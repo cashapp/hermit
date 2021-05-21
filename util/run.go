@@ -1,0 +1,60 @@
+package util
+
+import (
+	"bytes"
+	"io"
+	"os/exec"
+	"strings"
+
+	"github.com/kballard/go-shellquote"
+	"github.com/pkg/errors"
+
+	"github.com/cashapp/hermit/ui"
+)
+
+// Run a command, outputting to stdout and stderr.
+func Run(log *ui.Task, args ...string) error {
+	return RunInDir(log, "", args...)
+}
+
+// Capture runs a command, returning combined stdout and stderr.
+func Capture(log ui.Logger, args ...string) ([]byte, error) {
+	log.Debugf("%s", shellquote.Join(args...))
+	cmd := exec.Command(args[0], args[1:]...)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return out, errors.Wrapf(err, "%s: %s", shellquote.Join(args...), strings.TrimSpace(string(out)))
+	}
+	_, _ = log.Write(out)
+	return out, nil
+}
+
+// RunInDir runs a command in the given directory.
+func RunInDir(log *ui.Task, dir string, args ...string) error {
+	cmd, out := Command(log, args...)
+	cmd.Dir = dir
+	err := cmd.Run()
+	if err != nil {
+		// log.Write() goes to debug, so only dump the logs at error if we haven't already.
+		if !log.WillLog(ui.LevelDebug) {
+			log.Errorf("%s", out.String())
+		}
+		return errors.Wrapf(err, "%s failed", shellquote.Join(args...))
+	}
+	return nil
+}
+
+// Command constructs a new exec.Cmd with logging configured.
+//
+// Returns the command, and a *bytes.Buffer containing the combined stdout and stderr
+// of the execution
+func Command(log *ui.Task, args ...string) (*exec.Cmd, *bytes.Buffer) {
+	log = log.SubTask("exec")
+	log.Debugf("%s", shellquote.Join(args...))
+	b := &bytes.Buffer{}
+	w := io.MultiWriter(b, log)
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Stdout = w
+	cmd.Stderr = w
+	return cmd, b
+}

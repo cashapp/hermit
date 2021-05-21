@@ -1,0 +1,29 @@
+on:
+  push:
+    branches:
+      - master
+name: Release
+jobs:
+  canary:
+    name: Canary
+    runs-on: ubuntu-16.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '^1.16.3'
+      - name: Build Hermit
+        run: |
+          make GOOS=linux GOARCH=amd64 CHANNEL=canary build
+          make GOOS=darwin GOARCH=amd64 CHANNEL=canary build
+          make GOOS=darwin GOARCH=arm64 CHANNEL=canary build
+          go run ./cmd/geninstaller --dest=build/install.sh --dist-url=https://github.com/cashapp/hermit/releases/download/canary
+      - name: Release canary
+        uses: ncipollo/release-action@v1
+        with:
+          tag: canary
+          name: Canary
+          allowUpdates: true
+          artifacts: "build/*"
+          token: ${{ secrets.GITHUB_TOKEN }}

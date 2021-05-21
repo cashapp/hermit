@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+message In {
+}
+message Out {
+}
+
+service Service {
+  rpc Method (In) returns (Out);
+}
