@@ -1,0 +1,70 @@
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+name: CI
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-16.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Init Hermit
+        run: ./bin/hermit env >> $GITHUB_ENV
+      - name: Test
+        run: go test ./...
+  lint:
+    name: Lint
+    runs-on: ubuntu-16.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Init Hermit
+        run: ./bin/hermit env >> $GITHUB_ENV
+      - name: Shell check
+        run: ./bin/lint-shell-scripts
+      - name: Sum type check
+        run: |
+          GOBIN=${HERMIT_BIN} go install github.com/alecthomas/go-sumtype@master
+          go-sumtype $(go list ./...)
+      - name: golangci-lint
+        run: golangci-lint run
+  packages:
+    name: Package sanity tests
+    strategy:
+      matrix:
+        os: [ ubuntu-16.04, macos-latest ]
+    runs-on: ${{ matrix.os }}
+    needs:
+      - it
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Test packages
+        run: |
+          cd it/sanity
+          ./run.sh
+  it:
+    name: Integration Tests
+    runs-on: [ ubuntu-16.04 ]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Build Hermit
+        run: |
+          mkdir build testenv
+          ./bin/go build -o ./build/hermit ./cmd/hermit
+      - name: Install shells
+        run: sudo apt-get install zsh
+      - name: Run Full Integration tests
+        run: |
+          export PATH=$PWD/build:$PATH
+          cd it/full
+          ./run.sh
+#      - name: Run Backwards Compatibility Integration tests
+#        run: |
+#          export PATH=$PWD/build:$PATH
+#          cd it/compatibility
+#          ./run.sh
