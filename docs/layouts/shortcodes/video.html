@@ -1,0 +1,3 @@
+<video autoplay playsinline{{if .Get "controls"}} controls{{end}}{{if .Get "loop"}} loop{{end}}>
+  <source src="{{ (.Get "url") | relURL }}" type="video/mp4" />
+</video>

@@ -48,7 +48,6 @@ beforeAll
 testSubset() {
   ./bin/hermit test openjdk --level=debug
   ./bin/hermit test hermit --level=debug
-  ./bin/hermit test make --level=debug
 }
 
 testAll() {

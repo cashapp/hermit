@@ -38,6 +38,7 @@ func main() {
 		State: state.Config{
 			Builtin: sources.NewBuiltInSource(builtin),
 		},
+		CI: os.Getenv("CI") != "",
 	})
 }
 

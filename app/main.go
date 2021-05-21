@@ -36,6 +36,8 @@ type Config struct {
 	BaseDistURL string
 	HTTP        func(HTTPTransportConfig) *http.Client
 	State       state.Config
+	// True if we're running in CI.
+	CI bool
 }
 
 // Main runs the Hermit command-line application with the given config.
@@ -52,9 +54,13 @@ func Main(config Config) {
 			return &http.Client{Transport: transport}
 		}
 	}
-	var err error
-	var p *ui.UI
-	if isatty.IsTerminal(os.Stdout.Fd()) {
+	var (
+		err         error
+		p           *ui.UI
+		stdoutIsTTY = !config.CI && isatty.IsTerminal(os.Stdout.Fd())
+		stderrIsTTY = !config.CI && isatty.IsTerminal(os.Stderr.Fd())
+	)
+	if isatty.IsTerminal(os.Stdout.Fd()) && !config.CI {
 		// This is necessary because stdout/stderr are unbuffered and thus _very_ slow.
 		stdout := bufio.NewWriter(os.Stdout)
 		stderr := bufio.NewWriter(os.Stderr)
@@ -71,11 +77,11 @@ func Main(config Config) {
 				}
 			}
 		}()
-		p = ui.New(config.LogLevel, &bufioSyncer{stdout}, &bufioSyncer{stderr}, isatty.IsTerminal(os.Stdout.Fd()), isatty.IsTerminal(os.Stderr.Fd()))
+		p = ui.New(config.LogLevel, &bufioSyncer{stdout}, &bufioSyncer{stderr}, stdoutIsTTY, stderrIsTTY)
 		defer stdout.Flush()
 		defer stderr.Flush()
 	} else {
-		p = ui.New(config.LogLevel, os.Stdout, os.Stderr, isatty.IsTerminal(os.Stdout.Fd()), isatty.IsTerminal(os.Stderr.Fd()))
+		p = ui.New(config.LogLevel, os.Stdout, os.Stderr, stdoutIsTTY, stderrIsTTY)
 	}
 	defer func() {
 		err := recover()

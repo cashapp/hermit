@@ -8,4 +8,4 @@ build: schema
 
 .PHONY: schema
 schema:
-	(cd .. && ./bin/go run ./cmd/gendocs ./docs/content/docs/packaging/schema/)
+	(cd .. && ./bin/go run ./cmd/gendocs ./docs/content/packaging/schema/)
