@@ -1,8 +1,8 @@
 <a href="https://www.vecteezy.com/vector-art/292320-hermit-crab-on-white-background" title="Hermit Crab by Vecteezy">
-<img align="right" width="100" height="100" src="hermit.svg" alt="Hermit">
+<img align="right" width="100" height="100" src="./docs/static/images/logo.svg" alt="Hermit">
 </a>
 
-# Hermit - uniform tooling for Linux and Mac ![(CI status)](https://github.com/cashapp/hermit/workflows/ci/badge.svg)
+# Hermit - uniform tooling for Linux and Mac [![CI](https://github.com/cashapp/hermit/actions/workflows/ci.yml/badge.svg)](https://github.com/cashapp/hermit/actions/workflows/ci.yml)
 
 Hermit installs tools for software projects in self-contained, isolated sets, so your team, your contributors, and your CI have the same consistent tooling.
 
