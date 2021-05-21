@@ -1,0 +1,19 @@
+#!/bin/bash
+
+set -euxo pipefail
+
+./bin/hermit install
+
+case "${TEST_RUNNER}" in
+test)
+  ./bin/make test
+  ;;
+
+lint)
+  ./bin/make lint
+  ;;
+
+build)
+  ./bin/make build
+  ;;
+esac

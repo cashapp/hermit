@@ -1,0 +1,106 @@
+#!/bin/bash
+
+# shellcheck disable=SC2018,SC2019
+# SC2019: Use '[:upper:]' to support accents and foreign alphabets.
+# SC2018: Use '[:lower:]' to support accents and foreign alphabets.
+
+
+set -eo pipefail
+
+if [ -z "${HERMIT_STATE_DIR}" ]; then
+  case "$(uname -s)" in
+  Darwin)
+    HERMIT_STATE_DIR="${HOME}/Library/Caches/hermit"
+    ;;
+  Linux)
+    HERMIT_STATE_DIR="${XDG_CACHE_HOME:-${HOME}/.cache}/hermit"
+    ;;
+  esac
+fi
+
+if [ ! "$(type -P curl)"  ]; then
+    echo "No curl detected in the PATH. Please, install curl before installing Hermit"
+    exit 1
+fi
+
+#  This must be in the form <url>/<channel>
+# eg. https://github.com/cashapp/hermit/releases/download/stable
+HERMIT_DIST_URL="${HERMIT_DIST_URL:-{{.DistURL}}}"
+HERMIT_CHANNEL="$(basename "${HERMIT_DIST_URL}")"
+HERMIT_EXE=${HERMIT_EXE:-${HERMIT_STATE_DIR}/pkg/hermit@${HERMIT_CHANNEL}/hermit}
+HERMIT_EXE_DIR="$(dirname "${HERMIT_EXE}")"
+HERMIT_BIN_INSTALL_DIR="${HERMIT_BIN_INSTALL_DIR:-${HOME}/bin}"
+
+
+for dir in "${HERMIT_EXE_DIR}" "${HERMIT_STATE_DIR}"; do
+  if [ ! -e "${dir}" ]; then
+    echo "Creating ${dir}"
+    mkdir -p "${dir}"
+    chown "$USER:$GID" "${dir}"
+  fi
+
+  if [ ! -w "${dir}" ]; then
+    echo "${dir} is not writeable, making it so"
+    chown "$USER:$GID" "${dir}"
+    chmod u+w "${dir}"
+  fi
+done
+
+OS="$(uname -s | tr A-Z a-z)"
+ARCH="$(uname -m | tr A-Z a-z)"
+if [ "$ARCH" = "x86_64" ]; then
+  ARCH="amd64"
+fi
+URL="${HERMIT_DIST_URL}/hermit-${OS}-${ARCH}.gz"
+echo "Downloading ${URL} to ${HERMIT_EXE}"
+rm -f "${HERMIT_EXE}"
+curl -fsSL "${URL}" | gzip -dc > "${HERMIT_EXE}~"
+chown "$USER:$GID" "${HERMIT_EXE}~"
+chmod u+wx "${HERMIT_EXE}~"
+mv "${HERMIT_EXE}~" "${HERMIT_EXE}"
+
+echo "Hermit installed as ${HERMIT_EXE}"
+
+if [ ! -d "$HERMIT_BIN_INSTALL_DIR" ]; then
+  echo "NOTE: $HERMIT_BIN_INSTALL_DIR should be added to your \$PATH if it is not already"
+  mkdir -p "$HERMIT_BIN_INSTALL_DIR"
+fi
+
+if [ -e "$HERMIT_BIN_INSTALL_DIR/hermit" ]; then
+  echo "Removing the previous $HERMIT_BIN_INSTALL_DIR/hermit"
+  rm -f "$HERMIT_BIN_INSTALL_DIR/hermit"
+fi
+echo "Linking hermit to $HERMIT_BIN_INSTALL_DIR/hermit"
+cat > "$HERMIT_BIN_INSTALL_DIR/hermit" << EOF
+#!/bin/bash
+test -x \${HERMIT_EXE:-${HERMIT_EXE}} && exec "\${HERMIT_EXE:-${HERMIT_EXE}}" "\$@"
+(curl -fsSL "${HERMIT_DIST_URL}/install.sh" | bash) && exec "${HERMIT_EXE}" "\$@"
+EOF
+chmod +x "$HERMIT_BIN_INSTALL_DIR/hermit"
+
+cat <<-EOF
+
+Hermit is installed as $HERMIT_BIN_INSTALL_DIR/hermit!
+
+To create a new Hermit environment run:
+
+  $HERMIT_BIN_INSTALL_DIR/hermit init <dir>
+
+To activate the environment run:
+
+  . <dir>/bin/activate-hermit
+
+Then run the following to list available commands:
+
+  hermit --help
+
+To deactivate the environment run:
+
+  deactivate-hermit
+
+To setup shell hooks to automatically activate your environment when you enter
+it, run:
+
+  hermit shell-hooks --<zsh | bash>
+
+EOF

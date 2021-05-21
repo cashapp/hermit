@@ -1,0 +1,12 @@
+.henv
+testdata/env
+build
+pkgs
+registry
+bin/hermit.hcl
+.idea/
+.DS_Store
+.gradle/
+docs/resources/_gen
+docs/public
+.gobin/
