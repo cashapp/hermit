@@ -4,11 +4,14 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -215,9 +218,20 @@ func (c *Cache) downloadHTTP(b *ui.Task, checksum string, uri string, cachePath 
 	// For HTTP files we download and cache them, then return the cached file.
 	task.Debugf("Downloading %s", uri)
 
-	w, response, err := Download(c.httpClient, uri, downloadPath)
+	w, response, err := Download(c.httpClient, nil, uri, downloadPath)
 	if err != nil {
 		return "", "", errors.WithStack(err)
+	}
+	// Check for potential private github release
+	if response.StatusCode == 404 {
+		if ghi, ok := getGithubReleaseInfo(uri); ok {
+			response.Body.Close()
+			w.Close()
+			w, response, err = downloadGHPrivate(c.httpClient, ghi, downloadPath) // nolint:bodyclose // it _is_ handled below.
+			if err != nil {
+				return "", "", errors.WithStack(err)
+			}
+		}
 	}
 	defer response.Body.Close()
 	defer w.Close() // nolint: gosec
@@ -288,4 +302,93 @@ func (p2 *progressWriterAt) WriteAt(p []byte, off int64) (n int, err error) {
 	n, err = p2.w.WriteAt(p, off)
 	p2.task.Add(n)
 	return n, errors.WithStack(err)
+}
+
+// matches: https://github.com/{OWNER}/{REPO}/releases/download/{TAG}/{ASSET}
+var githubRe = regexp.MustCompile(`^https\://github.com/([^/]+)/([^/]+)/releases/download/([^/]+)/([^/]+)$`)
+
+type githubReleaseInfo struct {
+	owner, repo, tag, asset, token string
+}
+
+func getGithubReleaseInfo(uri string) (*githubReleaseInfo, bool) {
+	g := &githubReleaseInfo{}
+	g.token = os.Getenv("HERMIT_GITHUB_TOKEN")
+	if g.token == "" {
+		return nil, false
+	}
+	m := githubRe.FindStringSubmatch(uri)
+	if len(m) != 5 {
+		return nil, false
+	}
+	var err error
+	if g.owner, err = url.PathUnescape(m[1]); err != nil {
+		return nil, false
+	}
+	if g.repo, err = url.PathUnescape(m[2]); err != nil {
+		return nil, false
+	}
+	if g.tag, err = url.PathUnescape(m[3]); err != nil {
+		return nil, false
+	}
+	if g.asset, err = url.PathUnescape(m[4]); err != nil {
+		return nil, false
+	}
+	return g, true
+}
+
+// ghRelease is a minimal type for GitHub releases meta information
+// retrieved via the GitHub API see:
+// https://docs.github.com/en/rest/reference/repos#list-releases
+type ghRelease struct {
+	TagName string    `json:"tag_name"`
+	Assets  []ghAsset `json:"assets"`
+}
+
+// ghAsset is a minimal type for assets in the GitHub releases
+// meta information retrieved via the GitHub API see:
+// https://docs.github.com/en/rest/reference/repos#list-releases
+type ghAsset struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+}
+
+func downloadGHPrivate(client *http.Client, ghi *githubReleaseInfo, file string) (w *os.File, response *http.Response, err error) {
+	if client == nil {
+		client = http.DefaultClient
+	}
+
+	header := http.Header{"Authorization": []string{"token " + ghi.token}}
+	u := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases", ghi.owner, ghi.repo)
+	req, err := http.NewRequest("GET", u, nil) // nolint: noctx
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "cannot get private github repo assets")
+	}
+	req.Header = header.Clone()
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "cannot GET private github repo assets via API")
+	}
+	defer resp.Body.Close()
+	r := []ghRelease{}
+	if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
+		return nil, nil, errors.Wrap(err, "cannot decode private github repo assets")
+	}
+	assetURL, err := getAssetURL(r, ghi.tag, ghi.asset)
+	header.Set("Accept", "application/octet-stream")
+	return Download(client, header, assetURL, file)
+}
+
+func getAssetURL(releases []ghRelease, tag, assetName string) (string, error) {
+	for _, r := range releases {
+		if r.TagName != tag {
+			continue
+		}
+		for _, a := range r.Assets {
+			if a.Name == assetName {
+				return a.URL, nil
+			}
+		}
+	}
+	return "", fmt.Errorf("cannot find asset %s %s", tag, assetName)
 }

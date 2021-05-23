@@ -14,7 +14,7 @@ import (
 // On return "w" will be either at the beginning of the file, or at the resumption point.
 //
 // response.ContentLength will be the number of bytes remaining.
-func Download(client *http.Client, uri, file string) (w *os.File, response *http.Response, err error) {
+func Download(client *http.Client, header http.Header, uri, file string) (w *os.File, response *http.Response, err error) {
 	if client == nil {
 		client = http.DefaultClient
 	}
@@ -31,6 +31,9 @@ func Download(client *http.Client, uri, file string) (w *os.File, response *http
 	req, err := http.NewRequest("GET", uri, nil) // nolint: noctx
 	if err != nil {
 		return nil, nil, errors.WithStack(err)
+	}
+	if header != nil {
+		req.Header = header.Clone()
 	}
 	// req.Header.Set("If-Range", info.ModTime().UTC().Format("Mon, 2 Jan 2006 15:04:05 GMT"))
 	req.Header.Set("Range", fmt.Sprintf("bytes=%d-", resumed))
