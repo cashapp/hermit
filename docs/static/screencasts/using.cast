@@ -1,4 +1,4 @@
-{"version": 2, "width": 80, "height": 30, "timestamp": 1621756514, "env": {"SHELL": "/bin/zsh", "TERM": "xterm-256color"}}
+{"version": 2, "width": 80, "height": 20, "timestamp": 1621756514, "env": {"SHELL": "/bin/zsh", "TERM": "xterm-256color"}}
 [0.076896, "o", "\u001b[1m\u001b[7m%\u001b[27m\u001b[1m\u001b[0m                                                                              \r \r"]
 [0.092332, "o", "\r\u001b[0m\u001b[27m\u001b[24m\u001b[J\u001b[38;5;39m~\u001b[38;5;215m\u001b[32m $ \u001b[39m\u001b[K\u001b[68C\u001b[38;5;239m 170ms\u001b[39m\u001b[74D\u001b[?2004h"]
 [1.059202, "o", "g\u001b[90mo run main.go\u001b[39m\u001b[13D"]
