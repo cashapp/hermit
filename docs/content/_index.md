@@ -6,7 +6,7 @@ Hermit manages isolated, self-bootstrapping sets of tools in software
 projects, so your team, your contributors, and your CI have the same
 consistent tooling.
 
-{{< video url="images/hermit.mp4" controls=true loop=true >}}
+{{< asciinema url="screencasts/using.cast" >}}
 
 # Why Do I Need it?
 

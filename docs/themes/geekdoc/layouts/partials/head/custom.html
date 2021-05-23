@@ -1,1 +1,10 @@
-<!-- You can add custom elements to the page header here. -->
+<link rel="preload" href="{{ .Site.BaseURL }}/css/asciinema-player.css" as="style">
+<link rel="stylesheet" href="{{ .Site.BaseURL }}/css/asciinema-player.css" media="all">
+<script src="{{ .Site.BaseURL }}/js/asciinema-player.js"></script>
+<style type="text/css">
+video[src*="hermit.mp4"] {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
