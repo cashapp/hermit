@@ -74,7 +74,7 @@ const (
 type Config struct {
 	Envars    envars.Envars `hcl:"env,optional" help:"Extra environment variables."`
 	Sources   []string      `hcl:"sources,optional" help:"Package manifest sources."`
-	ManageGit bool          `hcl:"manage-git,optional" default:"true" help:"Whether Hermit should manage Git."`
+	ManageGit bool          `hcl:"manage-git,optional" default:"true" help:"Whether Hermit should automatically 'git add' new packages."`
 }
 
 // Env is a Hermit environment.
