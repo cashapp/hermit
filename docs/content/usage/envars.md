@@ -26,8 +26,16 @@ Flags:
 
 ## Hermit
 
-Hermit itself requires several environment variables to operate correctly. An
-empty environment might look something like the following:
+Hermit prefixes all of its own variables with `HERMIT_` or `_HERMIT_`. While
+it uses a bunch of variables internally, two you can rely on to always be
+present in an active environment are:
+
+| Name | Description |
+|-----------|------|-------------|
+| `HERMIT_ENV` | Path to the active Hermit environment. |
+| `HERMIT_BIN` | Path to the active Hermit environment `bin` directory. |
+
+An empty environment might look something like the following:
 
 ```text
 project🐚~/project$ hermit env

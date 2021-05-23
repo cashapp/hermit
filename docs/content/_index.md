@@ -1,19 +1,34 @@
 +++
 title = "Hermit"
+description = "Hermit manages isolated, self-bootstrapping sets of tools in software projects."
 geekdocNav = false
 geekdocAlign = "center"
 geekdocAnchor = false
 +++
 
-Hermit manages isolated, self-bootstrapping sets of tools in software projects, so your team, your contributors, and your CI have the same consistent tooling.
+### Hermit manages isolated, self-bootstrapping sets of tools in software projects.
 
-_Packages installed via Hermit will be available on any future machine, Linux
+{{< columns >}}
+
+
+Hermit ensures that your team, your contributors, and your CI have the same
+consistent tooling.
+
+<--->
+
+Packages installed via Hermit will be available on any future machine, Linux
 or Mac, by simply cloning the repository and running the linked binaries.
-Each link will bootstrap Hermit if necessary, then auto-install the package,
-before executing the binary._
 
+<--->
+
+Each link will bootstrap Hermit if necessary, then auto-install the package,
+before executing the binary.
+
+{{< /columns >}}
 
 {{< button class="get-started" relref="usage/get-started/" >}}Get Started{{< /button >}}
+
+---
 
 {{< columns >}}
 
