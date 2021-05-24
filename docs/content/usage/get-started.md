@@ -62,9 +62,22 @@ Once activated the shell prompt will change to include the prefix `<environment>
 
 At this point you can [use and manage](../management) packages in this environment.
 
+## Searching for packages
+
+Once your environment is activated, use `hermit search` to search for
+packages. Without arguments it will list all known packages, or you may pass
+a term to search in package names and descriptions.
+
+````text
+project🐚~/project$ hermit search openjdk
+openjdk (11.0.11_9-zulu11.48.21, @stable, @zulu, 11.0.8_10, 11.0.9_11, 11.0.10_9)
+  Java is a class-based, object-oriented programming language.
+```
+
 ## Installing a package
 
-One your environment is activated, use `hermit install` to install packages:
+After you've selected the package you'd like to install into your environment,
+use `hermit install` to install packages:
 
 ```text
 project🐚~/project$ hermit install go-1.16.3
