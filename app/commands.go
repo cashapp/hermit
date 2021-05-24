@@ -53,6 +53,7 @@ type unactivated struct {
 	Version    versionCmd    `cmd:"" help:"Show version." group:"global"`
 	Validate   validateCmd   `cmd:"" help:"Check a package manifest source for errors." group:"global"`
 	Info       infoCmd       `cmd:"" help:"Show information on packages." group:"global"`
+	Search     searchCmd     `cmd:"" help:"Search for packages to install." group:"env"`
 	ShellHooks shellHooksCmd `cmd:"" help:"Manage Hermit auto-activation hooks of a shell." group:"global" aliases:"install-hooks"`
 
 	Noop     noopCmd     `cmd:"" help:"No-op, just exit." hidden:""`
@@ -76,7 +77,6 @@ type activated struct {
 	Install   installCmd   `cmd:"" help:"Install packages." group:"env"`
 	Uninstall uninstallCmd `cmd:"" help:"Uninstall packages." group:"env"`
 	Upgrade   upgradeCmd   `cmd:"" help:"Upgrade packages" group:"env"`
-	Search    searchCmd    `cmd:"" help:"Search for packages to install." group:"env"`
 	List      listCmd      `cmd:"" help:"List local packages." group:"env"`
 	Exec      execCmd      `cmd:"" help:"Directly execute a binary in a package." group:"env"`
 	Env       envCmd       `cmd:"" help:"Manage environment variables." group:"env"`
