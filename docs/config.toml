@@ -55,5 +55,6 @@ disableKinds = ["taxonomy", "taxonomyTerm"]
   geekdocSearch = true
   geekdocNextPrev = true
   geekdocRepo = "https://github.com/cashapp/hermit"
-  geekdocEditPath = "edit/master/docs/content"
+  geekdocEditPath = ""
+  geekdocBreadcrumb = false
 
