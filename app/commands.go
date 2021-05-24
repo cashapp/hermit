@@ -53,7 +53,7 @@ type unactivated struct {
 	Version    versionCmd    `cmd:"" help:"Show version." group:"global"`
 	Validate   validateCmd   `cmd:"" help:"Check a package manifest source for errors." group:"global"`
 	Info       infoCmd       `cmd:"" help:"Show information on packages." group:"global"`
-	Search    searchCmd    `cmd:"" help:"Search for packages to install." group:"env"`
+	Search     searchCmd     `cmd:"" help:"Search for packages to install." group:"env"`
 	ShellHooks shellHooksCmd `cmd:"" help:"Manage Hermit auto-activation hooks of a shell." group:"global" aliases:"install-hooks"`
 
 	Noop     noopCmd     `cmd:"" help:"No-op, just exit." hidden:""`
