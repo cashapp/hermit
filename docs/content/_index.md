@@ -4,6 +4,8 @@ description = "Hermit manages isolated, self-bootstrapping sets of tools in soft
 geekdocNav = false
 geekdocAlign = "center"
 geekdocAnchor = false
+geekdocBreadcrumb = false
+geekdocEditPath = false
 +++
 
 ### Hermit manages isolated, self-bootstrapping sets of tools in software projects.
