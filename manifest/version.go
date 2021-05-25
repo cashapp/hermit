@@ -90,6 +90,14 @@ func (v Version) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + v.String() + `"`), nil
 }
 
+// Clean pre-release and metadata.
+func (v Version) Clean() Version {
+	v.metadata = ""
+	v.prerelease = nil
+	v.orig = v.String()
+	return v
+}
+
 // Major version number components only (includes prerelease + metadata).
 func (v Version) Major() Version {
 	return v.addPrereleaseMetadata(v.version[0])

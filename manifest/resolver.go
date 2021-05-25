@@ -50,7 +50,7 @@ func (p Packages) Len() int { return len(p) }
 func (p Packages) Less(i, j int) bool {
 	n := strings.Compare(p[i].Reference.Name, p[j].Reference.Name)
 	if n == 0 {
-		return p[i].Reference.Version.Less(p[j].Reference.Version)
+		return p[i].Reference.Less(p[j].Reference)
 	}
 	return n < 0
 }
@@ -358,6 +358,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 		for _, ref := range allRefs {
 			knownVersions = append(knownVersions, ref.StringNoName())
 		}
+		sort.Strings(knownVersions)
 		return nil, errors.Wrapf(ErrUnknownPackage, "%s: no version %s in known versions %s", manifest.Path, selector, strings.Join(knownVersions, ", "))
 	}
 

@@ -322,6 +322,30 @@ func TestSearchVersionsAndChannelsCoexist(t *testing.T) {
 	pkgs, err := l.Search(logger.Task("search"), "test")
 	require.NoError(t, err)
 	expected := Packages{
+		manifesttest.NewPkgBuilder(config.State + "/pkg/test@1").
+			WithName("test").
+			WithBinaries("bin").
+			WithChannel("1").
+			WithSource("www.example.com").
+			WithUpdateInterval(time.Hour * 24).
+			WithFS(ffs).
+			Result(),
+		manifesttest.NewPkgBuilder(config.State + "/pkg/test@1.0").
+			WithName("test").
+			WithBinaries("bin").
+			WithChannel("1.0").
+			WithSource("www.example.com").
+			WithUpdateInterval(time.Hour * 24).
+			WithFS(ffs).
+			Result(),
+		manifesttest.NewPkgBuilder(config.State + "/pkg/test@latest").
+			WithName("test").
+			WithBinaries("bin").
+			WithChannel("latest").
+			WithSource("www.example.com").
+			WithUpdateInterval(time.Hour * 24).
+			WithFS(ffs).
+			Result(),
 		manifesttest.NewPkgBuilder(config.State + "/pkg/test@stable").
 			WithName("test").
 			WithBinaries("bin").

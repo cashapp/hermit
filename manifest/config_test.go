@@ -136,7 +136,7 @@ func TestManifest(t *testing.T) {
 				version "1.14.4" {}
 			`,
 			pkg:  "go-1.14.5",
-			fail: "memory:///go.hcl: no version go-1.14.5 in known versions 1.14.4: unknown package",
+			fail: "memory:///go.hcl: no version go-1.14.5 in known versions 1.14.4, @1, @1.14, @latest: unknown package",
 		},
 		{name: "InvalidVariable",
 			manifest: `
