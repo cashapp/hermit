@@ -72,6 +72,14 @@ fine-grained control over which package definitions will be used.
 updates periodically. Hermit will check the URL's ETag and update the package
 if there is a newer version.
 
+Additionally, Hermit will create several synthetic channels which are checked for updates every 24h:
+
+1. A `@latest` channel pointing at the most recent non-pre-release version.
+2. A `@<MAJOR>` channel for every major version.
+3. A `@<MAJOR>.<MINOR>` channel for every major+minor version.
+
+This allows projects to pin to stable releases.
+
 ## Variable Interpolation
 
 Hermit manifests support basic variable interpolation to simplify

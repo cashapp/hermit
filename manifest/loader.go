@@ -4,12 +4,15 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/alecthomas/hcl"
 	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/ui"
+	"github.com/gobwas/glob"
 	"github.com/pkg/errors"
 )
 
@@ -159,5 +162,53 @@ func load(bundle fs.FS, name, filename string) *AnnotatedManifest {
 	}
 	annotated.Manifest = manifest
 	annotated.Errors = append(annotated.Errors, annotated.validate()...)
+	synthesise(annotated)
 	return annotated
+}
+
+// Synthesise a "stable" channel and a channel for each major version.
+func synthesise(manifest *AnnotatedManifest) {
+	highest := manifest.HighestMatch(glob.MustCompile("*"))
+	if highest != nil && manifest.ChannelByName("latest") == nil {
+		version := ParseVersion(highest.Version).Major().String() + ".*"
+		manifest.Channels = append(manifest.Channels, ChannelBlock{
+			Name:    "latest",
+			Update:  time.Hour * 24,
+			Version: version,
+		})
+	}
+
+	// Synthesise major and minor version channels.
+
+	// Order the stable versions
+	var versions Versions
+	for _, block := range manifest.Versions {
+		version := ParseVersion(block.Version)
+		if version.Prerelease() != "" {
+			continue
+		}
+		versions = append(versions, version)
+	}
+	if len(versions) == 0 {
+		return
+	}
+	sort.Sort(versions)
+
+	channels := map[string]bool{}
+	for _, version := range versions {
+		if version.Major().Clean().String() != version.Clean().String() {
+			channels[version.Major().Clean().String()] = true
+		}
+		if version.MajorMinor().Clean().String() != version.Clean().String() {
+			channels[version.MajorMinor().Clean().String()] = true
+		}
+	}
+
+	for version := range channels {
+		manifest.Channels = append(manifest.Channels, ChannelBlock{
+			Name:    version,
+			Update:  time.Hour * 24,
+			Version: version + ".*",
+		})
+	}
 }
