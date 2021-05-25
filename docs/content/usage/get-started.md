@@ -68,7 +68,7 @@ Once your environment is activated, use `hermit search` to search for
 packages. Without arguments it will list all known packages, or you may pass
 a term to search in package names and descriptions.
 
-````text
+```text
 project🐚~/project$ hermit search openjdk
 openjdk (11.0.11_9-zulu11.48.21, @stable, @zulu, 11.0.8_10, 11.0.9_11, 11.0.10_9)
   Java is a class-based, object-oriented programming language.
