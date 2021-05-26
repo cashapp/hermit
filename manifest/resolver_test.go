@@ -84,7 +84,7 @@ func TestResolver_Resolve(t *testing.T) {
 				binaries = ["bin"]
 				on "unpack" {
 					copy { from = "foo/bar" to = "${root}/fizz" }
-  					run { cmd = "test" dir = "${root}"}
+					run { cmd = "test" dir = "${root}" }
 					copy { from = "foo/baz" to = "${root}/biz" }
 					message { text = "hello" }
 				}

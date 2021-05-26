@@ -32,7 +32,12 @@ func (p *Package) triggerCopy(action *CopyAction) error {
 }
 
 func (p *Package) triggerRun(trigger *RunAction) error {
-	cmd := exec.Command(trigger.Command, trigger.Args...)
+	args, err := shellquote.Split(trigger.Command)
+	if err != nil {
+		return errors.Wrapf(err, "%s: invalid shell command %q", p, trigger.Command)
+	}
+	args = append(args, trigger.Args...)
+	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Env = trigger.Env
 	if trigger.Dir == "" {
 		cmd.Dir = p.Root
@@ -96,11 +101,11 @@ func (c *ChmodAction) String() string         { return fmt.Sprintf("chmod %o %s"
 type RunAction struct {
 	Pos hcl.Position `hcl:"-"`
 
-	Command string   `hcl:"cmd" help:"The command to execute"`
-	Dir     string   `hcl:"dir,optional" help:"The directory where the command is run in. Defaults to the root directory."`
-	Args    []string `hcl:"args,optional" help:"The arguments to the binary"`
-	Env     []string `hcl:"env,optional" help:"The environment variables for the execution"`
-	Stdin   string   `hcl:"stdin,optional" help:"Optional string to be used as the stdin for the command"`
+	Command string   `hcl:"cmd" help:"The command to execute, split by shellquote."`
+	Dir     string   `hcl:"dir,optional" help:"The directory where the command is run. Defaults to the ${root} directory."`
+	Args    []string `hcl:"args,optional" help:"The arguments to the binary."`
+	Env     []string `hcl:"env,optional" help:"The environment variables for the execution."`
+	Stdin   string   `hcl:"stdin,optional" help:"Optional string to be used as the stdin for the command."`
 }
 
 func (c *RunAction) position() hcl.Position { return c.Pos }
