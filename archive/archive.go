@@ -345,6 +345,21 @@ func extractZipFile(zf *zip.File, destFile string) error {
 	if zf.Mode().IsDir() {
 		return errors.WithStack(os.MkdirAll(destFile, 0700))
 	}
+	// Handle symlinks.
+	if zf.Mode()&os.ModeSymlink != 0 {
+		symlink, err := ioutil.ReadAll(zfr)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		dir := filepath.Dir(destFile)
+		symlinkPath := filepath.Join(dir, string(symlink))
+		symlinkPath, err = filepath.Rel(dir, symlinkPath)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		return errors.WithStack(os.Symlink(symlinkPath, destFile))
+	}
+
 	w, err := os.OpenFile(destFile, os.O_CREATE|os.O_WRONLY, zf.Mode()&^0077)
 	if err != nil {
 		return errors.WithStack(err)
