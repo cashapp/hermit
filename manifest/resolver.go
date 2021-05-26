@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"strings"
@@ -215,15 +216,19 @@ func (r *Resolver) Sync(l *ui.UI, force bool) error {
 	return nil
 }
 
-// Search for packages.
+// Search for packages using the given regular expression.
 func (r *Resolver) Search(l *ui.Task, pattern string) (Packages, error) {
+	re, err := regexp.Compile("(?i)^(" + pattern + ")$")
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
 	var pkgs Packages
 	manifests, err := r.loader.All()
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	for _, manifest := range manifests {
-		if !strings.Contains(manifest.Name, pattern) && !strings.Contains(strings.ToLower(manifest.Description), strings.ToLower(pattern)) {
+		if !re.MatchString(manifest.Name) {
 			continue
 		}
 		for _, version := range manifest.Versions {
