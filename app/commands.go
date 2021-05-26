@@ -543,7 +543,7 @@ func (e *envCmd) Run(l *ui.UI, env *hermit.Env) error {
 
 type searchCmd struct {
 	Short      bool   `short:"s" help:"Short listing."`
-	Constraint string `arg:"" help:"Package glob." optional:""`
+	Constraint string `arg:"" help:"Package regex." optional:""`
 }
 
 func (s *searchCmd) Run(l *ui.UI, env *hermit.Env) error {

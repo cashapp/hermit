@@ -707,9 +707,9 @@ func (e *Env) Clean(l *ui.UI, level CleanMask) error {
 	return nil
 }
 
-// Search for packages.
-func (e *Env) Search(l *ui.Task, glob string) (manifest.Packages, error) {
-	pkgs, err := e.resolver.Search(l, glob)
+// Search for packages using the given regular expression.
+func (e *Env) Search(l *ui.Task, pattern string) (manifest.Packages, error) {
+	pkgs, err := e.resolver.Search(l, pattern)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
