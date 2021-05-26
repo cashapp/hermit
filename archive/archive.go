@@ -324,7 +324,10 @@ func extractZip(b *ui.Task, f *os.File, info os.FileInfo, dest string, strip int
 	for _, zf := range zr.File {
 		b.Tracef("  %s", zf.Name)
 		task.Add(1)
-		destFile := makeDestPath(dest, zf.Name, strip)
+		destFile, err := makeDestPath(dest, zf.Name, strip)
+		if err != nil {
+			return err
+		}
 		if destFile == "" {
 			continue
 		}
@@ -386,7 +389,10 @@ func extractPackageTarball(b *ui.Task, r io.Reader, dest string, strip int) erro
 			return errors.WithStack(err)
 		}
 		mode := hdr.FileInfo().Mode() &^ 0077
-		destFile := makeDestPath(dest, hdr.Name, strip)
+		destFile, err := makeDestPath(dest, hdr.Name, strip)
+		if err != nil {
+			return err
+		}
 		if destFile == "" {
 			continue
 		}
@@ -483,7 +489,10 @@ func extract7Zip(r io.ReaderAt, size int64, dest string, strip int) error {
 		if hdr.IsEmptyStream && !hdr.IsEmptyFile {
 			continue
 		}
-		destFile := makeDestPath(dest, hdr.Name, strip)
+		destFile, err := makeDestPath(dest, hdr.Name, strip)
+		if err != nil {
+			return err
+		}
 		if destFile == "" {
 			continue
 		}
@@ -532,7 +541,10 @@ func extractRpmPackage(r io.Reader, dest string, pkg *manifest.Package) error {
 			if err != nil {
 				return errors.WithStack(err)
 			}
-			filename := makeDestPath(dest, header.Filename(), pkg.Strip)
+			filename, err := makeDestPath(dest, header.Filename(), pkg.Strip)
+			if err != nil {
+				return err
+			}
 			if filename == "" {
 				continue
 			}
@@ -555,12 +567,24 @@ func ensureDirExists(file string) error {
 }
 
 // Strip leading path component.
-func makeDestPath(dest, path string, strip int) string {
+func makeDestPath(dest, path string, strip int) (string, error) {
+	if err := sanitizeExtractPath(path, dest); err != nil {
+		return "", err
+	}
 	parts := strings.Split(path, "/")
 	if len(parts) <= strip {
-		return ""
+		return "", nil
 	}
 	destFile := strings.Join(parts[strip:], "/")
 	destFile = filepath.Join(dest, destFile)
-	return destFile
+	return destFile, nil
+}
+
+// https://snyk.io/research/zip-slip-vulnerability
+func sanitizeExtractPath(filePath string, destination string) error {
+	destPath := filepath.Join(destination, filePath)
+	if !strings.HasPrefix(destPath, filepath.Clean(destination)) {
+		return errors.Errorf("%s: illegal file path (%s not under %s)", filePath, destPath, destination)
+	}
+	return nil
 }
