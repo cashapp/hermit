@@ -64,11 +64,10 @@ type State struct {
 }
 
 // Open the global Hermit state.
-func Open(stateDir string, config Config, client *http.Client, fastFailClient *http.Client, p *ui.UI) (*State, error) {
+func Open(stateDir string, config Config, client *http.Client, fastFailClient *http.Client) (*State, error) {
 	if config.Builtin == nil {
 		return nil, errors.Errorf("state.Config.Builtin not provided")
 	}
-	logger := p.Task("hermit")
 
 	pkgDir := filepath.Join(stateDir, "pkg")
 	cacheDir := filepath.Join(stateDir, "cache")
@@ -120,28 +119,31 @@ func Open(stateDir string, config Config, client *http.Client, fastFailClient *h
 		config:      config,
 		pkgDir:      pkgDir,
 		cache:       cache,
-		lock:        util.NewLock(filepath.Join(stateDir, ".lock"), logger, 1*time.Second),
+		lock:        util.NewLock(filepath.Join(stateDir, ".lock"), 1*time.Second),
 	}
 	return s, nil
 }
 
 // Resolve package reference without an active environment.
 func (s *State) Resolve(l *ui.UI, mathcer manifest.Selector) (*manifest.Package, error) {
-	ss, err := sources.ForURIs(l, s.SourcesDir(), "", s.config.Sources)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	ss.Prepend(s.config.Builtin)
-	resolver, err := manifest.New(l, ss, manifest.Config{
-		Env:   "",
-		State: s.Root(),
-		OS:    runtime.GOOS,
-		Arch:  runtime.GOARCH,
-	})
+	resolver, err := s.resolver(l)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return resolver.Resolve(l, mathcer)
+}
+
+// Search for packages without an active environment.
+func (s *State) Search(l *ui.UI, glob string) (manifest.Packages, error) {
+	resolver, err := s.resolver(l)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	pkgs, err := resolver.Search(l, glob)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return pkgs, nil
 }
 
 // DumpDB of State to w.
@@ -169,9 +171,23 @@ func (s *State) PkgDir() string {
 	return s.pkgDir
 }
 
-func (s *State) acquireLock() (*util.FileLock, error) {
+func (s *State) resolver(l *ui.UI) (*manifest.Resolver, error) {
+	ss, err := sources.ForURIs(l, s.SourcesDir(), "", s.config.Sources)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	ss.Prepend(s.config.Builtin)
+	return manifest.New(ss, manifest.Config{
+		Env:   "",
+		State: s.Root(),
+		OS:    runtime.GOOS,
+		Arch:  runtime.GOARCH,
+	})
+}
+
+func (s *State) acquireLock(log ui.Logger) (*util.FileLock, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	err := s.lock.Acquire(ctx)
+	err := s.lock.Acquire(ctx, log)
 	cancel()
 	if err != nil {
 		return nil, fmt.Errorf("failed to acquire lock: %w", err)
@@ -213,11 +229,11 @@ func (s *State) WritePackageState(p *manifest.Package, binDir string) error {
 
 func (s *State) removePackage(b *ui.Task, pkg *manifest.Package) error {
 	task := b.SubTask("remove")
-	lock, err := s.acquireLock()
+	lock, err := s.acquireLock(b)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	defer lock.Release()
+	defer lock.Release(b)
 
 	task.Debugf("chmod -R +w %s", pkg.Dest)
 	_ = filepath.Walk(pkg.Dest, func(path string, info os.FileInfo, err error) error {
@@ -245,11 +261,11 @@ func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 		return nil
 	}
 
-	lock, err := s.acquireLock()
+	lock, err := s.acquireLock(b)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	defer lock.Release()
+	defer lock.Release(b)
 
 	if (s.isExtracted(p)) || p.Source == "/" {
 		return nil
@@ -305,11 +321,11 @@ func (s *State) RecordUninstall(pkg *manifest.Package, binDir string) error {
 // CleanPackages removes all the extracted packages
 func (s *State) CleanPackages(b ui.Logger) error {
 	// TODO: Uninstall packages from their configured root so that eg. external packages can be uninstalled.
-	lock, err := s.acquireLock()
+	lock, err := s.acquireLock(b)
 	if err != nil {
 		return err
 	}
-	defer lock.Release()
+	defer lock.Release(b)
 
 	b.Debugf("rm -rf %q", s.pkgDir)
 	return os.RemoveAll(s.pkgDir)
@@ -317,11 +333,11 @@ func (s *State) CleanPackages(b ui.Logger) error {
 
 // CleanCache clears the download cache
 func (s *State) CleanCache(b ui.Logger) error {
-	lock, err := s.acquireLock()
+	lock, err := s.acquireLock(b)
 	if err != nil {
 		return err
 	}
-	defer lock.Release()
+	defer lock.Release(b)
 
 	b.Debugf("rm -rf %q", s.cacheDir)
 	return os.RemoveAll(s.cacheDir)
@@ -370,11 +386,11 @@ func (s *State) UpgradeChannel(b *ui.Task, pkg *manifest.Package) (bool, error) 
 
 // GC clears packages that have not been used for the given duration and are not referred to in any environment
 func (s *State) GC(p *ui.UI, age time.Duration, pkgResolver func(b *ui.UI, selector manifest.Selector) (*manifest.Package, error)) error {
-	lock, err := s.acquireLock()
+	lock, err := s.acquireLock(p)
 	if err != nil {
 		return err
 	}
-	defer lock.Release()
+	defer lock.Release(p)
 
 	err = s.CleanCache(p)
 	if err != nil {
@@ -434,11 +450,11 @@ func (s *State) GC(p *ui.UI, age time.Duration, pkgResolver func(b *ui.UI, selec
 }
 
 func (s *State) evictPackage(b *ui.Task, pkg *manifest.Package) error {
-	lock, err := s.acquireLock()
+	lock, err := s.acquireLock(b)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	defer lock.Release()
+	defer lock.Release(b)
 
 	if err := s.cache.Evict(b, pkg.SHA256, pkg.Source); err != nil {
 		return errors.WithStack(err)

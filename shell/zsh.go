@@ -10,6 +10,11 @@ import (
 
 const zshShellHooks = commonHooks + `
 precmd_functions+=(change_hermit_env)
+
+if [ ! -z ${_comps+x} ]; then
+  autoload -U +X bashcompinit && bashcompinit
+  complete -o nospace -C $HOME/bin/hermit hermit
+fi
 `
 
 // Zsh represents the Zsh shell

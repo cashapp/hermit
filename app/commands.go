@@ -117,7 +117,7 @@ func (i *initCmd) Run(w *ui.UI, config Config) error {
 }
 
 type infoCmd struct {
-	Packages []string `arg:"" required:"" help:"Packages to retrieve information for"`
+	Packages []string `arg:"" required:"" help:"Packages to retrieve information for" predictor:"package"`
 	JSON     bool     `help:"Format information as a JSON array" default:"false"`
 }
 
@@ -597,7 +597,7 @@ func (cmd *listCmd) Run(l *ui.UI, env *hermit.Env) error {
 }
 
 type uninstallCmd struct {
-	Packages []string `arg:"" help:"Packages to uninstall from this environment."`
+	Packages []string `arg:"" help:"Packages to uninstall from this environment." predictor:"installed-package"`
 }
 
 func (u *uninstallCmd) Run(l *ui.UI, env *hermit.Env) error {
@@ -633,7 +633,7 @@ next:
 }
 
 type installCmd struct {
-	Packages []string `arg:"" optional:"" name:"package" help:"Packages to install (<name>[-<version>]). Version can be a glob to find the latest version with."`
+	Packages []string `arg:"" optional:"" name:"package" help:"Packages to install (<name>[-<version>]). Version can be a glob to find the latest version with." predictor:"package"`
 }
 
 func (i *installCmd) Help() string {
@@ -731,7 +731,7 @@ func (g *gcCmd) Run(l *ui.UI, env *hermit.Env) error {
 }
 
 type upgradeCmd struct {
-	Packages []string `arg:"" optional:"" name:"package" help:"Packages to upgrade. If omitted, upgrades all installed packages."`
+	Packages []string `arg:"" optional:"" name:"package" help:"Packages to upgrade. If omitted, upgrades all installed packages."  predictor:"installed-package"`
 }
 
 func (g *upgradeCmd) Run(l *ui.UI, env *hermit.Env) error {
@@ -790,7 +790,7 @@ func (g *validateCmd) Run(l *ui.UI, env *hermit.Env, sta *state.State) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		resolver, err := manifest.New(l, srcs, manifest.Config{
+		resolver, err := manifest.New(srcs, manifest.Config{
 			State: sta.Root(),
 			OS:    runtime.GOOS,
 			Arch:  runtime.GOARCH,

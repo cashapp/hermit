@@ -216,7 +216,7 @@ func OpenEnv(l *ui.UI, envDir string, state *state.State, ephemeral envars.Envar
 		return nil, errors.Wrap(err, configFile)
 	}
 
-	resolver, err := manifest.New(l, sources, manifest.Config{
+	resolver, err := manifest.New(sources, manifest.Config{
 		Env:   envDir,
 		State: state.Root(),
 		OS:    runtime.GOOS,
@@ -708,7 +708,7 @@ func (e *Env) Clean(l *ui.UI, level CleanMask) error {
 }
 
 // Search for packages using the given regular expression.
-func (e *Env) Search(l *ui.Task, pattern string) (manifest.Packages, error) {
+func (e *Env) Search(l ui.Logger, pattern string) (manifest.Packages, error) {
 	pkgs, err := e.resolver.Search(l, pattern)
 	if err != nil {
 		return nil, errors.WithStack(err)

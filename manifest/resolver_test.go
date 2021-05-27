@@ -259,7 +259,7 @@ func TestResolver_Resolve(t *testing.T) {
 			for name, content := range tt.files {
 				ss = append(ss, sources.NewMemSource(name, content))
 			}
-			l, err := New(logger.Task("test"), sources.New("", ss), config)
+			l, err := New(sources.New("", ss), config)
 			require.NoError(t, err)
 			if tt.reference != "" {
 				gotPkg, err := l.Resolve(logger, PrefixSelector(ParseReference(tt.reference)))
@@ -317,7 +317,7 @@ func TestSearchVersionsAndChannelsCoexist(t *testing.T) {
 	for name, content := range files {
 		ss = append(ss, sources.NewMemSource(name, content))
 	}
-	l, err := New(logger.Task("test"), sources.New("", ss), config)
+	l, err := New(sources.New("", ss), config)
 	require.NoError(t, err)
 	pkgs, err := l.Search(logger.Task("search"), "test")
 	require.NoError(t, err)

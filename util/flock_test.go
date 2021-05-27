@@ -26,13 +26,13 @@ func TestFileLockTimeout(t *testing.T) {
 	timeoutCtx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
 	defer cancel()
 
-	lock := NewLock(file, logger1, 5*time.Millisecond)
-	err1 := lock.Acquire(timeoutCtx)
+	lock := NewLock(file, 5*time.Millisecond)
+	err1 := lock.Acquire(timeoutCtx, logger1)
 	require.NoError(t, err1)
-	defer lock.Release()
+	defer lock.Release(logger1)
 
-	lock2 := NewLock(file, logger2, 10*time.Millisecond)
-	err2 := lock2.Acquire(timeoutCtx)
+	lock2 := NewLock(file, 10*time.Millisecond)
+	err2 := lock2.Acquire(timeoutCtx, logger2)
 	require.Equal(t, "timeout while waiting for the lock", err2.Error())
 
 	require.Contains(t, logger2buf.String(), "Waiting for a lock at "+file)
@@ -48,15 +48,15 @@ func TestFileLockRelease(t *testing.T) {
 	logger1, logger1buf := ui.NewForTesting()
 	logger2, logger2buf := ui.NewForTesting()
 
-	lock1 := NewLock(file, logger1, 5*time.Millisecond)
-	err1 := lock1.Acquire(context.Background())
+	lock1 := NewLock(file, 5*time.Millisecond)
+	err1 := lock1.Acquire(context.Background(), logger1)
 	require.NoError(t, err1)
-	lock1.Release()
+	lock1.Release(logger1)
 
-	lock2 := NewLock(file, logger2, 5*time.Millisecond)
-	err2 := lock2.Acquire(context.Background())
+	lock2 := NewLock(file, 5*time.Millisecond)
+	err2 := lock2.Acquire(context.Background(), logger2)
 	require.NoError(t, err2)
-	lock2.Release()
+	lock2.Release(logger2)
 
 	require.Empty(t, logger1buf.String())
 	require.Empty(t, logger2buf.String())
@@ -72,24 +72,24 @@ func TestFileLockProceed(t *testing.T) {
 	logger1, logger1buf := ui.NewForTesting()
 	logger2, logger2buf := ui.NewForTesting()
 
-	lock1 := NewLock(file, logger1, 5*time.Millisecond)
-	err1 := lock1.Acquire(context.Background())
+	lock1 := NewLock(file, 5*time.Millisecond)
+	err1 := lock1.Acquire(context.Background(), logger1)
 	timer := time.NewTimer(50 * time.Millisecond)
 	go func() {
 		for {
 			select {
 			case <-timer.C:
-				lock1.Release()
+				lock1.Release(logger1)
 				timer.Stop()
 			}
 		}
 	}()
 	require.NoError(t, err1)
 
-	lock2 := NewLock(file, logger2, 5*time.Millisecond)
-	err2 := lock2.Acquire(context.Background())
+	lock2 := NewLock(file, 5*time.Millisecond)
+	err2 := lock2.Acquire(context.Background(), logger2)
 	require.NoError(t, err2)
-	lock2.Release()
+	lock2.Release(logger2)
 
 	require.Empty(t, logger1buf.String())
 	require.Contains(t, logger2buf.String(), "Waiting for a lock at "+file)

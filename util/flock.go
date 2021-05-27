@@ -15,20 +15,19 @@ import (
 // This does not support multi-threading. Use only from within one go routine.
 type FileLock struct {
 	lock          *flock.Flock
-	log           ui.Logger
 	file          string
 	lockCount     int
 	checkInterval time.Duration
 }
 
-// NewLock creates and locks a new file lock.
-func NewLock(file string, log ui.Logger, checkInterval time.Duration) *FileLock {
-	return &FileLock{log: log, file: file, checkInterval: checkInterval}
+// NewLock creates a new file lock.
+func NewLock(file string, checkInterval time.Duration) *FileLock {
+	return &FileLock{file: file, checkInterval: checkInterval}
 }
 
 // Acquire takes the lock. For every Acquire, Release needs to be called later.
 // Returns immediately if this process already holds the lock.
-func (l *FileLock) Acquire(ctx context.Context) error {
+func (l *FileLock) Acquire(ctx context.Context, log ui.Logger) error {
 	if l.lock == nil {
 		lock := flock.New(l.file)
 		gotLock, err := lock.TryLock()
@@ -36,7 +35,7 @@ func (l *FileLock) Acquire(ctx context.Context) error {
 			return errors.WithStack(err)
 		}
 		if !gotLock {
-			l.log.Warnf("%s", "Waiting for a lock at "+l.file)
+			log.Warnf("%s", "Waiting for a lock at "+l.file)
 			ticker := time.NewTicker(l.checkInterval)
 			defer ticker.Stop()
 			for {
@@ -65,12 +64,12 @@ func (l *FileLock) Acquire(ctx context.Context) error {
 
 // Release releases the lock. If there is an error while releasing,
 // the error is logged
-func (l *FileLock) Release() {
+func (l *FileLock) Release(log ui.Logger) {
 	l.lockCount--
 	if l.lockCount <= 0 {
 		// If the release fails, log an error but allow the execution to continue
 		if err := l.lock.Unlock(); err != nil {
-			l.log.Errorf("%s", err.Error())
+			log.Errorf("%s", err.Error())
 		}
 		l.lock = nil
 	}

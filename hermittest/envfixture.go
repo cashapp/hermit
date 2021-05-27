@@ -54,7 +54,7 @@ func NewEnvTestFixture(t *testing.T, handler http.Handler) *EnvTestFixture {
 	sta, err := state.Open(stateDir, state.Config{
 		Sources: []string{},
 		Builtin: sources.NewBuiltInSource(vfs.InMemoryFS(nil)),
-	}, server.Client(), server.Client(), log)
+	}, server.Client(), server.Client())
 	require.NoError(t, err)
 	env, err := hermit.OpenEnv(log, envDir, sta, envars.Envars{})
 	require.NoError(t, err)
