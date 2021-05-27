@@ -25,10 +25,10 @@ func (p *PackagePredictor) Predict(args complete.Args) []string { // nolint: gol
 	var pkgs []*manifest.Package
 	// if there is an error, just quietly return an empty list
 	if p.env == nil {
-		ps, _ := p.state.Search(p.l, "")
+		ps, _ := p.state.Search(p.l, ".*")
 		pkgs = ps
 	} else {
-		ps, _ := p.env.Search(p.l, "")
+		ps, _ := p.env.Search(p.l, ".*")
 		pkgs = ps
 	}
 

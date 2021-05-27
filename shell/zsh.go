@@ -11,9 +11,10 @@ import (
 const zshShellHooks = commonHooks + `
 precmd_functions+=(change_hermit_env)
 
-if [ ! -z ${_comps+x} ]; then
+# shellcheck disable=SC2154
+if [[ -n ${_comps+x} ]]; then
   autoload -U +X bashcompinit && bashcompinit
-  complete -o nospace -C $HOME/bin/hermit hermit
+  complete -o nospace -C "$HOME/bin/hermit" hermit
 fi
 `
 
