@@ -48,7 +48,7 @@ export ACTIVE_HERMIT=$HERMIT_ENV
 export HERMIT_DEACTIVATION="$(${HERMIT_ENV}/bin/hermit env --deactivate)"
 export HERMIT_BIN_CHANGE=$(date -r ${HERMIT_ENV}/bin +"%s")
 
-if test -n "${PS1+_}"; then export _HERMIT_OLD_PS1="${PS1}"; export PS1="{{ .EnvName }}🐚 ${PS1}"; fi
+if test -n "${PS1+_}"; then export _HERMIT_OLD_PS1="${PS1}"; export PS1="{{if not .ShortPrompt}}{{ .EnvName }}{{end}}🐚 ${PS1}"; fi
 
 update_hermit_env() {
   local CURRENT=$(date -r ${HERMIT_ENV}/bin +"%s")

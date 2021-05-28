@@ -19,11 +19,11 @@ var _ Shell = &Zsh{}
 
 func (sh *Zsh) Name() string { return "zsh" } // nolint: golint
 
-func (sh *Zsh) ActivationScript(w io.Writer, envName, root string) error { // nolint: golint
+func (sh *Zsh) ActivationScript(w io.Writer, config ActivationConfig) error { // nolint: golint
 	err := posixActivationScriptTmpl.Execute(w, &posixActivationContext{
-		Root:    root,
-		EnvName: envName,
-		Shell:   "zsh",
+		EnvName:          filepath.Base(config.Root),
+		ActivationConfig: config,
+		Shell:            "zsh",
 	})
 	return errors.WithStack(err)
 }

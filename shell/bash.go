@@ -23,11 +23,11 @@ var _ Shell = &Bash{}
 
 func (sh *Bash) Name() string { return "bash" } // nolint: golint
 
-func (sh *Bash) ActivationScript(w io.Writer, envName, root string) error { // nolint: golint
+func (sh *Bash) ActivationScript(w io.Writer, config ActivationConfig) error { // nolint: golint
 	err := posixActivationScriptTmpl.Execute(w, &posixActivationContext{
-		Root:    root,
-		EnvName: envName,
-		Shell:   "bash",
+		ActivationConfig: config,
+		EnvName:          filepath.Base(config.Root),
+		Shell:            "bash",
 	})
 	return errors.WithStack(err)
 }
