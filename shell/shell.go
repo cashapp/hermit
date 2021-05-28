@@ -16,6 +16,13 @@ import (
 	"github.com/willdonnelly/passwd"
 )
 
+// ActivationConfig for shells.
+type ActivationConfig struct {
+	Root        string
+	ShortPrompt bool
+	Env         envars.Envars
+}
+
 // Shell abstracts shell specific functionality
 type Shell interface {
 	Name() string
@@ -24,7 +31,7 @@ type Shell interface {
 	// ActivationHooksCode returns the shell fragment for activation/deactivation hooks
 	ActivationHooksCode() (script string, err error)
 	// ActivationScript for this shell.
-	ActivationScript(w io.Writer, envName, root string) error
+	ActivationScript(w io.Writer, config ActivationConfig) error
 	// ApplyEnvars writes the shell fragment required to apply the given envars.
 	//
 	// Envars with empty values should be deleted.
@@ -134,12 +141,11 @@ func (c Changes) Merge(o *Changes) *Changes {
 }
 
 // ActivateHermit prints out the hermit activation script for the given shell.
-func ActivateHermit(w io.Writer, shell Shell, envRoot string, env envars.Envars) error {
-	envName := filepath.Base(envRoot)
-	if err := shell.ApplyEnvars(w, env); err != nil {
+func ActivateHermit(w io.Writer, shell Shell, config ActivationConfig) error {
+	if err := shell.ApplyEnvars(w, config.Env); err != nil {
 		return errors.WithStack(err)
 	}
-	if err := shell.ActivationScript(w, envName, envRoot); err != nil {
+	if err := shell.ActivationScript(w, config); err != nil {
 		return errors.WithStack(err)
 	}
 	return nil

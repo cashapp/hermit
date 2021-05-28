@@ -18,7 +18,7 @@ var (
 
 // Template context for activation script.
 type posixActivationContext struct {
-	Root    string
+	ActivationConfig
 	EnvName string
 	Shell   string
 }

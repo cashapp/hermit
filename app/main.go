@@ -121,7 +121,6 @@ func Main(config Config) {
 		kong.UsageOnError(),
 		kong.Description(help),
 		kong.BindTo(cli, (*cliCommon)(nil)),
-		kong.Bind(p),
 		kong.Vars{
 			"version": config.Version,
 			"env":     envPath,
@@ -143,7 +142,7 @@ func Main(config Config) {
 	}
 
 	if isActivated {
-		env, err = hermit.OpenEnv(p, envPath, sta, cli.getEnv())
+		env, err = hermit.OpenEnv(p, envPath, sta, cli.getGlobalState().Env)
 		if err != nil {
 			log.Fatalf("failed to open environment: %s", err)
 		}
@@ -166,7 +165,7 @@ func Main(config Config) {
 		err = pprof.WriteHeapProfile(f)
 		fatalIfError(p, err)
 	}
-	err = ctx.Run(env, p, sta, config, cli.getEnv())
+	err = ctx.Run(env, p, sta, config, cli.getGlobalState())
 	if err != nil && p.WillLog(ui.LevelDebug) {
 		p.Fatalf("%+v", err)
 	} else {

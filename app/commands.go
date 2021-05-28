@@ -28,6 +28,12 @@ import (
 	"github.com/cashapp/hermit/util/debug"
 )
 
+// GlobalState configurable by user to be passed through to Hermit.
+type GlobalState struct {
+	Env         envars.Envars `help:"Extra environment variables to apply to environments."`
+	ShortPrompt bool          `help:"Use a minimal prompt in active environments."`
+}
+
 type cliCommon interface {
 	getCPUProfile() string
 	getMemProfile() string
@@ -35,7 +41,7 @@ type cliCommon interface {
 	getTrace() bool
 	getQuiet() bool
 	getLevel() ui.Level
-	getEnv() envars.Envars
+	getGlobalState() GlobalState
 }
 
 // CLI structure.
@@ -47,7 +53,7 @@ type unactivated struct {
 	Trace       bool             `help:"Enable trace logging." short:"t"`
 	Quiet       bool             `help:"Disable logging and progress UI, except fatal errors." env:"HERMIT_QUIET" short:"q"`
 	Level       ui.Level         `help:"Set minimum log level." env:"HERMIT_LOG" default:"info" enum:"trace,debug,info,warn,error,fatal"`
-	Env         envars.Envars    `help:"Extra environment variables to apply to environments."`
+	GlobalState
 
 	Init       initCmd       `cmd:"" help:"Initialise an environment (idempotent)." group:"env"`
 	Version    versionCmd    `cmd:"" help:"Show version." group:"global"`
@@ -61,13 +67,13 @@ type unactivated struct {
 	DumpDB   dumpDBCmd   `cmd:"" help:"Dump state database." hidden:""`
 }
 
-func (u *unactivated) getCPUProfile() string { return u.CPUProfile }
-func (u *unactivated) getMemProfile() string { return u.MemProfile }
-func (u *unactivated) getTrace() bool        { return u.Trace }
-func (u *unactivated) getDebug() bool        { return u.Debug }
-func (u *unactivated) getQuiet() bool        { return u.Quiet }
-func (u *unactivated) getLevel() ui.Level    { return u.Level }
-func (u *unactivated) getEnv() envars.Envars { return u.Env }
+func (u *unactivated) getCPUProfile() string       { return u.CPUProfile }
+func (u *unactivated) getMemProfile() string       { return u.MemProfile }
+func (u *unactivated) getTrace() bool              { return u.Trace }
+func (u *unactivated) getDebug() bool              { return u.Debug }
+func (u *unactivated) getQuiet() bool              { return u.Quiet }
+func (u *unactivated) getLevel() ui.Level          { return u.Level }
+func (u *unactivated) getGlobalState() GlobalState { return u.GlobalState }
 
 type activated struct {
 	unactivated
@@ -202,12 +208,12 @@ type activateCmd struct {
 	Dir string `arg:"" help:"Directory of environment to activate (${default})" default:"${env}"`
 }
 
-func (a *activateCmd) Run(l *ui.UI, sta *state.State, ephemeral envars.Envars) error {
+func (a *activateCmd) Run(l *ui.UI, sta *state.State, globalState GlobalState) error {
 	realdir, err := resolveActivationDir(a.Dir)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	env, err := hermit.OpenEnv(l, realdir, sta, ephemeral)
+	env, err := hermit.OpenEnv(l, realdir, sta, globalState.Env)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -234,7 +240,11 @@ func (a *activateCmd) Run(l *ui.UI, sta *state.State, ephemeral envars.Envars) e
 		return errors.WithStack(err)
 	}
 	environ := envars.Parse(os.Environ()).Apply(env.Root(), ops).Changed(true)
-	return shell.ActivateHermit(os.Stdout, sh, env.Root(), environ)
+	return shell.ActivateHermit(os.Stdout, sh, shell.ActivationConfig{
+		Env:         environ,
+		Root:        env.Root(),
+		ShortPrompt: globalState.ShortPrompt,
+	})
 }
 
 // resolveActivationDir converts the directory used at activation to an absolute path
@@ -366,13 +376,13 @@ type execCmd struct {
 	Args   []string `arg:"" help:"Arguments to pass to executable (use -- to separate)." optional:""`
 }
 
-func (e *execCmd) Run(l *ui.UI, sta *state.State, env *hermit.Env, ephemeral envars.Envars) error {
+func (e *execCmd) Run(l *ui.UI, sta *state.State, env *hermit.Env, globalState GlobalState) error {
 	envDir, err := hermit.EnvDirFromProxyLink(e.Binary)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	if env == nil {
-		env, err = hermit.OpenEnv(l, envDir, sta, ephemeral)
+		env, err = hermit.OpenEnv(l, envDir, sta, globalState.Env)
 		if err != nil {
 			return errors.WithStack(err)
 		}
