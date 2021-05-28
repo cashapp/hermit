@@ -3,29 +3,21 @@ title = "Editor / IDE Integration"
 weight = 104
 +++
 
-<!--
 ## JetBrains - IntelliJ, GoLand
 
 {{< hint "warning" >}}
 Due to the way JetBrains IDE plugin APIs are designed, specific support for
-each language has to be built into the plugin. Currently only the JDK and Go
+each language has to be built into the plugin. Currently, only the JDK and Go
 are supported.
 {{< /hint >}}
 
-Add the following URL to your IDE via the
-[Custom Plugin Repositories](https://www.jetbrains.com/help/idea/custom-plugin-repositories.html)
-dialog:
+To install the plugin, search for the "Hermit" plugin from the Plugin Marketplace in the IDE `Preferences > Plugin` view, and install it.
 
-```text
-https://github.com/cashapp/hermit/releases/download/stable/updatePlugins.xml
-```
-
-Then search for the "Hermit" plugin and install it. You will need to restart your IDE.
+When you open a Hermit managed project, a dialog is shown asking if you want to enable the plugin for the project.
+If you select "yes", the plugin is configured for your project.
 
 The plugin will automatically configure Go and Java SDKs to work with the IDE,
 including Run Configurations, tests, and the builtin terminal.
-
--->
 
 ## Terminal-based Editors
 
