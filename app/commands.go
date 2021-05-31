@@ -213,7 +213,7 @@ func (a *activateCmd) Run(l *ui.UI, sta *state.State, globalState GlobalState) e
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	env, err := hermit.OpenEnv(l, realdir, sta, globalState.Env)
+	env, err := hermit.OpenEnv(realdir, sta, globalState.Env)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -284,7 +284,11 @@ func (s *statusCmd) Run(l *ui.UI, env *hermit.Env) error {
 		return errors.WithStack(err)
 	}
 	fmt.Println("Sources:")
-	for _, source := range env.Sources() {
+	sources, err := env.Sources(l)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	for _, source := range sources {
 		fmt.Printf("  %s\n", source)
 	}
 	fmt.Println("Packages:")
@@ -382,7 +386,7 @@ func (e *execCmd) Run(l *ui.UI, sta *state.State, env *hermit.Env, globalState G
 		return errors.WithStack(err)
 	}
 	if env == nil {
-		env, err = hermit.OpenEnv(l, envDir, sta, globalState.Env)
+		env, err = hermit.OpenEnv(envDir, sta, globalState.Env)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -557,13 +561,12 @@ type searchCmd struct {
 }
 
 func (s *searchCmd) Run(l *ui.UI, env *hermit.Env) error {
-	b := l.Task("search")
 	err := env.Sync(l, false)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	pkgs, err := env.Search(b, s.Constraint)
+	pkgs, err := env.Search(l, s.Constraint)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -781,7 +784,7 @@ func (g *validateCmd) Run(l *ui.UI, env *hermit.Env, sta *state.State) error {
 		merrors manifest.ManifestErrors
 	)
 	if env != nil && g.Source == "" {
-		merrors, err = env.ValidateManifests()
+		merrors, err = env.ValidateManifests(l)
 		if err != nil {
 			return errors.WithStack(err)
 		}

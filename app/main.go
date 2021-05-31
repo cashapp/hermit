@@ -138,7 +138,7 @@ func Main(config Config) {
 	}
 
 	if isActivated {
-		env, err = hermit.OpenEnv(p, envPath, sta, cli.getGlobalState().Env)
+		env, err = hermit.OpenEnv(envPath, sta, cli.getGlobalState().Env)
 		if err != nil {
 			log.Fatalf("failed to open environment: %s", err)
 		}
