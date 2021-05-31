@@ -117,7 +117,7 @@ func (i *initCmd) Run(w *ui.UI, config Config) error {
 }
 
 type infoCmd struct {
-	Packages []string `arg:"" required:"" help:"Packages to retrieve information for"`
+	Packages []string `arg:"" required:"" help:"Packages to retrieve information for" predictor:"package"`
 	JSON     bool     `help:"Format information as a JSON array" default:"false"`
 }
 
@@ -213,7 +213,7 @@ func (a *activateCmd) Run(l *ui.UI, sta *state.State, globalState GlobalState) e
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	env, err := hermit.OpenEnv(l, realdir, sta, globalState.Env)
+	env, err := hermit.OpenEnv(realdir, sta, globalState.Env)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -284,7 +284,11 @@ func (s *statusCmd) Run(l *ui.UI, env *hermit.Env) error {
 		return errors.WithStack(err)
 	}
 	fmt.Println("Sources:")
-	for _, source := range env.Sources() {
+	sources, err := env.Sources(l)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	for _, source := range sources {
 		fmt.Printf("  %s\n", source)
 	}
 	fmt.Println("Packages:")
@@ -382,7 +386,7 @@ func (e *execCmd) Run(l *ui.UI, sta *state.State, env *hermit.Env, globalState G
 		return errors.WithStack(err)
 	}
 	if env == nil {
-		env, err = hermit.OpenEnv(l, envDir, sta, globalState.Env)
+		env, err = hermit.OpenEnv(envDir, sta, globalState.Env)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -557,13 +561,12 @@ type searchCmd struct {
 }
 
 func (s *searchCmd) Run(l *ui.UI, env *hermit.Env) error {
-	b := l.Task("search")
 	err := env.Sync(l, false)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	pkgs, err := env.Search(b, s.Constraint)
+	pkgs, err := env.Search(l, s.Constraint)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -597,7 +600,7 @@ func (cmd *listCmd) Run(l *ui.UI, env *hermit.Env) error {
 }
 
 type uninstallCmd struct {
-	Packages []string `arg:"" help:"Packages to uninstall from this environment."`
+	Packages []string `arg:"" help:"Packages to uninstall from this environment." predictor:"installed-package"`
 }
 
 func (u *uninstallCmd) Run(l *ui.UI, env *hermit.Env) error {
@@ -633,7 +636,7 @@ next:
 }
 
 type installCmd struct {
-	Packages []string `arg:"" optional:"" name:"package" help:"Packages to install (<name>[-<version>]). Version can be a glob to find the latest version with."`
+	Packages []string `arg:"" optional:"" name:"package" help:"Packages to install (<name>[-<version>]). Version can be a glob to find the latest version with." predictor:"package"`
 }
 
 func (i *installCmd) Help() string {
@@ -731,7 +734,7 @@ func (g *gcCmd) Run(l *ui.UI, env *hermit.Env) error {
 }
 
 type upgradeCmd struct {
-	Packages []string `arg:"" optional:"" name:"package" help:"Packages to upgrade. If omitted, upgrades all installed packages."`
+	Packages []string `arg:"" optional:"" name:"package" help:"Packages to upgrade. If omitted, upgrades all installed packages."  predictor:"installed-package"`
 }
 
 func (g *upgradeCmd) Run(l *ui.UI, env *hermit.Env) error {
@@ -781,7 +784,7 @@ func (g *validateCmd) Run(l *ui.UI, env *hermit.Env, sta *state.State) error {
 		merrors manifest.ManifestErrors
 	)
 	if env != nil && g.Source == "" {
-		merrors, err = env.ValidateManifests()
+		merrors, err = env.ValidateManifests(l)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -790,7 +793,7 @@ func (g *validateCmd) Run(l *ui.UI, env *hermit.Env, sta *state.State) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		resolver, err := manifest.New(l, srcs, manifest.Config{
+		resolver, err := manifest.New(srcs, manifest.Config{
 			State: sta.Root(),
 			OS:    runtime.GOOS,
 			Arch:  runtime.GOARCH,

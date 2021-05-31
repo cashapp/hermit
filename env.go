@@ -84,10 +84,12 @@ type Env struct {
 	state           *state.State
 	binDir          string // Path to bin directory for the environment.
 	ephemeralEnvars envars.Ops
-	resolver        *manifest.Resolver
 	config          *Config
 	configFile      string
-	sources         *sources.Sources
+
+	// Lazily initialized fields
+	lazyResolver *manifest.Resolver
+	lazySources  *sources.Sources
 }
 
 // Init a new Env.
@@ -203,27 +205,12 @@ func readConfig(configFile string) (*Config, error) {
 // OpenEnv opens a Hermit environment.
 //
 // The environment may not exist, in which case this will succeed but subsequent operations will fail.
-func OpenEnv(l *ui.UI, envDir string, state *state.State, ephemeral envars.Envars) (*Env, error) {
+func OpenEnv(envDir string, state *state.State, ephemeral envars.Envars) (*Env, error) {
 	binDir := filepath.Join(envDir, "bin")
 	configFile := filepath.Join(binDir, "hermit.hcl")
 	config, err := readConfig(configFile)
 	if err != nil {
 		return nil, errors.Wrap(err, configFile)
-	}
-
-	sources, err := getSources(l, envDir, config, state, state.Config().Sources)
-	if err != nil {
-		return nil, errors.Wrap(err, configFile)
-	}
-
-	resolver, err := manifest.New(l, sources, manifest.Config{
-		Env:   envDir,
-		State: state.Root(),
-		OS:    runtime.GOOS,
-		Arch:  runtime.GOARCH,
-	})
-	if err != nil {
-		return nil, errors.WithStack(err)
 	}
 
 	useGit := config.ManageGit && isEnvAGitRepo(envDir)
@@ -236,8 +223,6 @@ func OpenEnv(l *ui.UI, envDir string, state *state.State, ephemeral envars.Envar
 		state:           state,
 		binDir:          binDir,
 		configFile:      configFile,
-		resolver:        resolver,
-		sources:         sources,
 		ephemeralEnvars: envars.Infer(ephemeral.System()),
 	}
 	return e, nil
@@ -265,11 +250,15 @@ func (e *Env) Trigger(l *ui.UI, event manifest.Event) (messages []string, err er
 }
 
 // ValidateManifests from all sources.
-func (e *Env) ValidateManifests() (manifest.ManifestErrors, error) {
-	if err := e.resolver.LoadAll(); err != nil {
+func (e *Env) ValidateManifests(l *ui.UI) (manifest.ManifestErrors, error) {
+	resolver, err := e.resolver(l)
+	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return e.resolver.Errors(), nil
+	if err := resolver.LoadAll(); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return resolver.Errors(), nil
 }
 
 // GC can be used to clean up unused packages, and clear the download cache.
@@ -553,7 +542,11 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 
 // Resolve package reference.
 func (e *Env) Resolve(l *ui.UI, selector manifest.Selector) (*manifest.Package, error) {
-	resolved, err := e.resolver.Resolve(l, selector)
+	resolver, err := e.resolver(l)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	resolved, err := resolver.Resolve(l, selector)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -563,8 +556,12 @@ func (e *Env) Resolve(l *ui.UI, selector manifest.Selector) (*manifest.Package, 
 }
 
 // ResolveVirtual references to concrete packages.
-func (e *Env) ResolveVirtual(name string) ([]*manifest.Package, error) {
-	resolved, err := e.resolver.ResolveVirtual(name)
+func (e *Env) ResolveVirtual(l *ui.UI, name string) ([]*manifest.Package, error) {
+	resolver, err := e.resolver(l)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	resolved, err := resolver.ResolveVirtual(name)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -708,8 +705,12 @@ func (e *Env) Clean(l *ui.UI, level CleanMask) error {
 }
 
 // Search for packages using the given regular expression.
-func (e *Env) Search(l *ui.Task, pattern string) (manifest.Packages, error) {
-	pkgs, err := e.resolver.Search(l, pattern)
+func (e *Env) Search(l *ui.UI, pattern string) (manifest.Packages, error) {
+	resolver, err := e.resolver(l)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	pkgs, err := resolver.Search(l, pattern)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -735,7 +736,11 @@ func (e *Env) EnsureChannelIsUpToDate(l *ui.UI, pkg *manifest.Package) error {
 
 // AddSource adds a new source bundle and refreshes the packages from it
 func (e *Env) AddSource(l *ui.UI, s sources.Source) error {
-	e.sources.Add(s)
+	sources, err := e.sources(l)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	sources.Add(s)
 	return e.Sync(l, true)
 }
 
@@ -761,8 +766,12 @@ func (e *Env) upgradeChannel(task *ui.Task, pkg *manifest.Package) error {
 // upgradeVersion upgrades the package to its latest version.
 // If the package is already at its latest version, this is a no-op.
 func (e *Env) upgradeVersion(l *ui.UI, pkg *manifest.Package) (*shell.Changes, error) {
+	resolver, err := e.resolver(l)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
 	// Get the latest version of the package
-	resolved, err := e.resolver.Resolve(l, manifest.PrefixSelector(pkg.Reference.Major()))
+	resolved, err := resolver.Resolve(l, manifest.PrefixSelector(pkg.Reference.Major()))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -915,12 +924,20 @@ func (e *Env) linkApp(app string) error {
 
 // Sync sources.
 func (e *Env) Sync(l *ui.UI, force bool) error {
-	return errors.WithStack(e.resolver.Sync(l, force))
+	resolver, err := e.resolver(l)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	return errors.WithStack(resolver.Sync(l, force))
 }
 
 // Sources enabled in this environment.
-func (e *Env) Sources() []string {
-	return e.sources.Sources()
+func (e *Env) Sources(l *ui.UI) ([]string, error) {
+	sources, err := e.sources(l)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return sources.Sources(), nil
 }
 
 // ResolveWithDeps collect packages and their dependencies based on the given manifest.Selector into a map
@@ -937,7 +954,7 @@ func (e *Env) ResolveWithDeps(l *ui.UI, installed manifest.Packages, selector ma
 	out[pkg.Reference.String()] = pkg
 	for _, req := range pkg.Requires {
 		// First search from virtual providers
-		ref, err := e.resolveVirtual(req)
+		ref, err := e.resolveVirtual(l, req)
 		if err != nil && errors.Is(err, manifest.ErrUnknownPackage) {
 			// Secondly seartch by the package name
 			return e.ResolveWithDeps(l, installed, manifest.NameSelector(req), out)
@@ -953,8 +970,8 @@ func (e *Env) ResolveWithDeps(l *ui.UI, installed manifest.Packages, selector ma
 	return nil
 }
 
-func (e *Env) resolveVirtual(name string) (manifest.Reference, error) {
-	virtual, err := e.ResolveVirtual(name)
+func (e *Env) resolveVirtual(l *ui.UI, name string) (manifest.Reference, error) {
+	virtual, err := e.ResolveVirtual(l, name)
 	if err != nil {
 		return manifest.Reference{}, errors.WithStack(err)
 	}
@@ -998,4 +1015,37 @@ func writeFileToEnvBin(l *ui.Task, useGit bool, src, envDir string, vars map[str
 		}
 	}
 	return nil
+}
+
+func (e *Env) sources(l *ui.UI) (*sources.Sources, error) {
+	if e.lazySources != nil {
+		return e.lazySources, nil
+	}
+	sources, err := getSources(l, e.envDir, e.config, e.state, e.state.Config().Sources)
+	if err != nil {
+		return nil, errors.Wrap(err, e.configFile)
+	}
+	e.lazySources = sources
+	return sources, nil
+}
+
+func (e *Env) resolver(l *ui.UI) (*manifest.Resolver, error) {
+	if e.lazyResolver != nil {
+		return e.lazyResolver, nil
+	}
+	sources, err := e.sources(l)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	resolver, err := manifest.New(sources, manifest.Config{
+		Env:   e.envDir,
+		State: e.state.Root(),
+		OS:    runtime.GOOS,
+		Arch:  runtime.GOARCH,
+	})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	e.lazyResolver = resolver
+	return resolver, nil
 }

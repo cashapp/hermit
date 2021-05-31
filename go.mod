@@ -22,6 +22,7 @@ require (
 	github.com/mitchellh/go-ps v1.0.0
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/pkg/errors v0.9.1
+	github.com/posener/complete v1.2.3 // indirect
 	github.com/qdm12/reprint v0.0.0-20200326205758-722754a53494
 	github.com/saracen/go7z v0.0.0-20191010121135-9c09b6bd7fda
 	github.com/saracen/go7z-fixtures v0.0.0-20190623165746-aa6b8fba1d2f // indirect
@@ -29,6 +30,7 @@ require (
 	github.com/sassoftware/go-rpmutils v0.1.2-0.20210127001923-e5cf0f808585
 	github.com/stretchr/testify v1.7.0
 	github.com/ulikunitz/xz v0.5.10 // indirect
+	github.com/willabides/kongplete v0.2.0 // indirect
 	github.com/willdonnelly/passwd v0.0.0-20141013001024-7935dab3074c
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
 	go.etcd.io/bbolt v1.3.5

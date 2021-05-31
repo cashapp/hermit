@@ -175,13 +175,12 @@ func (p *Package) DeprecationWarningf(format string, args ...interface{}) {
 // Resolver of packages.
 type Resolver struct {
 	config  Config
-	logger  ui.Logger
 	sources *sources.Sources
 	loader  *Loader
 }
 
 // New constructs a new package loader.
-func New(l ui.Logger, sources *sources.Sources, config Config) (*Resolver, error) {
+func New(sources *sources.Sources, config Config) (*Resolver, error) {
 	if config.OS == "" {
 		config.OS = runtime.GOOS
 	}
@@ -190,9 +189,8 @@ func New(l ui.Logger, sources *sources.Sources, config Config) (*Resolver, error
 	}
 	return &Resolver{
 		config:  config,
-		logger:  l,
 		sources: sources,
-		loader:  NewLoader(l, sources),
+		loader:  NewLoader(sources),
 	}, nil
 }
 
@@ -212,12 +210,12 @@ func (r *Resolver) Sync(l *ui.UI, force bool) error {
 	if err := r.sources.Sync(l, force); err != nil {
 		return errors.WithStack(err)
 	}
-	r.loader = NewLoader(r.logger, r.sources)
+	r.loader = NewLoader(r.sources)
 	return nil
 }
 
 // Search for packages using the given regular expression.
-func (r *Resolver) Search(l *ui.Task, pattern string) (Packages, error) {
+func (r *Resolver) Search(l ui.Logger, pattern string) (Packages, error) {
 	re, err := regexp.Compile("(?i)^(" + pattern + ")$")
 	if err != nil {
 		return nil, errors.WithStack(err)

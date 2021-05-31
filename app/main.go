@@ -2,6 +2,7 @@ package app
 
 import (
 	"bufio"
+	"github.com/willabides/kongplete"
 	"log"
 	"net"
 	"net/http"
@@ -12,12 +13,11 @@ import (
 
 	"github.com/alecthomas/kong"
 	konghcl "github.com/alecthomas/kong-hcl"
-	"github.com/mattn/go-isatty"
-
 	"github.com/cashapp/hermit"
 	"github.com/cashapp/hermit/state"
 	"github.com/cashapp/hermit/ui"
 	"github.com/cashapp/hermit/util/debug"
+	"github.com/mattn/go-isatty"
 )
 
 const help = `🐚 Hermit is a hermetic binary package manager.`
@@ -131,22 +131,29 @@ func Main(config Config) {
 	if err != nil {
 		log.Fatalf("failed to initialise CLI: %s", err)
 	}
-	ctx, err := parser.Parse(os.Args[1:])
-	parser.FatalIfErrorf(err)
 
-	configureLogging(cli, ctx.Command(), p)
-
-	sta, err = openState(p, config.State, config.HTTP)
+	sta, err = openState(config.State, config.HTTP)
 	if err != nil {
 		log.Fatalf("failed to open state: %s", err)
 	}
 
 	if isActivated {
-		env, err = hermit.OpenEnv(p, envPath, sta, cli.getGlobalState().Env)
+		env, err = hermit.OpenEnv(envPath, sta, cli.getGlobalState().Env)
 		if err != nil {
 			log.Fatalf("failed to open environment: %s", err)
 		}
 	}
+
+	packagePredictor := hermit.NewPackagePredictor(sta, env, p)
+	installedPredictor := hermit.NewInstalledPackagePredictor(env, p)
+	kongplete.Complete(parser,
+		kongplete.WithPredictor("package", packagePredictor),
+		kongplete.WithPredictor("installed-package", installedPredictor),
+	)
+
+	ctx, err := parser.Parse(os.Args[1:])
+	parser.FatalIfErrorf(err)
+	configureLogging(cli, ctx.Command(), p)
 
 	if pprofPath := cli.getCPUProfile(); pprofPath != "" {
 		f, err := os.Create(pprofPath)
@@ -173,7 +180,7 @@ func Main(config Config) {
 	}
 }
 
-func openState(p *ui.UI, config state.Config, newHTTPClient func(HTTPTransportConfig) *http.Client) (*state.State, error) {
+func openState(config state.Config, newHTTPClient func(HTTPTransportConfig) *http.Client) (*state.State, error) {
 	client := newHTTPClient(HTTPTransportConfig{})
 	fastFailClient := newHTTPClient(HTTPTransportConfig{
 		ResponseHeaderTimeout: time.Second * 5,
@@ -184,7 +191,7 @@ func openState(p *ui.UI, config state.Config, newHTTPClient func(HTTPTransportCo
 		client.Timeout = time.Millisecond
 		fastFailClient.Timeout = time.Millisecond
 	}
-	return state.Open(hermit.UserStateDir, config, client, fastFailClient, p)
+	return state.Open(hermit.UserStateDir, config, client, fastFailClient)
 }
 
 func configureLogging(cli cliCommon, cmd string, p *ui.UI) {

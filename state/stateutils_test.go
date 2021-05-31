@@ -59,7 +59,7 @@ func (f *StateTestFixture) State() *state.State {
 	f.roots[root] = true
 	sta, err := state.Open(root, state.Config{
 		Builtin: sources.NewBuiltInSource(vfs.InMemoryFS(nil)),
-	}, f.Server.Client(), f.Server.Client(), f.ui)
+	}, f.Server.Client(), f.Server.Client())
 	require.NoError(f.t, err)
 	return sta
 }

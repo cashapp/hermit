@@ -42,15 +42,13 @@ func (merrors ManifestErrors) LogErrors(l ui.Logger) {
 // Loader of manifests.
 type Loader struct {
 	lock    sync.Mutex
-	logger  ui.Logger
 	sources *sources.Sources
 	files   map[string]*AnnotatedManifest
 }
 
 // NewLoader constructs a new Loader.
-func NewLoader(logger ui.Logger, sources *sources.Sources) *Loader {
+func NewLoader(sources *sources.Sources) *Loader {
 	return &Loader{
-		logger:  logger,
 		sources: sources,
 		files:   map[string]*AnnotatedManifest{},
 	}

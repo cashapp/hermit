@@ -14,6 +14,8 @@ if test -n "${PROMPT_COMMAND+_}"; then
 else
   export PROMPT_COMMAND="change_hermit_env"
 fi
+
+complete -o nospace -C "$HOME/bin/hermit" hermit
 `
 
 // Bash represent the Bash shell
