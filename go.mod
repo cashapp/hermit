@@ -17,7 +17,6 @@ require (
 	github.com/gobwas/glob v0.2.3
 	github.com/gofrs/flock v0.8.0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
-	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.12
 	github.com/mitchellh/go-ps v1.0.0
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
@@ -36,9 +35,10 @@ require (
 	go.etcd.io/bbolt v1.3.5
 	go.uber.org/multierr v1.7.0
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
-	golang.org/x/net v0.0.0-20210916014120-12bc252f5db8
-	golang.org/x/sys v0.0.0-20210423082822-04245dca01da
+	golang.org/x/net v0.0.0-20200421231249-e086a090c8fd
+	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e
+	golang.org/x/text v0.3.2 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	howett.net/plist v0.0.0-20200419221736-3b63eb3a43b5
-	mvdan.cc/sh v2.6.4+incompatible
+	mvdan.cc/sh/v3 v3.3.0
 )

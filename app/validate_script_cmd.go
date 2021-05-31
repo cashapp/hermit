@@ -11,7 +11,7 @@ import (
 	"github.com/cashapp/hermit"
 	"github.com/cashapp/hermit/ui"
 	"github.com/pkg/errors"
-	"mvdan.cc/sh/syntax"
+	"mvdan.cc/sh/v3/syntax"
 )
 
 var (
