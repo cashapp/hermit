@@ -8,6 +8,8 @@ Hermit installs tools for software projects in self-contained, isolated sets, so
 
 See https://cashapp.github.io/hermit for full documentation.
 
+![hermit intro screen cast](docs/static/screencasts/using.svg)
+
 ---
 
 Copyright 2021 Square, Inc.
