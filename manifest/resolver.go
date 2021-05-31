@@ -216,7 +216,7 @@ func (r *Resolver) Sync(l *ui.UI, force bool) error {
 
 // Search for packages using the given regular expression.
 func (r *Resolver) Search(l ui.Logger, pattern string) (Packages, error) {
-	re, err := regexp.Compile("(?i)^(" + pattern + ")$")
+	re, err := regexp.Compile("(?i)" + pattern + "")
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
