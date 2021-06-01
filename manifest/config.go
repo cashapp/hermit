@@ -85,7 +85,7 @@ func (c *Layer) match(arch string) bool {
 
 // VersionBlock is a Layer block specifying an installable version of a package.
 type VersionBlock struct {
-	Version string `hcl:"version,label" help:"Version of package."`
+	Version []string `hcl:"version,label" help:"Version(s) of package."`
 	Layer
 }
 
@@ -105,7 +105,7 @@ func (c *ChannelBlock) layersWithReferences(os string, arch string, m *Manifest)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		result := m.HighestMatch(g)
+		result, _ := m.HighestMatch(g)
 		if result != nil {
 			return append(result.layers(os, arch), layer...), nil
 		}
@@ -131,10 +131,13 @@ func (m *Manifest) layers(ref Reference, os string, arch string) (layers, error)
 
 	for _, v := range m.Versions {
 		l := v.layers(os, arch)
-		versionLayers[v.Version] = l
-		if v.Version == ref.Version.String() {
-			return append(m.Layer.layers(os, arch), l...), nil
+		for _, version := range v.Version {
+			versionLayers[version] = l
+			if version == ref.Version.String() {
+				return append(m.Layer.layers(os, arch), l...), nil
+			}
 		}
+
 	}
 	for _, ch := range m.Channels {
 		if ch.Name == ref.Channel {

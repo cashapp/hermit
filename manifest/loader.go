@@ -10,10 +10,11 @@ import (
 	"time"
 
 	"github.com/alecthomas/hcl"
-	"github.com/cashapp/hermit/sources"
-	"github.com/cashapp/hermit/ui"
 	"github.com/gobwas/glob"
 	"github.com/pkg/errors"
+
+	"github.com/cashapp/hermit/sources"
+	"github.com/cashapp/hermit/ui"
 )
 
 // AnnotatedManifest includes extra metadata not included in the manifest itself.
@@ -166,13 +167,13 @@ func load(bundle fs.FS, name, filename string) *AnnotatedManifest {
 
 // Synthesise a "stable" channel and a channel for each major version.
 func synthesise(manifest *AnnotatedManifest) {
-	highest := manifest.HighestMatch(glob.MustCompile("*"))
+	highest, version := manifest.HighestMatch(glob.MustCompile("*"))
 	if highest != nil && manifest.ChannelByName("latest") == nil {
-		version := ParseVersion(highest.Version).Major().String() + ".*"
+		vstr := version.Major().String() + ".*"
 		manifest.Channels = append(manifest.Channels, ChannelBlock{
 			Name:    "latest",
 			Update:  time.Hour * 24,
-			Version: version,
+			Version: vstr,
 		})
 	}
 
@@ -181,11 +182,13 @@ func synthesise(manifest *AnnotatedManifest) {
 	// Order the stable versions
 	var versions Versions
 	for _, block := range manifest.Versions {
-		version := ParseVersion(block.Version)
-		if version.Prerelease() != "" {
-			continue
+		for _, vstr := range block.Version {
+			blockVersion := ParseVersion(vstr)
+			if blockVersion.Prerelease() != "" {
+				continue
+			}
+			versions = append(versions, blockVersion)
 		}
-		versions = append(versions, version)
 	}
 	if len(versions) == 0 {
 		return
