@@ -12,8 +12,8 @@ Used by: [on](../on#blocks)
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
-| `args` | `[string]?` | The arguments to the binary |
-| `cmd` | `string` | The command to execute |
-| `dir` | `string?` | The directory where the command is run in. Defaults to the root directory. |
-| `env` | `[string]?` | The environment variables for the execution |
-| `stdin` | `string?` | Optional string to be used as the stdin for the command |
+| `args` | `[string]?` | The arguments to the binary. |
+| `cmd` | `string` | The command to execute, split by shellquote. |
+| `dir` | `string?` | The directory where the command is run. Defaults to the ${root} directory. |
+| `env` | `[string]?` | The environment variables for the execution. |
+| `stdin` | `string?` | Optional string to be used as the stdin for the command. |

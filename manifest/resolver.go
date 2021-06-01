@@ -230,14 +230,16 @@ func (r *Resolver) Search(l ui.Logger, pattern string) (Packages, error) {
 			continue
 		}
 		for _, version := range manifest.Versions {
-			ref := Reference{manifest.Name, ParseVersion(version.Version), ""}
-			// If the reference doesn't resolve, discard it.
-			pkg, err := newPackage(manifest, r.config, ExactSelector(ref))
-			if err != nil {
-				l.Warnf("invalid manifest reference %s in %s.hcl: %s", ref, manifest.Name, err)
-				continue
+			for _, vstr := range version.Version {
+				ref := Reference{Name: manifest.Name, Version: ParseVersion(vstr)}
+				// If the reference doesn't resolve, discard it.
+				pkg, err := newPackage(manifest, r.config, ExactSelector(ref))
+				if err != nil {
+					l.Warnf("invalid manifest reference %s in %s.hcl: %s", ref, manifest.Name, err)
+					continue
+				}
+				pkgs = append(pkgs, pkg)
 			}
-			pkgs = append(pkgs, pkg)
 		}
 		for _, channel := range manifest.Channels {
 			name := filepath.Base(strings.TrimSuffix(manifest.Path, ".hcl"))
@@ -304,10 +306,12 @@ func (r *Resolver) Resolve(l *ui.UI, selector Selector) (pkg *Package, err error
 
 func matchVersion(manifest *AnnotatedManifest, selector Selector) (collected References, selected Reference) {
 	for _, v := range manifest.Versions {
-		candidate := Reference{Name: selector.Name(), Version: ParseVersion(v.Version)}
-		collected = append(collected, candidate)
-		if selector.Matches(candidate) && (!selected.IsSet() || selected.Less(candidate)) {
-			selected = candidate
+		for _, vstr := range v.Version {
+			candidate := Reference{Name: selector.Name(), Version: ParseVersion(vstr)}
+			collected = append(collected, candidate)
+			if selector.Matches(candidate) && (!selected.IsSet() || selected.Less(candidate)) {
+				selected = candidate
+			}
 		}
 	}
 	return
@@ -393,8 +397,11 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 			if err != nil {
 				return nil, errors.WithStack(err)
 			}
-			highest := manifest.HighestMatch(g).Version
-			found.Version = ParseVersion(highest)
+			_, version := manifest.HighestMatch(g)
+			if version == nil {
+				return nil, errors.Errorf("no matching version found for channel %s", found)
+			}
+			found.Version = *version
 		}
 	}
 
@@ -651,9 +658,11 @@ func (m *Manifest) validate() []error {
 			}
 			found := false
 			for _, v := range versions {
-				if g.Match(ParseVersion(v.Version).String()) {
-					found = true
-					break
+				for _, version := range v.Version {
+					if g.Match(ParseVersion(version).String()) {
+						found = true
+						break
+					}
 				}
 			}
 			if !found {
@@ -666,19 +675,19 @@ func (m *Manifest) validate() []error {
 }
 
 // HighestMatch returns the VersionBlock with highest version number matching the given Glob
-func (m *Manifest) HighestMatch(to glob.Glob) *VersionBlock {
+func (m *Manifest) HighestMatch(to glob.Glob) (result *VersionBlock, highest *Version) {
 	versions := m.Versions
-	var result *VersionBlock
-	var highest *Version
 	for _, v := range versions {
-		version := v
-		parsed := ParseVersion(v.Version)
-		if to.Match(v.Version) && (highest == nil || highest.Less(parsed)) {
-			highest = &parsed
-			result = &version
+		block := v
+		for _, vstr := range v.Version {
+			parsed := ParseVersion(vstr)
+			if to.Match(vstr) && (highest == nil || highest.Less(parsed)) {
+				highest = &parsed
+				result = &block
+			}
 		}
 	}
-	return result
+	return
 }
 
 // ChannelByName returns the channel with the given name, or nil if not found

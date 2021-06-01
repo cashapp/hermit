@@ -23,6 +23,34 @@ func TestManifest(t *testing.T) {
 		expected *Package
 		fail     string
 	}{
+		{name: "MultiVersionBlockSelectFirst",
+			manifest: `
+				description = "Go"
+				binaries = ["bin/go"]
+				source = "https://golang.org/dl/go${version}.${os}-${arch}.tar.gz"
+				version "1.13.5" "1.14.4" {}
+		`,
+			pkg: `go-1.13.5`,
+			expected: &Package{
+				Binaries:  []string{"bin/go"},
+				Reference: ParseReference("go-1.13.5"),
+				Source:    "https://golang.org/dl/go1.13.5.darwin-amd64.tar.gz",
+			},
+		},
+		{name: "MultiVersionBlockSelectSecond",
+			manifest: `
+				description = "Go"
+				binaries = ["bin/go"]
+				source = "https://golang.org/dl/go${version}.${os}-${arch}.tar.gz"
+				version "1.13.5" "1.14.4" {}
+		`,
+			pkg: `go-1.14.4`,
+			expected: &Package{
+				Binaries:  []string{"bin/go"},
+				Reference: ParseReference("go-1.14.4"),
+				Source:    "https://golang.org/dl/go1.14.4.darwin-amd64.tar.gz",
+			},
+		},
 		{name: "Go",
 			manifest: `
 				description = "Go"
@@ -191,7 +219,7 @@ func TestManifest(t *testing.T) {
 					test.expected.Rename = map[string]string{}
 				}
 				if !test.expected.Reference.IsFullyQualified() {
-					test.expected.Reference = ParseReference("go-1.14.4")
+					test.expected.Reference = ParseReference(test.pkg)
 				}
 				if test.expected.Root == "" {
 					test.expected.Root = "/tmp/hermit/" + test.expected.Reference.String()
@@ -215,10 +243,11 @@ func TestManifest(t *testing.T) {
 				require.EqualError(t, err, test.fail)
 			} else {
 				require.NoError(t, err)
-				test.expected.Root = "/tmp/hermit/pkg/go-1.14.4"
-				test.expected.Dest = "/tmp/hermit/pkg/go-1.14.4"
+				test.expected.Root = "/tmp/hermit/pkg/" + test.pkg
+				test.expected.Dest = "/tmp/hermit/pkg/" + test.pkg
 				pkg.FS = nil
-				require.Equal(t, repr.String(test.expected, repr.Indent("  ")),
+				require.Equal(t,
+					repr.String(test.expected, repr.Indent("  ")),
 					repr.String(pkg, repr.Indent("  ")))
 			}
 		})
