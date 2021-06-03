@@ -2,6 +2,7 @@ package app
 
 import (
 	"bufio"
+	"github.com/posener/complete"
 	"github.com/willabides/kongplete"
 	"log"
 	"net"
@@ -149,6 +150,7 @@ func Main(config Config) {
 	kongplete.Complete(parser,
 		kongplete.WithPredictor("package", packagePredictor),
 		kongplete.WithPredictor("installed-package", installedPredictor),
+		kongplete.WithPredictor("dir", complete.PredictDirs("*")),
 	)
 
 	ctx, err := parser.Parse(os.Args[1:])

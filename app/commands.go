@@ -106,7 +106,7 @@ func (v *versionCmd) Run(kctx kong.Vars) error {
 type initCmd struct {
 	NoGit   bool     `help:"Disable Hermit's automatic management of Git'"`
 	Sources []string `help:"Sources to sync package manifests from."`
-	Dir     string   `arg:"" help:"Directory to create environment in (${default})." default:"${env}"`
+	Dir     string   `arg:"" help:"Directory to create environment in (${default})." default:"${env}" predictor:"dir"`
 }
 
 func (i *initCmd) Run(w *ui.UI, config Config) error {
