@@ -16,7 +16,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Init Hermit
-        run: ./bin/hermit env >> $GITHUB_ENV
+        run: ./bin/hermit env -r >> $GITHUB_ENV
       - name: Test
         run: go test ./...
   lint:
@@ -26,7 +26,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Init Hermit
-        run: ./bin/hermit env >> $GITHUB_ENV
+        run: ./bin/hermit env -r >> $GITHUB_ENV
       - name: Shell check
         run: ./bin/lint-shell-scripts
       - name: Sum type check
