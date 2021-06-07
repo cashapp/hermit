@@ -28,8 +28,8 @@ Here's an example manifest for Rust:
 
 ```hcl
 description = "A language empowering everyone to build reliable and efficient software."
-binaries = ["*/bin/*"]
-strip = 1
+binaries = ["bin/*"]
+strip = 2
 
 darwin {
   source = "https://static.rust-lang.org/dist/rust-${version}-x86_64-apple-darwin.tar.xz"
