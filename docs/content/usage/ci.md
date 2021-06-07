@@ -13,7 +13,7 @@ Using Hermit in GitHub Actions is straightforward. Just add the following step t
 
 ```yaml
       - name: Init Hermit
-        run: ./bin/hermit env >> $GITHUB_ENV
+        run: ./bin/hermit env --raw >> $GITHUB_ENV
 ```
 
 eg.
