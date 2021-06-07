@@ -62,17 +62,20 @@ func TestOpsApplyRevert(t *testing.T) {
 		"GOBIN":  "/go/bin",
 	}
 	ops := Ops{
+		&Set{Name: "NPM_CONFIG_PREFIX", Value: "/node_modules"},
 		&Set{Name: "GOPATH", Value: "/home/larry/go"},
 		&Prepend{Name: "PATH", Value: "/usr/bin"},
 		&Set{Name: "GOPATH", Value: "/home/moe/go"},
 		&Unset{Name: "GOPATH"},
+		&Prepend{Name: "PATH", Value: "${NPM_CONFIG_PREFIX}/bin"},
 		&Prepend{Name: "PATH", Value: "/usr/local/bin"},
 		&Set{Name: "HERMIT_BIN", Value: "${GOBIN}/bin"},
 	}
 	expected := Envars{
 		"GOBIN":                               "/go/bin",
 		"HERMIT_BIN":                          "/go/bin/bin",
-		"PATH":                                "/usr/local/bin:/usr/bin:/bin",
+		"NPM_CONFIG_PREFIX":                   "/node_modules",
+		"PATH":                                "/usr/local/bin:/node_modules/bin:/usr/bin:/bin",
 		"_HERMIT_OLD_GOPATH_A3751075A9D52FD8": "/home/moe/go",
 		"_HERMIT_OLD_GOPATH_D3B9A60664850146": "/go",
 		"_HERMIT_OLD_GOPATH_1B15BBB670152CB3": "/home/larry/go",
@@ -91,4 +94,25 @@ func TestTransform(t *testing.T) {
 	tr.set("PATH", "/usr/bin:${PATH}")
 	require.Equal(t, Envars{"PATH": "/usr/bin:/bin", "GOPATH": "/go/bin"}, tr.Combined())
 	require.Equal(t, Envars{"GOPATH": "/go/bin", "PATH": "/usr/bin:/bin"}, tr.Changed(false))
+}
+
+func TestIssue47(t *testing.T) {
+	original := Envars{
+		"PATH":       "/bin",
+		"HERMIT_ENV": "/home/user/project",
+	}
+	pkg := Envars{
+		"NPM_CONFIG_PREFIX": "${HERMIT_ENV}/.hermit/node",
+		"PATH":              "${HERMIT_ENV}/node_modules/.bin:${NPM_CONFIG_PREFIX}/bin:${PATH}",
+	}
+	ops := Infer(pkg.System())
+	actual := original.Apply("/home/user/project", ops).Combined()
+	expected := Envars{
+		"HERMIT_ENV":        "/home/user/project",
+		"NPM_CONFIG_PREFIX": "/home/user/project/.hermit/node",
+		"PATH":              "/home/user/project/node_modules/.bin:/home/user/project/.hermit/node/bin:/bin",
+	}
+	require.Equal(t, expected, actual)
+	reverted := expected.Revert("/home/user/project", ops).Combined()
+	require.Equal(t, original, reverted)
 }

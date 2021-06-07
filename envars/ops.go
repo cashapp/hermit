@@ -207,7 +207,7 @@ func (e *Set) String() string { return fmt.Sprintf(`%s="%s"`, e.Name, shellquote
 func (e *Set) Envar() string  { return e.Name } // nolint: golint
 func (e *Set) Apply(transform *Transform) { // nolint: golint
 	if value, ok := transform.get(e.Name); ok {
-		old := revertKey(transform, e)
+		old := makeRevertKey(transform, e)
 		if _, keep := transform.get(old); !keep {
 			transform.set(old, value)
 		}
@@ -217,7 +217,7 @@ func (e *Set) Apply(transform *Transform) { // nolint: golint
 }
 func (e *Set) Revert(transform *Transform) { // nolint: golint
 	transform.unset(e.Name)
-	old := revertKey(transform, e) // nolint: ifshort
+	old := makeRevertKey(transform, e) // nolint: ifshort
 	if value, ok := transform.get(old); ok {
 		transform.set(e.Name, value)
 		transform.unset(old)
@@ -235,7 +235,7 @@ func (e *Unset) String() string { return fmt.Sprintf("unset %s", e.Name) }
 func (e *Unset) Envar() string  { return e.Name } // nolint: golint
 func (e *Unset) Apply(transform *Transform) { // nolint: golint
 	if value, ok := transform.get(e.Name); ok {
-		old := revertKey(transform, e)
+		old := makeRevertKey(transform, e)
 		transform.set(old, value)
 	}
 	transform.unset(e.Name)
@@ -243,7 +243,7 @@ func (e *Unset) Apply(transform *Transform) { // nolint: golint
 }
 func (e *Unset) Revert(transform *Transform) { // nolint: golint
 	transform.unset(e.Name)
-	old := revertKey(transform, e) // nolint: ifshort
+	old := makeRevertKey(transform, e) // nolint: ifshort
 	if value, ok := transform.get(old); ok {
 		transform.set(e.Name, value)
 		transform.unset(old)
@@ -275,20 +275,25 @@ func (f *Force) Revert(transform *Transform) { // nolint: golint
 // Split "envar" by ":" and drop "value" from it.
 func splitAndDrop(envar string, value string) []string {
 	parts := strings.Split(envar, ":")
+	values := strings.Split(value, ":")
 	out := make([]string, 0, len(parts))
+skip:
 	for _, elem := range parts {
-		if elem != value {
-			out = append(out, elem)
+		for _, valel := range values {
+			if elem == valel {
+				continue skip
+			}
 		}
+		out = append(out, elem)
 	}
 	return out
 }
 
 var zero = []byte{0}
 
-// Creates a unique and deterministic key from an Op.
+// Creates a unique and deterministic key for storing a revert, from an Op.
 // nolint: errcheck
-func revertKey(transform *Transform, op Op) string {
+func makeRevertKey(transform *Transform, op Op) string {
 	hash := fnv.New64a()
 	hash.Write([]byte(transform.envRoot))
 	hash.Write(zero)

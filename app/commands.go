@@ -464,7 +464,7 @@ func updateHermit(l *ui.UI, env *hermit.Env, pkgRef string) error {
 }
 
 type envCmd struct {
-	Raw        bool   `short:"r" help:"Output raw values without shell quoting." default:"true"`
+	Raw        bool   `short:"r" help:"Output raw values without shell quoting."`
 	Activate   bool   `xor:"envars" help:"Prints the commands needed to set the environment to the activated state"`
 	Deactivate bool   `xor:"envars" help:"Prints the commands needed to reset the environment to the deactivated state"`
 	Inherit    bool   `short:"i" help:"Inherit variables from parent environment."`
