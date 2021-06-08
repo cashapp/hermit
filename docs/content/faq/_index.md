@@ -16,15 +16,25 @@ No, Hermit is deliberately not in the business of installing libraries. Hermit
 is designed to manage development _tools_ only, not be a general purpose
 package manager. Consider [Nix](https://nixos.org) if you need this kind of functionality.
 
-## Could Hermit include Python, Ruby?
+## Does Hermit host its own packages?
 
-Theoretically yes, but there are several limiting factors:
+Yes and no. Mostly no, but some existing upstream binary packages require some
+level of pre-processing (eg. Python). These are hosted at [cashapp/hermit-build](https://github.com/cashapp/hermit-build).
 
-- Python does not provide [relocatable](https://bugs.python.org/issue42514) packages for OSX.
-- Python does not provide self-contained binary packages for Linux at all, deferring this responsibility to OS package managers.
-- Many Python and Ruby packages are wrappers around C libraries. As Hermit
-  does not manage libraries at all, this makes distributing Python/Ruby
-  through Hermit of limited usefulness.
+## Is Python supported?
+
+[Yes!](https://github.com/cashapp/hermit-packages/blob/master/python3.hcl)
+
+Hermit sets [`PYTHONUSERBASE`](https://docs.python.org/3/using/cmdline.html#envvar-PYTHONUSERBASE) to
+`${HERMIT_ENV}/.hermit/python` and adds `${PYTHONUSERBASE}/bin` to the
+`${PATH}` when in an activated environment. This results in packages installed
+within the environment being mostly (completely?) isolated similar to how virtualenv works.
+
+## Is Ruby supported?
+
+Not yet. Hermit only supports static/relocatable binary packages and there are
+no recent Ruby versions compiled in this way. We would love contributions to
+support Ruby.
 
 ## Why Doesn't Hermit Have a Package for ...?
 
