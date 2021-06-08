@@ -5,6 +5,10 @@ weight = 50
 
 As of early 2021 Hermit has support for the following language SDKs.
 
+## [Elm](https://github.com/cashapp/hermit-packages/blob/master/elm.hcl)
+
+Elm is distributed as a single binary, so everything works as you would expect!
+
 ## [Flutter (Dart)](https://github.com/cashapp/hermit-packages/blob/master/flutter.hcl)
 
 Flutter is available, though not well tested.
