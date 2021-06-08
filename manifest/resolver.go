@@ -105,32 +105,10 @@ func (p *Package) String() string {
 func (p *Package) Trigger(l ui.Logger, event Event) (messages []string, err error) {
 	for _, action := range p.Triggers[event] {
 		l.Debugf("%s", action)
-		switch action := action.(type) {
-		case *RunAction:
-			if err := p.triggerRun(action); err != nil {
-				return nil, errors.Wrapf(err, "%s: on %s", p, event)
-			}
-
-		case *CopyAction:
-			if err := p.triggerCopy(action); err != nil {
-				return nil, errors.Wrapf(err, "%s: on %s", p, event)
-			}
-
-		case *ChmodAction:
-			if err := p.triggerChmod(action); err != nil {
-				return nil, errors.Wrapf(err, "%s: on %s", p, event)
-			}
-
-		case *RenameAction:
-			if err := p.triggerRename(action); err != nil {
-				return nil, errors.Wrapf(err, "%s: on %s", p, event)
-			}
-
-		case *MessageAction:
-			messages = append(messages, action.Text)
-
-		default:
-			panic("??")
+		if msg, ok := action.(*MessageAction); ok {
+			messages = append(messages, msg.Text)
+		} else if err := action.Apply(p); err != nil {
+			return nil, errors.WithStack(err)
 		}
 	}
 	return messages, nil
