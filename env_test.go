@@ -274,13 +274,15 @@ func TestCopyFilesAction(t *testing.T) {
 		WithTrigger(manifest.EventUnpack, &manifest.CopyAction{
 			From: "from",
 			To:   filepath.Join(dir, "to"),
+			Mode: 0755,
 		}).
 		Result()
 	_, err = fixture.Env.Install(fixture.P, pkg)
 	require.NoError(t, err)
 
-	_, err = os.Stat(filepath.Join(dir, "to"))
+	info, err := os.Stat(filepath.Join(dir, "to"))
 	require.NoError(t, err)
+	require.Equal(t, 0755, int(info.Mode()))
 }
 
 func TestTriggers(t *testing.T) {
