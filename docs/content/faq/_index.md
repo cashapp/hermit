@@ -16,11 +16,6 @@ No, Hermit is deliberately not in the business of installing libraries. Hermit
 is designed to manage development _tools_ only, not be a general purpose
 package manager. Consider [Nix](https://nixos.org) if you need this kind of functionality.
 
-## Does Hermit host its own packages?
-
-Yes and no. Mostly no, but some existing upstream binary packages require some
-level of pre-processing (eg. Python). These are hosted at [cashapp/hermit-build](https://github.com/cashapp/hermit-build).
-
 ## Is Python supported?
 
 [Yes!](https://github.com/cashapp/hermit-packages/blob/master/python3.hcl)
@@ -45,20 +40,34 @@ There could be a number of reasons why a package isn't present in Hermit.
 
 ## Does the Hermit Project Build and Host its own Packages?
 
-No, Hermit is a package _installer_ only. Self-contained redistributable
-packages must be hosted elsewhere, ideally by the package owners.
+Yes and no. Mostly no, but some existing upstream binary packages require some
+level of pre-processing (eg. Python). These are hosted at [cashapp/hermit-build](https://github.com/cashapp/hermit-build).
 
 ## How is Hermit different to ...?
 
-### Docker
+### asdf
 
-[Docker](https://www.docker.com/) has a very large community and provides isolation, both of which are
-appealing. Unfortunately it has several shortcomings which in our view
-preclude it from use as a day to day _development tooling_ system.
+Hermit is probably most similar to [asdf](https://asdf-vm.com/), but their goals
+differ. Hermit's goal is to make isolated cross-platform tooling consistent,
+self-bootstrapping, and reproducible at the project level. asdf's primary
+goal is to allow developers to install and switch between multiple versions
+of languages and tooling.
 
-- Filesystem mapping on OSX is [very slow](https://github.com/docker/roadmap/issues/7).
-- It does not support OSX binaries inside Docker (though see [Docker-OSX](https://github.com/sickcodes/Docker-OSX)).
-- Poor integration with host editors/IDEs (though there is [some movement](https://code.visualstudio.com/docs/remote/containers)).
+|                | Hermit                                | asdf                  | Compare                           |
+|----------------|---------------------------------------|-----------------------|-----------------------------------|
+| **Packaging**      | HCL [manifest](../packaging)          | Shell script-based plugin [API](https://asdf-vm.com/#/plugins-create) | [Java in asdf](https://github.com/halcyon/asdf-java) / [Java in Hermit](https://github.com/cashapp/hermit-packages/blob/master/openjdk.hcl).
+| **Packages**       | Binary only.                          | Compile from source, binary, wrappers around pyenv, rbenv, etc. | [Python in asdf](https://github.com/danhper/asdf-python/blob/master/bin/install#L7) / [Python in Hermit](https://github.com/cashapp/hermit-packages/blob/master/python3.hcl)
+
+Limiting Hermit to installing only binary packages has pros and cons:
+
+|     | Feature              | Explanation
+|-----|----------------------|-------------------
+| Pro | Faster               | Binary packages don't require compilation, just downloading and unpacking.
+| Con | Less choice          | There are typically less relocatable/static binary packages available.
+| Con | Relocatable packages | Relocatable/static binary packages can be difficult to build.
+| Pro | Less fragile         | Source installations fail frequently due to missing dependencies, missing tools, and so on.
+| Pro | Less requirements    | Source installations generally require a functional compiler toolchain be already present on your system, such as GCC, clang, etc.
+
 
 ### Bazel
 
@@ -71,20 +80,15 @@ opt-in hermetic builds. However Bazel also:
   toolchains.
 - Requires completely separate tooling, editor/IDE integration and so on.
 
-### asdf
+### Docker
 
-Hermit is similar to [asdf](https://asdf-vm.com/), but differs in the following key ways:
+[Docker](https://www.docker.com/) has a very large community and provides isolation, both of which are
+appealing. Unfortunately it has several shortcomings which in our view
+preclude it from use as a day to day _development tooling_ system.
 
-- Hermit package definitions are declarative and _much_ simpler. <br/> Contrast [Java in asdf](https://github.com/halcyon/asdf-java) with [Java in Hermit](https://github.com/cashapp/hermit-packages/blob/master/openjdk.hcl).
-- Hermit's primary goal is to make project tooling self-contained within the repository. <br/> asdf's goal is to allow end users to install tools easily.
-
-### Nix
-
-[Nix](https://github.com/NixOS/nix) is the package manager for an entire OS and thus provides vastly more
-functionality than Hermit, including a full package build system. This
-naturally also comes with a corresponding increase in complexity. Hermit is
-deliberately designed to be narrow in scope, limited to just _installing_
-existing packages.
+- Filesystem mapping on OSX is [very slow](https://github.com/docker/roadmap/issues/7).
+- It does not support OSX binaries inside Docker (though see [Docker-OSX](https://github.com/sickcodes/Docker-OSX)).
+- Poor integration with host editors/IDEs (though there is [some movement](https://code.visualstudio.com/docs/remote/containers)).
 
 ### GoFish
 
@@ -102,3 +106,11 @@ Hermit's, but GoFish itself:
 - Is a system wide package manager.
 - Is largely OSX specific.
 - Does not support concurrent installation of different versions of the same package well.
+
+### Nix
+
+[Nix](https://github.com/NixOS/nix) is the package manager for an entire OS and thus provides vastly more
+functionality than Hermit, including a full package build system. This
+naturally also comes with a corresponding increase in complexity. Hermit is
+deliberately designed to be narrow in scope, limited to just _installing_
+existing packages.
