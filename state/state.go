@@ -385,7 +385,7 @@ func (s *State) UpgradeChannel(b *ui.Task, pkg *manifest.Package) (bool, error) 
 }
 
 // GC clears packages that have not been used for the given duration and are not referred to in any environment
-func (s *State) GC(p *ui.UI, age time.Duration, pkgResolver func(b *ui.UI, selector manifest.Selector) (*manifest.Package, error)) error {
+func (s *State) GC(p *ui.UI, age time.Duration, pkgResolver func(b *ui.UI, selector manifest.Selector, syncOnMissing bool) (*manifest.Package, error)) error {
 	lock, err := s.acquireLock(p)
 	if err != nil {
 		return err
@@ -431,7 +431,7 @@ func (s *State) GC(p *ui.UI, age time.Duration, pkgResolver func(b *ui.UI, selec
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		pkg, err := pkgResolver(p, manifest.ExactSelector(manifest.ParseReference(name)))
+		pkg, err := pkgResolver(p, manifest.ExactSelector(manifest.ParseReference(name)), false)
 		// This can occur if a package was at some point installed and tracked
 		// by the DB but now no longer exists in the manifests.
 		if errors.Is(err, manifest.ErrUnknownPackage) {

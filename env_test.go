@@ -416,7 +416,7 @@ func TestDependencyResolution(t *testing.T) {
 	})
 	defer f.Clean()
 
-	pkg, err := f.Env.Resolve(f.P, manifest.NameSelector("dep"))
+	pkg, err := f.Env.Resolve(f.P, manifest.NameSelector("dep"), false)
 	require.NoError(t, err)
 	_, err = f.Env.Install(f.P, pkg)
 	require.NoError(t, err)
