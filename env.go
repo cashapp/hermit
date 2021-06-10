@@ -489,7 +489,7 @@ func (e *Env) ResolveLink(l *ui.UI, executable string) (pkg *manifest.Package, b
 		return nil, "", errors.Errorf("%s: could not find Hermit .pkg in symlink chain", executable)
 	}
 	ref := e.referenceFromBinLink(link)
-	pkg, err = e.Resolve(l, manifest.ExactSelector(ref))
+	pkg, err = e.Resolve(l, manifest.ExactSelector(ref), true)
 	if err != nil {
 		return nil, "", errors.WithStack(err)
 	}
@@ -541,12 +541,22 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 }
 
 // Resolve package reference.
-func (e *Env) Resolve(l *ui.UI, selector manifest.Selector) (*manifest.Package, error) {
+//
+// If "syncOnMissing" is true, sources will be synced if the selector cannot
+// be initially resolved, then resolve attempted again.
+func (e *Env) Resolve(l *ui.UI, selector manifest.Selector, syncOnMissing bool) (*manifest.Package, error) {
 	resolver, err := e.resolver(l)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	resolved, err := resolver.Resolve(l, selector)
+	// If the package is missing sync sources and try again, once.
+	if syncOnMissing && errors.Is(err, manifest.ErrUnknownPackage) {
+		if err = resolver.Sync(l, true); err != nil {
+			return nil, errors.WithStack(err)
+		}
+		resolved, err = resolver.Resolve(l, selector)
+	}
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -604,7 +614,7 @@ func (e *Env) ListInstalled(l *ui.UI) ([]*manifest.Package, error) {
 	}
 	out := []*manifest.Package{}
 	for _, ref := range refs {
-		pkg, err := e.Resolve(l, manifest.ExactSelector(ref))
+		pkg, err := e.Resolve(l, manifest.ExactSelector(ref), false)
 		if err != nil { // We don't want to error if there are corrupt packages.
 			continue
 		}
@@ -947,7 +957,7 @@ func (e *Env) ResolveWithDeps(l *ui.UI, installed manifest.Packages, selector ma
 			return nil
 		}
 	}
-	pkg, err := e.Resolve(l, selector)
+	pkg, err := e.Resolve(l, selector, false)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -956,7 +966,7 @@ func (e *Env) ResolveWithDeps(l *ui.UI, installed manifest.Packages, selector ma
 		// First search from virtual providers
 		ref, err := e.resolveVirtual(l, req)
 		if err != nil && errors.Is(err, manifest.ErrUnknownPackage) {
-			// Secondly seartch by the package name
+			// Secondly search by the package name
 			return e.ResolveWithDeps(l, installed, manifest.NameSelector(req), out)
 		}
 		if err != nil {

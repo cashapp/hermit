@@ -130,7 +130,7 @@ func (i *infoCmd) Run(l *ui.UI, env *hermit.Env, sta *state.State) error {
 		}
 		var pkg *manifest.Package
 		if env != nil {
-			p, err := env.Resolve(l, selector)
+			p, err := env.Resolve(l, selector, false)
 			if err != nil {
 				return errors.WithStack(err)
 			}
@@ -337,7 +337,7 @@ func (t *testCmd) Run(l *ui.UI, env *hermit.Env) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		pkg, err := env.Resolve(l, selector)
+		pkg, err := env.Resolve(l, selector, false)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -443,7 +443,7 @@ func (e *execCmd) Run(l *ui.UI, sta *state.State, env *hermit.Env, globalState G
 }
 
 func updateHermit(l *ui.UI, env *hermit.Env, pkgRef string) error {
-	pkg, err := env.Resolve(l, manifest.ExactSelector(manifest.ParseReference(pkgRef)))
+	pkg, err := env.Resolve(l, manifest.ExactSelector(manifest.ParseReference(pkgRef)), false)
 	if err != nil {
 		return errors.WithStack(err)
 	}
