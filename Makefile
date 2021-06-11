@@ -4,8 +4,8 @@ ROOT = $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 BUILD_DIR = $(ROOT)/build
 CHANNEL ?= canary
 VERSION ?= $(shell git describe --tags --dirty  --always)
-GOOS ?= $(shell ./bin/go version | awk '{print $NF}' | cut -d/ -f1)
-GOARCH ?= $(shell ./bin/go version | awk '{print $NF}' | cut -d/ -f2)
+GOOS ?= $(shell ./bin/go version | awk '{print $$NF}' | cut -d/ -f1)
+GOARCH ?= $(shell ./bin/go version | awk '{print $$NF}' | cut -d/ -f2)
 BIN = $(BUILD_DIR)/hermit-$(GOOS)-$(GOARCH)
 
 .PHONY: all build lint test
@@ -21,4 +21,4 @@ test:
 build:
 	mkdir -p build
 	CGO_ENABLED=0 go build -ldflags "-X main.version=$(VERSION) -X main.channel=$(CHANNEL)" -o $(BIN) ./cmd/hermit
-	gzip -9 $(BIN)
+	gzip -c9 $(BIN) > $(BIN).gz
