@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/qdm12/reprint"
 
 	"github.com/cashapp/hermit/archive"
 	"github.com/cashapp/hermit/cache"
@@ -343,8 +344,10 @@ func (s *State) CleanCache(b ui.Logger) error {
 	return os.RemoveAll(s.cacheDir)
 }
 
-// UpgradeChannel checks if the given binary has changed in its channel, and if so, downloads it
-func (s *State) UpgradeChannel(b *ui.Task, pkg *manifest.Package) (bool, error) {
+// UpgradeChannel checks if the given binary has changed in its channel, and if so, downloads it.
+//
+// If the channel is upgraded this will return a clone of the updated manifest.
+func (s *State) UpgradeChannel(b *ui.Task, pkg *manifest.Package) (*manifest.Package, error) {
 	if !pkg.Reference.IsChannel() {
 		panic("UpgradeChannel can only be used with channel packages")
 	}
@@ -352,7 +355,7 @@ func (s *State) UpgradeChannel(b *ui.Task, pkg *manifest.Package) (bool, error) 
 	name := pkg.Reference.String()
 	mirrors := append(pkg.Mirrors, s.generateMirrors(pkg.Source)...)
 	etag, err := s.cache.ETag(b, pkg.Source, mirrors...)
-	updated := false
+	var updated *manifest.Package
 
 	if err != nil {
 		b.Warnf("Could not check updates for %s. Skipping update. Error: %s", name, err)
@@ -361,13 +364,14 @@ func (s *State) UpgradeChannel(b *ui.Task, pkg *manifest.Package) (bool, error) 
 	} else if etag != pkg.ETag {
 		b.Infof("Fetching a new version for %s", name)
 		if err := s.evictPackage(b, pkg); err != nil {
-			return false, errors.WithStack(err)
+			return nil, errors.WithStack(err)
 		}
 		if err := s.CacheAndUnpack(b, pkg); err != nil {
-			return false, errors.WithStack(err)
+			return nil, errors.WithStack(err)
 		}
 		etag = pkg.ETag
-		updated = true
+		updated = reprint.This(pkg).(*manifest.Package)
+		updated.UpdatedAt = time.Now()
 	}
 
 	dpkg := &dao.Package{
@@ -375,10 +379,9 @@ func (s *State) UpgradeChannel(b *ui.Task, pkg *manifest.Package) (bool, error) 
 		Etag:            etag,
 		UpdateCheckedAt: time.Now(),
 	}
-
 	err = s.dao.UpdatePackage(name, dpkg)
 	if err != nil {
-		return false, errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
 
 	return updated, nil
