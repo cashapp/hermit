@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -228,7 +229,7 @@ func (s *State) WritePackageState(p *manifest.Package, binDir string) error {
 	return s.dao.UpdatePackageWithUsage(binDir, p.Reference.String(), pkg)
 }
 
-func (s *State) removePackage(b *ui.Task, pkg *manifest.Package) error {
+func (s *State) removePackage(b *ui.Task, dest string) error {
 	task := b.SubTask("remove")
 	lock, err := s.acquireLock(b)
 	if err != nil {
@@ -236,16 +237,15 @@ func (s *State) removePackage(b *ui.Task, pkg *manifest.Package) error {
 	}
 	defer lock.Release(b)
 
-	task.Debugf("chmod -R +w %s", pkg.Dest)
-	_ = filepath.Walk(pkg.Dest, func(path string, info os.FileInfo, err error) error {
+	task.Debugf("chmod -R +w %s", dest)
+	_ = filepath.Walk(dest, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
 		return os.Chmod(path, info.Mode()|0200)
 	})
-	task.Debugf("rm -rf %s", pkg.Dest)
-
-	return errors.WithStack(os.RemoveAll(pkg.Dest))
+	task.Debugf("rm -rf %s", dest)
+	return errors.WithStack(os.RemoveAll(dest))
 }
 
 // CacheAndUnpack downloads a package and extracts it if it is not present.
@@ -319,8 +319,8 @@ func (s *State) RecordUninstall(pkg *manifest.Package, binDir string) error {
 	return nil
 }
 
-// CleanPackages removes all the extracted packages
-func (s *State) CleanPackages(b ui.Logger) error {
+// CleanPackages removes all extracted packages
+func (s *State) CleanPackages(b *ui.UI) error {
 	// TODO: Uninstall packages from their configured root so that eg. external packages can be uninstalled.
 	lock, err := s.acquireLock(b)
 	if err != nil {
@@ -328,8 +328,20 @@ func (s *State) CleanPackages(b ui.Logger) error {
 	}
 	defer lock.Release(b)
 
-	b.Debugf("rm -rf %q", s.pkgDir)
-	return os.RemoveAll(s.pkgDir)
+	entries, err := os.ReadDir(s.pkgDir)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	for _, entry := range entries {
+		if strings.HasPrefix(entry.Name(), "hermit@") {
+			continue
+		}
+		path := filepath.Join(s.pkgDir, entry.Name())
+		if err = s.removePackage(b.Task(entry.Name()), path); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+	return nil
 }
 
 // CleanCache clears the download cache
@@ -444,7 +456,7 @@ func (s *State) GC(p *ui.UI, age time.Duration, pkgResolver func(b *ui.UI, selec
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		err = s.removePackage(task, pkg)
+		err = s.removePackage(task, pkg.Dest)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -462,7 +474,7 @@ func (s *State) evictPackage(b *ui.Task, pkg *manifest.Package) error {
 	if err := s.cache.Evict(b, pkg.SHA256, pkg.Source); err != nil {
 		return errors.WithStack(err)
 	}
-	if err := s.removePackage(b, pkg); err != nil {
+	if err := s.removePackage(b, pkg.Dest); err != nil {
 		return errors.WithStack(err)
 	}
 	return nil
