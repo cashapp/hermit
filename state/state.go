@@ -384,6 +384,8 @@ func (s *State) UpgradeChannel(b *ui.Task, pkg *manifest.Package) (*manifest.Pac
 		etag = pkg.ETag
 		updated = reprint.This(pkg).(*manifest.Package)
 		updated.UpdatedAt = time.Now()
+	} else {
+		b.Infof("No updated required")
 	}
 
 	dpkg := &dao.Package{

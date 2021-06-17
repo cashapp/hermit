@@ -345,7 +345,22 @@ func (s *statusCmd) Run(l *ui.UI, env *hermit.Env) error {
 type syncCmd struct{}
 
 func (s *syncCmd) Run(l *ui.UI, env *hermit.Env) error {
-	return env.Sync(l, true)
+	self, err := os.Executable()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if err = env.Sync(l, true); err != nil {
+		return errors.WithStack(err)
+	}
+	// Upgrade hermit if necessary
+	pkgRef := filepath.Base(filepath.Dir(self))
+	if strings.HasPrefix(pkgRef, "hermit@") {
+		if err = updateHermit(l, env, pkgRef, true); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+	return nil
 }
 
 type testCmd struct {
@@ -422,9 +437,9 @@ func (e *execCmd) Run(l *ui.UI, sta *state.State, env *hermit.Env, globalState G
 	}
 
 	// Upgrade hermit if necessary
-	dir := filepath.Base(filepath.Dir(self))
-	if strings.HasPrefix(dir, "hermit@") {
-		err := updateHermit(l, env, dir)
+	pkgRef := filepath.Base(filepath.Dir(self))
+	if strings.HasPrefix(pkgRef, "hermit@") {
+		err := updateHermit(l, env, pkgRef, false)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -463,13 +478,16 @@ func (e *execCmd) Run(l *ui.UI, sta *state.State, env *hermit.Env, globalState G
 	return env.Exec(l, pkg, binary, args, deps)
 }
 
-func updateHermit(l *ui.UI, env *hermit.Env, pkgRef string) error {
+func updateHermit(l *ui.UI, env *hermit.Env, pkgRef string, force bool) error {
+	l.Tracef("Checking if %s needs to be updated", pkgRef)
 	pkg, err := env.Resolve(l, manifest.ExactSelector(manifest.ParseReference(pkgRef)), false)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	// Mark Hermit updated if this is a new installation to prevent immediate upgrade checks
-	if pkg.UpdatedAt.IsZero() {
+	if force {
+		pkg.UpdatedAt = time.Time{}
+	} else if pkg.UpdatedAt.IsZero() {
 		pkg.UpdatedAt = time.Now()
 	}
 	err = env.UpdateUsage(pkg)
