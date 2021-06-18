@@ -31,3 +31,28 @@ jobs:
       - name: Test
         run: go test ./...
 ```
+
+## Jenkins
+
+Here's an example `Jenkinsfile` to use Hermit inside [Jenkins](https://www.jenkins.io/):
+
+```groovy
+pipeline {
+  agent any
+
+  stages {
+    stage('Do stuff') {
+      environment {
+        hermitEnvVars = sh(returnStdout: true, script: './bin/hermit env --raw').trim()
+      }
+
+      steps {
+        withEnv(hermitEnvVars.split('\n').toList()) {
+          // now we can use any hermit package directly...
+          sh 'go build'
+        }
+      }
+    }
+  }
+}
+```
