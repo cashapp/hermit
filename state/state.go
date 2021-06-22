@@ -373,6 +373,8 @@ func (s *State) UpgradeChannel(b *ui.Task, pkg *manifest.Package) (*manifest.Pac
 		b.Warnf("Could not check updates for %s. Skipping update. Error: %s", name, err)
 	} else if etag == "" {
 		b.Warnf("No ETag found for %s. Skipping update.", name)
+		// We couldn't find an ETag for whatever reason, try again next update.
+		pkg.UpdatedAt = time.Now()
 	} else if etag != pkg.ETag {
 		b.Infof("Fetching a new version for %s", name)
 		if err := s.evictPackage(b, pkg); err != nil {
@@ -473,8 +475,12 @@ func (s *State) evictPackage(b *ui.Task, pkg *manifest.Package) error {
 	}
 	defer lock.Release(b)
 
-	if err := s.cache.Evict(b, pkg.SHA256, pkg.Source); err != nil {
-		return errors.WithStack(err)
+	// Don't delete the previous archive if we don't know for certain that the
+	// new one differs. This avoids duplicate downloads in some circumstances.
+	if pkg.ETag != "" {
+		if err := s.cache.Evict(b, pkg.SHA256, pkg.Source); err != nil {
+			return errors.WithStack(err)
+		}
 	}
 	if err := s.removePackage(b, pkg.Dest); err != nil {
 		return errors.WithStack(err)

@@ -459,8 +459,8 @@ func (e *Env) Upgrade(l *ui.UI, pkg *manifest.Package) (*shell.Changes, *manifes
 	task := l.Task(pkg.Reference.String())
 
 	if pkg.Reference.IsChannel() {
-		updated, err := e.upgradeChannel(task, pkg)
-		return nil, updated, err
+		upgraded, err := e.state.UpgradeChannel(task, pkg)
+		return nil, upgraded, errors.WithStack(err)
 	}
 	return e.upgradeVersion(l, pkg)
 }
@@ -752,13 +752,16 @@ func (e *Env) Search(l *ui.UI, pattern string) (manifest.Packages, error) {
 //
 // This should only be called for packages that have already been installed
 func (e *Env) EnsureChannelIsUpToDate(l *ui.UI, pkg *manifest.Package) (*manifest.Package, error) {
-	task := l.Task(pkg.Reference.String())
 	if pkg.UpdateInterval == 0 || pkg.UpdatedAt.After(time.Now().Add(-1*pkg.UpdateInterval)) {
+		task := l.Task(pkg.Reference.String())
 		task.Tracef("No updated required")
 		// No updates needed for this package
 		return nil, nil
 	}
-	return e.upgradeChannel(task, pkg)
+	task := l.Task(pkg.Reference.String())
+	task.Infof("Upgrading %s", pkg)
+	upgraded, err := e.state.UpgradeChannel(task, pkg)
+	return upgraded, errors.WithStack(err)
 }
 
 // AddSource adds a new source bundle and refreshes the packages from it
@@ -779,13 +782,6 @@ func (e *Env) EnvDir() string {
 // BinDir returns the directory for the binaries of this environment
 func (e *Env) BinDir() string {
 	return e.binDir
-}
-
-// Upgrade channel if we need to.
-func (e *Env) upgradeChannel(task *ui.Task, pkg *manifest.Package) (*manifest.Package, error) {
-	task.Infof("Upgrading %s", pkg)
-	upgraded, err := e.state.UpgradeChannel(task, pkg)
-	return upgraded, errors.WithStack(err)
 }
 
 // upgradeVersion upgrades the package to its latest version.
