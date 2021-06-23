@@ -499,8 +499,7 @@ func updateHermit(l *ui.UI, env *hermit.Env, pkgRef string, force bool) error {
 		// set the update time to 0 to force an update check
 		pkg.UpdatedAt = time.Time{}
 	}
-	_, err = env.EnsureChannelIsUpToDate(l, pkg)
-	return errors.WithStack(err)
+	return errors.WithStack(env.EnsureChannelIsUpToDate(l, pkg))
 }
 
 type envCmd struct {
@@ -803,7 +802,7 @@ func (g *upgradeCmd) Run(l *ui.UI, env *hermit.Env) error {
 
 	// upgrade packages
 	for _, pkg := range packages {
-		c, _, err := env.Upgrade(l, pkg)
+		c, err := env.Upgrade(l, pkg)
 		if err != nil {
 			return errors.WithStack(err)
 		}

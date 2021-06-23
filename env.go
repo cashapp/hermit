@@ -455,12 +455,12 @@ func (e *Env) install(l *ui.Task, p *manifest.Package) (*shell.Changes, error) {
 }
 
 // Upgrade package.
-func (e *Env) Upgrade(l *ui.UI, pkg *manifest.Package) (*shell.Changes, *manifest.Package, error) {
+func (e *Env) Upgrade(l *ui.UI, pkg *manifest.Package) (*shell.Changes, error) {
 	task := l.Task(pkg.Reference.String())
 
 	if pkg.Reference.IsChannel() {
-		upgraded, err := e.state.UpgradeChannel(task, pkg)
-		return nil, upgraded, errors.WithStack(err)
+		err := e.state.UpgradeChannel(task, pkg)
+		return nil, errors.WithStack(err)
 	}
 	return e.upgradeVersion(l, pkg)
 }
@@ -523,12 +523,9 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	updatedPkg, err := e.EnsureChannelIsUpToDate(l, pkg)
+	err = e.EnsureChannelIsUpToDate(l, pkg)
 	if err != nil {
 		return errors.WithStack(err)
-	}
-	if updatedPkg != nil {
-		pkg = updatedPkg
 	}
 	binaries, err := pkg.ResolveBinaries()
 	if err != nil {
@@ -751,17 +748,16 @@ func (e *Env) Search(l *ui.UI, pattern string) (manifest.Packages, error) {
 // and the etag in the source has changed from the last check.
 //
 // This should only be called for packages that have already been installed
-func (e *Env) EnsureChannelIsUpToDate(l *ui.UI, pkg *manifest.Package) (*manifest.Package, error) {
+func (e *Env) EnsureChannelIsUpToDate(l *ui.UI, pkg *manifest.Package) error {
 	if pkg.UpdateInterval == 0 || pkg.UpdatedAt.After(time.Now().Add(-1*pkg.UpdateInterval)) {
 		task := l.Task(pkg.Reference.String())
 		task.Tracef("No updated required")
 		// No updates needed for this package
-		return nil, nil
+		return nil
 	}
 	task := l.Task(pkg.Reference.String())
 	task.Infof("Upgrading %s", pkg)
-	upgraded, err := e.state.UpgradeChannel(task, pkg)
-	return upgraded, errors.WithStack(err)
+	return errors.WithStack(e.state.UpgradeChannel(task, pkg))
 }
 
 // AddSource adds a new source bundle and refreshes the packages from it
@@ -785,30 +781,33 @@ func (e *Env) BinDir() string {
 }
 
 // upgradeVersion upgrades the package to its latest version.
+//
 // If the package is already at its latest version, this is a no-op.
-func (e *Env) upgradeVersion(l *ui.UI, pkg *manifest.Package) (*shell.Changes, *manifest.Package, error) {
+func (e *Env) upgradeVersion(l *ui.UI, pkg *manifest.Package) (*shell.Changes, error) {
 	resolver, err := e.resolver(l)
 	if err != nil {
-		return nil, nil, errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
 	// Get the latest version of the package
 	resolved, err := resolver.Resolve(l, manifest.PrefixSelector(pkg.Reference.Major()))
 	if err != nil {
-		return nil, nil, errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
 	if !resolved.Reference.Version.Match(pkg.Reference.Version) {
 		l.Task(pkg.Reference.Name).SubTask("upgrade").Infof("Upgrading %s to %s", pkg, resolved)
 		uc, err := e.uninstall(l.Task(pkg.Reference.String()), pkg)
 		if err != nil {
-			return nil, nil, errors.WithStack(err)
+			return nil, errors.WithStack(err)
 		}
 		ic, err := e.install(l.Task(resolved.Reference.String()), resolved)
 		if err != nil {
-			return nil, nil, errors.WithStack(err)
+			return nil, errors.WithStack(err)
 		}
-		return uc.Merge(ic), resolved, nil
+		// Update the package.
+		*pkg = *resolved
+		return uc.Merge(ic), nil
 	}
-	return shell.NewChanges(envars.Parse(os.Environ())), nil, nil
+	return shell.NewChanges(envars.Parse(os.Environ())), nil
 }
 
 func (e *Env) readPackageState(pkg *manifest.Package) {
