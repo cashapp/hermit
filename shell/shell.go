@@ -97,6 +97,9 @@ func Detect() (Shell, error) {
 			return shell, nil
 		}
 		pid = process.PPid()
+		if pid == 0 {
+			break
+		}
 	}
 
 	// Next, try to pull the shell from the user's password entry.
