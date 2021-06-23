@@ -110,7 +110,7 @@ func TestEnsureUpToDate(t *testing.T) {
 	require.Equal(t, 0, headCalls)
 
 	// Update before update check is due
-	_, err = fixture.Env.EnsureChannelIsUpToDate(fixture.P, pkg)
+	err = fixture.Env.EnsureChannelIsUpToDate(fixture.P, pkg)
 	require.NoError(t, err)
 	require.Equal(t, 1, getCalls)
 	require.Equal(t, 0, headCalls)
@@ -119,7 +119,7 @@ func TestEnsureUpToDate(t *testing.T) {
 
 	// Update after a check is needed but etag has not changed
 	pkg.UpdatedAt = time.Now().Add(-2 * time.Hour)
-	_, err = fixture.Env.EnsureChannelIsUpToDate(fixture.P, pkg)
+	err = fixture.Env.EnsureChannelIsUpToDate(fixture.P, pkg)
 	require.NoError(t, err)
 	require.Equal(t, 1, getCalls)
 	require.Equal(t, 1, headCalls)
@@ -130,7 +130,7 @@ func TestEnsureUpToDate(t *testing.T) {
 	pkg.UpdatedAt = time.Now().Add(-2 * time.Hour)
 	etag = "changed"
 	data = strings.Repeat("other", 1024)
-	_, err = fixture.Env.EnsureChannelIsUpToDate(fixture.P, pkg)
+	err = fixture.Env.EnsureChannelIsUpToDate(fixture.P, pkg)
 	require.NoError(t, err)
 	require.Equal(t, 2, getCalls)
 	require.Equal(t, 2, headCalls)

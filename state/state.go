@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/qdm12/reprint"
 
 	"github.com/cashapp/hermit/archive"
 	"github.com/cashapp/hermit/cache"
@@ -359,16 +358,15 @@ func (s *State) CleanCache(b ui.Logger) error {
 // UpgradeChannel checks if the given binary has changed in its channel, and if so, downloads it.
 //
 // If the channel is upgraded this will return a clone of the updated manifest.
-func (s *State) UpgradeChannel(b *ui.Task, pkg *manifest.Package) (*manifest.Package, error) {
+func (s *State) UpgradeChannel(b *ui.Task, pkg *manifest.Package) error {
 	if !pkg.Reference.IsChannel() {
 		panic("UpgradeChannel can only be used with channel packages")
 	}
 
 	name := pkg.Reference.String()
 	mirrors := append(pkg.Mirrors, s.generateMirrors(pkg.Source)...)
-	etag, err := s.cache.ETag(b, pkg.Source, mirrors...)
-	var updated *manifest.Package
 
+	etag, err := s.cache.ETag(b, pkg.Source, mirrors...)
 	if err != nil {
 		b.Warnf("Could not check updates for %s. Skipping update. Error: %s", name, err)
 	} else if etag == "" {
@@ -378,14 +376,13 @@ func (s *State) UpgradeChannel(b *ui.Task, pkg *manifest.Package) (*manifest.Pac
 	} else if etag != pkg.ETag {
 		b.Infof("Fetching a new version for %s", name)
 		if err := s.evictPackage(b, pkg); err != nil {
-			return nil, errors.WithStack(err)
+			return errors.WithStack(err)
 		}
 		if err := s.CacheAndUnpack(b, pkg); err != nil {
-			return nil, errors.WithStack(err)
+			return errors.WithStack(err)
 		}
 		etag = pkg.ETag
-		updated = reprint.This(pkg).(*manifest.Package)
-		updated.UpdatedAt = time.Now()
+		pkg.UpdatedAt = time.Now()
 	} else {
 		b.Infof("No updated required")
 	}
@@ -395,12 +392,7 @@ func (s *State) UpgradeChannel(b *ui.Task, pkg *manifest.Package) (*manifest.Pac
 		Etag:            etag,
 		UpdateCheckedAt: time.Now(),
 	}
-	err = s.dao.UpdatePackage(name, dpkg)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	return updated, nil
+	return errors.WithStack(s.dao.UpdatePackage(name, dpkg))
 }
 
 // GC clears packages that have not been used for the given duration and are not referred to in any environment
