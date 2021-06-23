@@ -70,13 +70,15 @@ func (s *Sources) Sync(p *ui.UI, force bool) error {
 
 // ForURIs returns Source instances for given uri strings
 func ForURIs(b *ui.UI, dir, env string, uris []string) (*Sources, error) {
-	sources := make([]Source, len(uris))
-	for i, uri := range uris {
+	sources := make([]Source, 0, len(uris))
+	for _, uri := range uris {
 		s, err := getSource(b, uri, dir, env)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		sources[i] = s
+		if s != nil {
+			sources = append(sources, s)
+		}
 	}
 	return &Sources{
 		dir:     dir,
