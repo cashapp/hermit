@@ -57,7 +57,8 @@ type unactivated struct {
 
 	Init       initCmd       `cmd:"" help:"Initialise an environment (idempotent)." group:"env"`
 	Version    versionCmd    `cmd:"" help:"Show version." group:"global"`
-	Validate   validateCmd   `cmd:"" help:"Check a package manifest source for errors." group:"global"`
+	Validate   validateCmd   `hidden:"" cmd:"" help:"Check a package manifest source for errors." group:"global"`
+	Manifest   manifestCmd   `cmd:"" help:"Commands for manipulating manifests."`
 	Info       infoCmd       `cmd:"" help:"Show information on packages." group:"global"`
 	ShellHooks shellHooksCmd `cmd:"" help:"Manage Hermit auto-activation hooks of a shell." group:"global" aliases:"install-hooks"`
 
@@ -926,4 +927,27 @@ type dumpDBCmd struct{}
 
 func (dumpDBCmd) Run(state *state.State) error {
 	return state.DumpDB(os.Stdout)
+}
+
+type autoVersionCmd struct {
+	Manifest []string `arg:"" type:"existingfile" required:"" help:"Manifests to upgrade."`
+}
+
+func (s *autoVersionCmd) Run(l *ui.UI) error {
+	for _, path := range s.Manifest {
+		l.Debugf("Auto-versioning %s", path)
+		version, err := manifest.AutoVersion(path)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		if version != "" {
+			l.Infof("Auto-versioned %s to %s", path, version)
+		}
+	}
+	return nil
+}
+
+type manifestCmd struct {
+	Validate    validateCmd    `cmd:"" help:"Check a package manifest source for errors." group:"global"`
+	AutoVersion autoVersionCmd `cmd:"" help:"Upgrade manifest versions automatically where possible." group:"global"`
 }
