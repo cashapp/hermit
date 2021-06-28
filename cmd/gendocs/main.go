@@ -3,6 +3,7 @@ package main
 
 import (
 	"fmt"
+	"html"
 	"os"
 	"path/filepath"
 	"sort"
@@ -179,7 +180,10 @@ func writeEntries(w *os.File, entries []*hcl.Entry) error {
 				description += " <" + label + ">"
 			}
 			description += " { … }"
-			fmt.Fprintf(w, "| [`%s`](../%s) | %s |\n", description, block.Name, strings.Join(block.Comments, " "))
+			fmt.Fprintf(w, "| [`%s`](../%s) | %s |\n",
+				description,
+				block.Name,
+				html.EscapeString(strings.Join(block.Comments, " ")))
 		}
 	}
 
@@ -195,7 +199,10 @@ func writeEntries(w *os.File, entries []*hcl.Entry) error {
 			if attr.Optional {
 				typ += "?"
 			}
-			fmt.Fprintf(w, "| `%s` | `%s` | %s |\n", attr.Key, typ, strings.Join(attr.Comments, " "))
+			fmt.Fprintf(w, "| `%s` | `%s` | %s |\n",
+				attr.Key,
+				typ,
+				html.EscapeString(strings.Join(attr.Comments, " ")))
 		}
 	}
 	return nil

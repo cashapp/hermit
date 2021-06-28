@@ -12,4 +12,4 @@ Used by: [version](../version#blocks)
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
-| `github-release` | `string` | GitHub <user>/<repo> to retrieve and update versions from the releases API. |
+| `github-release` | `string` | GitHub &lt;user&gt;/&lt;repo&gt; to retrieve and update versions from the releases API. |
