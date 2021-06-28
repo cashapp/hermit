@@ -12,6 +12,7 @@ Used by: [&lt;manifest>](../manifest#blocks)
 
 | Block  | Description |
 |--------|-------------|
+| [`auto-version { … }`](../auto-version) | Automatically update versions. |
 | [`darwin { … }`](../darwin) | Darwin-specific configuration. |
 | [`linux { … }`](../linux) | Linux-specific configuration. |
 | [`on <event> { … }`](../on) | Triggers to run on lifecycle events. |

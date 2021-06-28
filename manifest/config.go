@@ -85,7 +85,10 @@ func (c *Layer) match(arch string) bool {
 
 // VersionBlock is a Layer block specifying an installable version of a package.
 type VersionBlock struct {
-	Version []string `hcl:"version,label" help:"Version(s) of package."`
+	Version     []string `hcl:"version,label" help:"Version(s) of package."`
+	AutoVersion struct {
+		GitHubRelease string `hcl:"github-release" help:"GitHub <user>/<repo> to retrieve and update versions from the releases API."`
+	} `hcl:"auto-version,block" help:"Automatically update versions."`
 	Layer
 }
 
