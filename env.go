@@ -749,14 +749,12 @@ func (e *Env) Search(l *ui.UI, pattern string) (manifest.Packages, error) {
 //
 // This should only be called for packages that have already been installed
 func (e *Env) EnsureChannelIsUpToDate(l *ui.UI, pkg *manifest.Package) error {
+	task := l.Task(pkg.Reference.String())
 	if pkg.UpdateInterval == 0 || pkg.UpdatedAt.After(time.Now().Add(-1*pkg.UpdateInterval)) {
-		task := l.Task(pkg.Reference.String())
 		task.Tracef("No updated required")
 		// No updates needed for this package
 		return nil
 	}
-	task := l.Task(pkg.Reference.String())
-	task.Infof("Upgrading %s", pkg)
 	return errors.WithStack(e.state.UpgradeChannel(task, pkg))
 }
 

@@ -371,8 +371,6 @@ func (s *State) UpgradeChannel(b *ui.Task, pkg *manifest.Package) error {
 		b.Warnf("Could not check updates for %s. Skipping update. Error: %s", name, err)
 	} else if etag == "" {
 		b.Warnf("No ETag found for %s. Skipping update.", name)
-		// We couldn't find an ETag for whatever reason, try again next update.
-		pkg.UpdatedAt = time.Now()
 	} else if etag != pkg.ETag {
 		b.Infof("Fetching a new version for %s", name)
 		if err := s.evictPackage(b, pkg); err != nil {
@@ -382,11 +380,10 @@ func (s *State) UpgradeChannel(b *ui.Task, pkg *manifest.Package) error {
 			return errors.WithStack(err)
 		}
 		etag = pkg.ETag
-		pkg.UpdatedAt = time.Now()
 	} else {
 		b.Infof("No updated required")
 	}
-
+	pkg.UpdatedAt = time.Now()
 	dpkg := &dao.Package{
 		UsedAt:          time.Now(),
 		Etag:            etag,
