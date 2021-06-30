@@ -83,12 +83,16 @@ func (c *Layer) match(arch string) bool {
 	return c.Arch == "" || c.Arch == arch
 }
 
+// AutoVersionBlock represents auto-version configuration.
+type AutoVersionBlock struct {
+	GitHubRelease  string `hcl:"github-release" help:"GitHub <user>/<repo> to retrieve and update versions from the releases API."`
+	VersionPattern string `hcl:"version-pattern" help:"Regex with one capture group to extract the version number from the origin." default:"v?(.*)"`
+}
+
 // VersionBlock is a Layer block specifying an installable version of a package.
 type VersionBlock struct {
-	Version     []string `hcl:"version,label" help:"Version(s) of package."`
-	AutoVersion struct {
-		GitHubRelease string `hcl:"github-release" help:"GitHub <user>/<repo> to retrieve and update versions from the releases API."`
-	} `hcl:"auto-version,block" help:"Automatically update versions."`
+	Version     []string          `hcl:"version,label" help:"Version(s) of package."`
+	AutoVersion *AutoVersionBlock `hcl:"auto-version,block" help:"Automatically update versions."`
 	Layer
 }
 
