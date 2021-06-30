@@ -5,13 +5,11 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
+	"regexp"
 
 	"github.com/alecthomas/hcl"
 	"github.com/pkg/errors"
 )
-
-const githubAutoVersionerKey = "github-release"
 
 // AutoVersion rewrites the given manifest with new version information if applicable.
 //
@@ -52,32 +50,40 @@ func autoVersion(manifest []byte, versioner versioner) (string, []byte, error) {
 		return "", nil, errors.WithStack(err)
 	}
 	var (
-		githubProject      string
+		autoVersion        *AutoVersionBlock
 		autoVersionedBlock *hcl.Block
 	)
 	// Find auto-version info if any.
 	err = hcl.Visit(ast, func(node hcl.Node, next func() error) error {
-		if node, ok := node.(*hcl.Attribute); ok && node.Key == githubAutoVersionerKey {
-			githubProject = *node.Value.Str
-			// auto-version -> version
-			autoVersionedBlock = node.Parent.(*hcl.Entry).Parent.(*hcl.Block).Parent.(*hcl.Entry).Parent.(*hcl.Block)
+		if node, ok := node.(*hcl.Block); ok && node.Name == "auto-version" {
+			autoVersion = &AutoVersionBlock{}
+			err = hcl.UnmarshalBlock(node, autoVersion)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			autoVersionedBlock = node.Parent.(*hcl.Entry).Parent.(*hcl.Block)
 		}
 		return next()
 	})
 	if err != nil {
 		return "", nil, errors.WithStack(err)
 	}
-	if autoVersionedBlock == nil {
+	if autoVersion == nil {
 		return "", nil, nil
 	}
-	latestVersion, err := versioner.latestGitHubRelease(githubProject)
+	latestVersion, err := versioner.latestGitHubRelease(autoVersion.GitHubRelease)
 	if err != nil {
 		return "", nil, errors.WithStack(err)
 	}
-	if !strings.HasPrefix(latestVersion, "v") {
-		return "", nil, errors.Errorf("%s: latest release must be in the form v... but is %s", githubProject, latestVersion)
+	versionRe, err := regexp.Compile(autoVersion.VersionPattern)
+	if err != nil {
+		return "", nil, errors.WithStack(err)
 	}
-	latestVersion = strings.TrimPrefix(latestVersion, "v")
+	groups := versionRe.FindStringSubmatch(latestVersion)
+	if groups == nil {
+		return "", nil, errors.Errorf("%s: latest release must match the pattern %s but is %s", autoVersion.GitHubRelease, autoVersion.VersionPattern, latestVersion)
+	}
+	latestVersion = groups[1]
 	// Check if version already exists.
 	for _, label := range autoVersionedBlock.Labels {
 		if label == latestVersion {
