@@ -189,4 +189,4 @@ jq-1.6
 ## Distribute the Package
 
 At this point you can (and should!) contribute the package back to the
-community via a [PR](https://github.com/cashapp/hermit/pulls).
+community via a [PR](https://github.com/cashapp/hermit-packages/pulls).
