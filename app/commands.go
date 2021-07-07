@@ -65,6 +65,7 @@ type unactivated struct {
 	Noop     noopCmd     `cmd:"" help:"No-op, just exit." hidden:""`
 	Activate activateCmd `cmd:"" help:"Activate an environment." hidden:""`
 	Exec     execCmd     `cmd:"" help:"Directly execute a binary in a package." hidden:""`
+	Sync     syncCmd     `cmd:"" help:"Sync manifest sources." group:"global"`
 	DumpDB   dumpDBCmd   `cmd:"" help:"Dump state database." hidden:""`
 }
 
@@ -88,7 +89,6 @@ type activated struct {
 	Exec      execCmd      `cmd:"" help:"Directly execute a binary in a package." group:"env"`
 	Env       envCmd       `cmd:"" help:"Manage environment variables." group:"env"`
 
-	Sync  syncCmd  `cmd:"" help:"Sync manifest sources." group:"global"`
 	Clean cleanCmd `cmd:"" help:"Clean hermit cache." group:"global"`
 	GC    gcCmd    `cmd:"" help:"Garbage collect unused Hermit packages and clean the download cache." group:"global"`
 	Test  testCmd  `cmd:"" help:"Run package sanity tests." group:"global"`
@@ -345,19 +345,34 @@ func (s *statusCmd) Run(l *ui.UI, env *hermit.Env) error {
 
 type syncCmd struct{}
 
-func (s *syncCmd) Run(l *ui.UI, env *hermit.Env) error {
+func (s *syncCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
 	self, err := os.Executable()
 	if err != nil {
 		return errors.WithStack(err)
 	}
-
-	if err = env.Sync(l, true); err != nil {
+	srcs, err := state.Sources(l)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	// Sync sources from either the env or default sources.
+	if env != nil {
+		err = env.Sync(l, true)
+	} else {
+		err = srcs.Sync(l, true)
+	}
+	if err != nil {
 		return errors.WithStack(err)
 	}
 	// Upgrade hermit if necessary
 	pkgRef := filepath.Base(filepath.Dir(self))
+
 	if strings.HasPrefix(pkgRef, "hermit@") {
-		if err = updateHermit(l, env, pkgRef, true); err != nil {
+		pkg, err := state.Resolve(l, manifest.ExactSelector(manifest.ParseReference(pkgRef)))
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		err = state.UpgradeChannel(l.Task(pkgRef), pkg)
+		if err != nil {
 			return errors.WithStack(err)
 		}
 	}

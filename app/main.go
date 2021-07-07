@@ -2,8 +2,6 @@ package app
 
 import (
 	"bufio"
-	"github.com/posener/complete"
-	"github.com/willabides/kongplete"
 	"log"
 	"net"
 	"net/http"
@@ -12,13 +10,17 @@ import (
 	"runtime/pprof"
 	"time"
 
+	"github.com/posener/complete"
+	"github.com/willabides/kongplete"
+
 	"github.com/alecthomas/kong"
 	konghcl "github.com/alecthomas/kong-hcl"
+	"github.com/mattn/go-isatty"
+
 	"github.com/cashapp/hermit"
 	"github.com/cashapp/hermit/state"
 	"github.com/cashapp/hermit/ui"
 	"github.com/cashapp/hermit/util/debug"
-	"github.com/mattn/go-isatty"
 )
 
 const help = `🐚 Hermit is a hermetic binary package manager.`

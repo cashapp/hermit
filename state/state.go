@@ -173,17 +173,25 @@ func (s *State) PkgDir() string {
 }
 
 func (s *State) resolver(l *ui.UI) (*manifest.Resolver, error) {
+	ss, err := s.Sources(l)
+	if err != nil {
+		return nil, err
+	}
+	return manifest.New(ss, manifest.Config{
+		State: s.Root(),
+		OS:    runtime.GOOS,
+		Arch:  runtime.GOARCH,
+	})
+}
+
+// Sources associated with the State.
+func (s *State) Sources(l *ui.UI) (*sources.Sources, error) {
 	ss, err := sources.ForURIs(l, s.SourcesDir(), "", s.config.Sources)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	ss.Prepend(s.config.Builtin)
-	return manifest.New(ss, manifest.Config{
-		Env:   "",
-		State: s.Root(),
-		OS:    runtime.GOOS,
-		Arch:  runtime.GOARCH,
-	})
+	return ss, nil
 }
 
 func (s *State) acquireLock(log ui.Logger) (*util.FileLock, error) {
