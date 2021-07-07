@@ -106,7 +106,7 @@ weight = %d
 
 %s
 
-`, title, weight, strings.Join(block.Comments, "\n"))
+`, title, weight, html.EscapeString(strings.Join(block.Comments, "\n")))
 	if len(backrefs) > 0 && (len(backrefs) > 1 || backrefs[0] != block.Name) {
 		seen := map[string]bool{block.Name: true}
 		fmt.Fprintf(w, "Used by:")
