@@ -472,12 +472,8 @@ func (s *State) evictPackage(b *ui.Task, pkg *manifest.Package) error {
 	}
 	defer lock.Release(b)
 
-	// Don't delete the previous archive if we don't know for certain that the
-	// new one differs. This avoids duplicate downloads in some circumstances.
-	if pkg.ETag != "" {
-		if err := s.cache.Evict(b, pkg.SHA256, pkg.Source); err != nil {
-			return errors.WithStack(err)
-		}
+	if err := s.cache.Evict(b, pkg.SHA256, pkg.Source); err != nil {
+		return errors.WithStack(err)
 	}
 	if err := s.removePackage(b, pkg.Dest); err != nil {
 		return errors.WithStack(err)
