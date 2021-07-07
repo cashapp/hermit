@@ -66,6 +66,7 @@ type unactivated struct {
 	Activate activateCmd `cmd:"" help:"Activate an environment." hidden:""`
 	Exec     execCmd     `cmd:"" help:"Directly execute a binary in a package." hidden:""`
 	Sync     syncCmd     `cmd:"" help:"Sync manifest sources." group:"global"`
+	Search   searchCmd   `cmd:"" help:"Search for packages to install." group:"global"`
 	DumpDB   dumpDBCmd   `cmd:"" help:"Dump state database." hidden:""`
 }
 
@@ -84,7 +85,6 @@ type activated struct {
 	Install   installCmd   `cmd:"" help:"Install packages." group:"env"`
 	Uninstall uninstallCmd `cmd:"" help:"Uninstall packages." group:"env"`
 	Upgrade   upgradeCmd   `cmd:"" help:"Upgrade packages" group:"env"`
-	Search    searchCmd    `cmd:"" help:"Search for packages to install." group:"env"`
 	List      listCmd      `cmd:"" help:"List local packages." group:"env"`
 	Exec      execCmd      `cmd:"" help:"Directly execute a binary in a package." group:"env"`
 	Env       envCmd       `cmd:"" help:"Manage environment variables." group:"env"`
@@ -365,7 +365,6 @@ func (s *syncCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
 	}
 	// Upgrade hermit if necessary
 	pkgRef := filepath.Base(filepath.Dir(self))
-
 	if strings.HasPrefix(pkgRef, "hermit@") {
 		pkg, err := state.Resolve(l, manifest.ExactSelector(manifest.ParseReference(pkgRef)))
 		if err != nil {
@@ -615,15 +614,33 @@ type searchCmd struct {
 	Constraint string `arg:"" help:"Package regex." optional:""`
 }
 
-func (s *searchCmd) Run(l *ui.UI, env *hermit.Env) error {
-	err := env.Sync(l, false)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	pkgs, err := env.Search(l, s.Constraint)
-	if err != nil {
-		return errors.WithStack(err)
+func (s *searchCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
+	var (
+		pkgs manifest.Packages
+		err  error
+	)
+	if env != nil {
+		err = env.Sync(l, false)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		pkgs, err = env.Search(l, s.Constraint)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+	} else {
+		srcs, err := state.Sources(l)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		err = srcs.Sync(l, false)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		pkgs, err = state.Search(l, s.Constraint)
+		if err != nil {
+			return errors.WithStack(err)
+		}
 	}
 	if s.Short {
 		for _, pkg := range pkgs {
