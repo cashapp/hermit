@@ -5,7 +5,7 @@ weight = 402
 
 Darwin-specific configuration.
 
-Used by: [channel](../channel#blocks) [linux](../linux#blocks) [&lt;manifest>](../manifest#blocks) [version](../version#blocks)
+Used by: [channel](../channel#blocks) [linux](../linux#blocks) [&lt;manifest>](../manifest#blocks) [platform](../platform#blocks) [version](../version#blocks)
 
 
 ## Blocks
@@ -15,6 +15,7 @@ Used by: [channel](../channel#blocks) [linux](../linux#blocks) [&lt;manifest>](.
 | [`darwin { … }`](../darwin) | Darwin-specific configuration. |
 | [`linux { … }`](../linux) | Linux-specific configuration. |
 | [`on <event> { … }`](../on) | Triggers to run on lifecycle events. |
+| [`platform { … }`](../platform) | Platform-specific configuration. &lt;attr&gt; is a set of platform attributes (CPU, OS, etc.) to match. |
 
 ## Attributes
 

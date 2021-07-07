@@ -1,11 +1,11 @@
 +++
-title = "linux"
-weight = 403
+title = "platform <attr>"
+weight = 412
 +++
 
-Linux-specific configuration.
+Platform-specific configuration. &lt;attr&gt; is a set of platform attributes (CPU, OS, etc.) to match.
 
-Used by: [channel](../channel#blocks) [darwin](../darwin#blocks) [&lt;manifest>](../manifest#blocks) [platform](../platform#blocks) [version](../version#blocks)
+Used by: [channel](../channel#blocks) [darwin](../darwin#blocks) [linux](../linux#blocks) [&lt;manifest>](../manifest#blocks) [version](../version#blocks)
 
 
 ## Blocks

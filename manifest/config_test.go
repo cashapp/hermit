@@ -121,6 +121,33 @@ func TestManifest(t *testing.T) {
 				Source:    "https://arm-linux-golang.org/dl/go1.14.4.linux-arm.tar.gz",
 			},
 		},
+		{name: "PlatformOverlay",
+			manifest: `
+				description = "Go"
+				binaries = ["bin/go"]
+				source = "https://golang.org/dl/go${version}.${os}-${arch}.tar.gz"
+
+				platform linux amd64 {
+					source = "https://amd64-linux-golang.org/dl/go${version}.${os}-${arch}.tar.gz"
+				}
+
+				platform linux arm {
+					arch = "arm"
+					source = "https://arm-linux-golang.org/dl/go${version}.${os}-${arch}.tar.gz"
+				}
+
+				version "1.14.4" {}
+			`,
+			os:   "linux",
+			arch: "arm",
+			pkg:  "go-1.14.4",
+			expected: &Package{
+				Arch:      "arm",
+				Reference: ParseReference("go-1.14.4"),
+				Binaries:  []string{"bin/go"},
+				Source:    "https://arm-linux-golang.org/dl/go1.14.4.linux-arm.tar.gz",
+			},
+		},
 		{name: "VersionOverlay",
 			manifest: `
 				description = "Go"

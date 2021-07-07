@@ -2,12 +2,9 @@ package manifest
 
 import (
 	"reflect"
-	"strings"
 	"time"
 
 	"github.com/pkg/errors"
-
-	"github.com/alecthomas/hcl"
 
 	"github.com/cashapp/hermit/envars"
 )
@@ -23,20 +20,6 @@ const (
 	PackageStateDownloaded                     // downloaded
 	PackageStateInstalled                      // installed
 )
-
-// Help returns the manifest help.
-func Help() string {
-	ast, err := hcl.Schema(&Manifest{})
-	if err != nil {
-		panic(err)
-	}
-	w := &strings.Builder{}
-	err = hcl.MarshalASTToWriter(ast, w)
-	if err != nil {
-		panic(err)
-	}
-	return w.String()
-}
 
 // A Layer contributes to the final merged manifest definition.
 type Layer struct {
@@ -57,6 +40,7 @@ type Layer struct {
 	SHA256   string            `hcl:"sha256,optional" help:"SHA256 of source package for verification."`
 	Darwin   []*Layer          `hcl:"darwin,block" help:"Darwin-specific configuration."`
 	Linux    []*Layer          `hcl:"linux,block" help:"Linux-specific configuration."`
+	Platform []*PlatformBlock  `hcl:"platform,block" help:"Platform-specific configuration. <attr> is a set of platform attributes (CPU, OS, etc.) to match."`
 	Triggers []*Trigger        `hcl:"on,block" help:"Triggers to run on lifecycle events."`
 }
 
@@ -76,6 +60,15 @@ func (c Layer) layers(os string, arch string) (out layers) {
 			}
 		}
 	}
+nextPlatform:
+	for _, platform := range c.Platform {
+		for _, attr := range platform.Attrs {
+			if attr != os && attr != arch {
+				continue nextPlatform
+			}
+		}
+		out = append(out, &platform.Layer)
+	}
 	return out
 }
 
@@ -87,6 +80,14 @@ func (c *Layer) match(arch string) bool {
 type AutoVersionBlock struct {
 	GitHubRelease  string `hcl:"github-release" help:"GitHub <user>/<repo> to retrieve and update versions from the releases API."`
 	VersionPattern string `hcl:"version-pattern" help:"Regex with one capture group to extract the version number from the origin." default:"v?(.*)"`
+}
+
+// PlatformBlock matches a set of attributes describing a platform (eg. CPU, OS, etc.)
+//
+// The PlatformBlock replaces "linux" and "darwin".
+type PlatformBlock struct {
+	Attrs []string `hcl:"attr,label" help:"Platform attributes to match."`
+	Layer
 }
 
 // VersionBlock is a Layer block specifying an installable version of a package.

@@ -5,7 +5,7 @@ weight = 406
 
 Triggers to run on lifecycle events.
 
-Used by: [channel](../channel#blocks) [darwin](../darwin#blocks) [linux](../linux#blocks) [&lt;manifest>](../manifest#blocks) [version](../version#blocks)
+Used by: [channel](../channel#blocks) [darwin](../darwin#blocks) [linux](../linux#blocks) [&lt;manifest>](../manifest#blocks) [platform](../platform#blocks) [version](../version#blocks)
 
 
 ## Blocks
