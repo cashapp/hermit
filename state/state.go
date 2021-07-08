@@ -391,6 +391,11 @@ func (s *State) UpgradeChannel(b *ui.Task, pkg *manifest.Package) error {
 	} else {
 		b.Infof("No updated required")
 	}
+
+	if etag == "" {
+		etag = pkg.ETag
+	}
+
 	pkg.UpdatedAt = time.Now()
 	dpkg := &dao.Package{
 		UsedAt:          time.Now(),
