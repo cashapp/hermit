@@ -80,10 +80,12 @@ func TestEnsureUpToDate(t *testing.T) {
 	data := "data"
 	headCalls := 0
 	getCalls := 0
+	fail := false
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("ETag", etag)
-
-		if r.Method == "HEAD" {
+		if fail {
+			w.WriteHeader(500)
+		} else if r.Method == "HEAD" {
 			headCalls++
 		} else if r.Method == "GET" {
 			getCalls++
@@ -141,6 +143,15 @@ func TestEnsureUpToDate(t *testing.T) {
 	dbPkg, err := dao.GetPackage(pkg.Reference.String())
 	require.NoError(t, err)
 	require.NotNil(t, dbPkg)
+
+	// Check etag retained when the connection fails
+	fail = true
+	pkg.UpdatedAt = time.Now().Add(-2 * time.Hour)
+	err = fixture.Env.EnsureChannelIsUpToDate(fixture.P, pkg)
+	require.NoError(t, err)
+	dbPkg, err = dao.GetPackage(pkg.Reference.String())
+	require.NoError(t, err)
+	require.Equal(t, etag, dbPkg.Etag)
 }
 
 // Tests that Garbage collection removes expired packages only if they are no longer referred from
