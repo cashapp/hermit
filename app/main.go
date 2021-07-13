@@ -40,6 +40,7 @@ type Config struct {
 	HTTP        func(HTTPTransportConfig) *http.Client
 	State       state.Config
 	KongOptions []kong.Option
+	KongPlugins kong.Plugins
 	// True if we're running in CI.
 	CI bool
 }
@@ -107,13 +108,13 @@ func Main(config Config) {
 	}
 	if envPath != "" {
 		isActivated = true
-		cli = &activated{}
+		cli = &activated{unactivated: unactivated{Plugins: config.KongPlugins}}
 	} else {
 		envPath, err = os.Getwd()
 		if err != nil {
 			log.Fatalf("couldn't get working directory: %s", err)
 		}
-		cli = &unactivated{}
+		cli = &unactivated{Plugins: config.KongPlugins}
 	}
 
 	kongOptions := []kong.Option{

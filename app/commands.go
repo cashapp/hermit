@@ -68,6 +68,8 @@ type unactivated struct {
 	Sync     syncCmd     `cmd:"" help:"Sync manifest sources." group:"global"`
 	Search   searchCmd   `cmd:"" help:"Search for packages to install." group:"global"`
 	DumpDB   dumpDBCmd   `cmd:"" help:"Dump state database." hidden:""`
+
+	kong.Plugins
 }
 
 func (u *unactivated) getCPUProfile() string       { return u.CPUProfile }
