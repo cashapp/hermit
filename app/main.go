@@ -39,6 +39,7 @@ type Config struct {
 	BaseDistURL string
 	HTTP        func(HTTPTransportConfig) *http.Client
 	State       state.Config
+	KongOptions []kong.Option
 	// True if we're running in CI.
 	CI bool
 }
@@ -115,7 +116,7 @@ func Main(config Config) {
 		cli = &unactivated{}
 	}
 
-	parser, err := kong.New(cli,
+	kongOptions := []kong.Option{
 		kong.Groups{
 			"env":    "Environment:\nCommands for creating and managing environments.",
 			"global": "Global:\nCommands for interacting with the shared global Hermit state.",
@@ -130,7 +131,11 @@ func Main(config Config) {
 		},
 		kong.HelpOptions{
 			Compact: true,
-		})
+		},
+	}
+	kongOptions = append(kongOptions, config.KongOptions...)
+
+	parser, err := kong.New(cli, kongOptions...)
 	if err != nil {
 		log.Fatalf("failed to initialise CLI: %s", err)
 	}
