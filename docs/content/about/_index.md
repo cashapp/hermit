@@ -11,3 +11,7 @@ contributions by many others whose feedback is very much appreciated.
 The source code for Hermit is [here](https://github.com/cashapp/hermit). The
 default open source set of package manifests is
 [here](https://github.com/cashapp/hermit-packages).
+
+For discussions find us on the
+[#cashapp](https://app.slack.com/client/T029RQSE6/C028GSD4Y81) channel
+on Gophers Slack.
