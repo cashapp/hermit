@@ -975,14 +975,16 @@ func (e *Env) ResolveWithDeps(l *ui.UI, installed manifest.Packages, selector ma
 		ref, err := e.resolveVirtual(l, req)
 		if err != nil && errors.Is(err, manifest.ErrUnknownPackage) {
 			// Secondly search by the package name
-			return e.ResolveWithDeps(l, installed, manifest.NameSelector(req), out)
-		}
-		if err != nil {
-			return err
-		}
-		err = e.ResolveWithDeps(l, installed, manifest.ExactSelector(ref), out)
-		if err != nil {
+			if err = e.ResolveWithDeps(l, installed, manifest.NameSelector(req), out); err != nil {
+				return errors.WithStack(err)
+			}
+		} else if err != nil {
 			return errors.WithStack(err)
+		} else {
+			err = e.ResolveWithDeps(l, installed, manifest.ExactSelector(ref), out)
+			if err != nil {
+				return errors.WithStack(err)
+			}
 		}
 	}
 	return nil
