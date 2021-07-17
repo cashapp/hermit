@@ -10,12 +10,15 @@ set -eo pipefail
 if [ -z "${HERMIT_STATE_DIR}" ]; then
   case "$(uname -s)" in
   Darwin)
-    HERMIT_STATE_DIR="${HOME}/Library/Caches/hermit"
+    HERMIT_STATE_DIR_RAW="\${HOME}/Library/Caches/hermit"
     ;;
   Linux)
-    HERMIT_STATE_DIR="${XDG_CACHE_HOME:-${HOME}/.cache}/hermit"
+    HERMIT_STATE_DIR_RAW="\${XDG_CACHE_HOME:-\${HOME}/.cache}/hermit"
     ;;
   esac
+  eval HERMIT_STATE_DIR="${HERMIT_STATE_DIR_RAW}"
+else
+  HERMIT_STATE_DIR_RAW="${HERMIT_STATE_DIR}"
 fi
 
 if [ ! "$(type -P curl)"  ]; then
@@ -27,7 +30,8 @@ fi
 # eg. https://github.com/cashapp/hermit/releases/download/stable
 HERMIT_DIST_URL="${HERMIT_DIST_URL:-{{.DistURL}}}"
 HERMIT_CHANNEL="$(basename "${HERMIT_DIST_URL}")"
-HERMIT_EXE=${HERMIT_EXE:-${HERMIT_STATE_DIR}/pkg/hermit@${HERMIT_CHANNEL}/hermit}
+HERMIT_EXE_RAW="${HERMIT_STATE_DIR_RAW}/pkg/hermit@${HERMIT_CHANNEL}/hermit"
+eval HERMIT_EXE="\${HERMIT_EXE:-${HERMIT_EXE_RAW}}"
 HERMIT_EXE_DIR="$(dirname "${HERMIT_EXE}")"
 HERMIT_BIN_INSTALL_DIR="${HERMIT_BIN_INSTALL_DIR:-${HOME}/bin}"
 
@@ -73,8 +77,9 @@ fi
 echo "Linking hermit to $HERMIT_BIN_INSTALL_DIR/hermit"
 cat > "$HERMIT_BIN_INSTALL_DIR/hermit" << EOF
 #!/bin/bash
-test -x \${HERMIT_EXE:-${HERMIT_EXE}} && exec "\${HERMIT_EXE:-${HERMIT_EXE}}" "\$@"
-(curl -fsSL "${HERMIT_DIST_URL}/install.sh" | bash) && exec "${HERMIT_EXE}" "\$@"
+: "\${HERMIT_EXE:=${HERMIT_EXE_RAW}}"
+test -x \${HERMIT_EXE} && exec "\${HERMIT_EXE}" "\$@"
+(curl -fsSL "${HERMIT_DIST_URL}/install.sh" | bash) && exec "\${HERMIT_EXE}" "\$@"
 EOF
 chmod +x "$HERMIT_BIN_INSTALL_DIR/hermit"
 
