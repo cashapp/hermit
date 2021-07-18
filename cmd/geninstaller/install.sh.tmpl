@@ -31,17 +31,19 @@ HERMIT_EXE=${HERMIT_EXE:-${HERMIT_STATE_DIR}/pkg/hermit@${HERMIT_CHANNEL}/hermit
 HERMIT_EXE_DIR="$(dirname "${HERMIT_EXE}")"
 HERMIT_BIN_INSTALL_DIR="${HERMIT_BIN_INSTALL_DIR:-${HOME}/bin}"
 
+ID_USER=$(id -u)
+ID_GROUP=$(id -g)
 
 for dir in "${HERMIT_EXE_DIR}" "${HERMIT_STATE_DIR}"; do
   if [ ! -e "${dir}" ]; then
     echo "Creating ${dir}"
     mkdir -p "${dir}"
-    chown "$USER:$GID" "${dir}"
+    chown "$ID_USER:$ID_GROUP" "${dir}"
   fi
 
   if [ ! -w "${dir}" ]; then
     echo "${dir} is not writeable, making it so"
-    chown "$USER:$GID" "${dir}"
+    chown "$ID_USER:$ID_GROUP" "${dir}"
     chmod u+w "${dir}"
   fi
 done
@@ -55,7 +57,7 @@ URL="${HERMIT_DIST_URL}/hermit-${OS}-${ARCH}.gz"
 echo "Downloading ${URL} to ${HERMIT_EXE}"
 rm -f "${HERMIT_EXE}"
 curl -fsSL "${URL}" | gzip -dc > "${HERMIT_EXE}~"
-chown "$USER:$GID" "${HERMIT_EXE}~"
+chown "$ID_USER:$ID_GROUP" "${HERMIT_EXE}~"
 chmod u+wx "${HERMIT_EXE}~"
 mv "${HERMIT_EXE}~" "${HERMIT_EXE}"
 
