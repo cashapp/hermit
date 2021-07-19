@@ -10,9 +10,9 @@ import (
 
 const bashShellHooks = commonHooks + `
 if test -n "${PROMPT_COMMAND+_}"; then 
-  export PROMPT_COMMAND="change_hermit_env; $PROMPT_COMMAND"
+  PROMPT_COMMAND="change_hermit_env; $PROMPT_COMMAND"
 else
-  export PROMPT_COMMAND="change_hermit_env"
+  PROMPT_COMMAND="change_hermit_env"
 fi
 
 complete -o nospace -C "$HOME/bin/hermit" hermit
