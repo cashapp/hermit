@@ -26,7 +26,7 @@ _hermit_deactivate() {
 
 {{- if .Bash }}
   unset PROMPT_COMMAND >/dev/null 2>&1
-  if test -n "${_HERMIT_OLD_PROMPT_COMMAND+_}"; then export PROMPT_COMMAND="${_HERMIT_OLD_PROMPT_COMMAND}"; unset _HERMIT_OLD_PROMPT_COMMAND; fi
+  if test -n "${_HERMIT_OLD_PROMPT_COMMAND+_}"; then PROMPT_COMMAND="${_HERMIT_OLD_PROMPT_COMMAND}"; unset _HERMIT_OLD_PROMPT_COMMAND; fi
 {{- end}}
 
 {{- if .Zsh }}
@@ -62,10 +62,10 @@ update_hermit_env() {
 
 {{- if .Bash }}
 if test -n "${PROMPT_COMMAND+_}"; then
-  export _HERMIT_OLD_PROMPT_COMMAND="${PROMPT_COMMAND}"
-  export PROMPT_COMMAND="update_hermit_env; $PROMPT_COMMAND"
+  _HERMIT_OLD_PROMPT_COMMAND="${PROMPT_COMMAND}"
+  PROMPT_COMMAND="update_hermit_env; $PROMPT_COMMAND"
 else
-  export PROMPT_COMMAND="update_hermit_env"
+  PROMPT_COMMAND="update_hermit_env"
 fi
 {{- end}}
 
