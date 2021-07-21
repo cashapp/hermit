@@ -1,6 +1,6 @@
 +++
 title = "Updating"
-weight = 108
+weight = 109
 +++
 
 Hermit is designed in such a way that it and its package manifests are
