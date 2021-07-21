@@ -2,6 +2,7 @@ package manifest
 
 import (
 	"reflect"
+	"regexp"
 	"time"
 
 	"github.com/pkg/errors"
@@ -40,7 +41,7 @@ type Layer struct {
 	SHA256   string            `hcl:"sha256,optional" help:"SHA256 of source package for verification."`
 	Darwin   []*Layer          `hcl:"darwin,block" help:"Darwin-specific configuration."`
 	Linux    []*Layer          `hcl:"linux,block" help:"Linux-specific configuration."`
-	Platform []*PlatformBlock  `hcl:"platform,block" help:"Platform-specific configuration. <attr> is a set of platform attributes (CPU, OS, etc.) to match."`
+	Platform []*PlatformBlock  `hcl:"platform,block" help:"Platform-specific configuration. <attr> is a set regexes that must all match against one of CPU, OS, etc.."`
 	Triggers []*Trigger        `hcl:"on,block" help:"Triggers to run on lifecycle events."`
 }
 
@@ -63,7 +64,11 @@ func (c Layer) layers(os string, arch string) (out layers) {
 nextPlatform:
 	for _, platform := range c.Platform {
 		for _, attr := range platform.Attrs {
-			if attr != os && attr != arch {
+			re, err := regexp.Compile(attr)
+			if err != nil {
+				continue
+			}
+			if !re.MatchString(os) && !re.MatchString(arch) {
 				continue nextPlatform
 			}
 		}

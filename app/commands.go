@@ -62,12 +62,13 @@ type unactivated struct {
 	Info       infoCmd       `cmd:"" help:"Show information on packages." group:"global"`
 	ShellHooks shellHooksCmd `cmd:"" help:"Manage Hermit auto-activation hooks of a shell." group:"global" aliases:"install-hooks"`
 
-	Noop     noopCmd     `cmd:"" help:"No-op, just exit." hidden:""`
-	Activate activateCmd `cmd:"" help:"Activate an environment." hidden:""`
-	Exec     execCmd     `cmd:"" help:"Directly execute a binary in a package." hidden:""`
-	Sync     syncCmd     `cmd:"" help:"Sync manifest sources." group:"global"`
-	Search   searchCmd   `cmd:"" help:"Search for packages to install." group:"global"`
-	DumpDB   dumpDBCmd   `cmd:"" help:"Dump state database." hidden:""`
+	Noop                 noopCmd              `cmd:"" help:"No-op, just exit." hidden:""`
+	Activate             activateCmd          `cmd:"" help:"Activate an environment." hidden:""`
+	Exec                 execCmd              `cmd:"" help:"Directly execute a binary in a package." hidden:""`
+	Sync                 syncCmd              `cmd:"" help:"Sync manifest sources." group:"global"`
+	Search               searchCmd            `cmd:"" help:"Search for packages to install." group:"global"`
+	DumpDB               dumpDBCmd            `cmd:"" help:"Dump state database." hidden:""`
+	DumpUserConfigSchema dumpUserConfigSchema `cmd:"" help:"Dump user configuration schema." hidden:""`
 
 	kong.Plugins
 }
@@ -984,4 +985,11 @@ func (s *autoVersionCmd) Run(l *ui.UI) error {
 type manifestCmd struct {
 	Validate    validateCmd    `cmd:"" help:"Check a package manifest source for errors." group:"global"`
 	AutoVersion autoVersionCmd `cmd:"" help:"Upgrade manifest versions automatically where possible." group:"global"`
+}
+
+type dumpUserConfigSchema struct{}
+
+func (dumpUserConfigSchema) Run() error {
+	fmt.Print(userConfigSchema)
+	return nil
 }

@@ -8,13 +8,13 @@ import (
 	"os"
 	"runtime"
 	"runtime/pprof"
+	"strings"
 	"time"
 
 	"github.com/posener/complete"
 	"github.com/willabides/kongplete"
 
 	"github.com/alecthomas/kong"
-	konghcl "github.com/alecthomas/kong-hcl"
 	"github.com/mattn/go-isatty"
 
 	"github.com/cashapp/hermit"
@@ -117,14 +117,21 @@ func Main(config Config) {
 		cli = &unactivated{Plugins: config.KongPlugins}
 	}
 
+	userConfig, err := LoadUserConfig()
+	if err != nil {
+		log.Printf("%s: %s", userConfigPath, err)
+	}
+
+	hermitHelp := help + "\n\nConfiguration format for ~/.hermit.hcl:\n    " + strings.Join(strings.Split(userConfigSchema, "\n"), "\n    ")
+
 	kongOptions := []kong.Option{
 		kong.Groups{
 			"env":    "Environment:\nCommands for creating and managing environments.",
 			"global": "Global:\nCommands for interacting with the shared global Hermit state.",
 		},
-		kong.Configuration(konghcl.Loader, "~/.hermit.hcl"),
+		kong.Resolvers(UserConfigResolver(userConfig)),
 		kong.UsageOnError(),
-		kong.Description(help),
+		kong.Description(hermitHelp),
 		kong.BindTo(cli, (*cliCommon)(nil)),
 		kong.Vars{
 			"version": config.Version,

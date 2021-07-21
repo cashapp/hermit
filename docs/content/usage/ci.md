@@ -1,6 +1,6 @@
 +++
 title = "Continuous Integration"
-weight = 107
+weight = 108
 +++
 
 Generally, using Hermit in CI is similar to using it locally - activate

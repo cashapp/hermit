@@ -15,7 +15,7 @@ Used by: [channel](../channel#blocks) [linux](../linux#blocks) [&lt;manifest>](.
 | [`darwin { … }`](../darwin) | Darwin-specific configuration. |
 | [`linux { … }`](../linux) | Linux-specific configuration. |
 | [`on <event> { … }`](../on) | Triggers to run on lifecycle events. |
-| [`platform { … }`](../platform) | Platform-specific configuration. &lt;attr&gt; is a set of platform attributes (CPU, OS, etc.) to match. |
+| [`platform { … }`](../platform) | Platform-specific configuration. &lt;attr&gt; is a set regexes that must all match against one of CPU, OS, etc.. |
 
 ## Attributes
 
