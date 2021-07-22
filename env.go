@@ -407,6 +407,9 @@ func (e *Env) Install(l *ui.UI, pkg *manifest.Package) (*shell.Changes, error) {
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+	if err := pkg.EnsureSupported(); err != nil {
+		return nil, errors.Wrapf(err, "install failed")
+	}
 
 	allChanges := shell.NewChanges(envars.Parse(os.Environ()))
 
@@ -790,6 +793,9 @@ func (e *Env) upgradeVersion(l *ui.UI, pkg *manifest.Package) (*shell.Changes, e
 	resolved, err := resolver.Resolve(l, manifest.PrefixSelector(pkg.Reference.Major()))
 	if err != nil {
 		return nil, errors.WithStack(err)
+	}
+	if err := resolved.EnsureSupported(); err != nil {
+		return nil, errors.Wrapf(err, "upgrade failed")
 	}
 	if !resolved.Reference.Version.Match(pkg.Reference.Version) {
 		l.Task(pkg.Reference.Name).SubTask("upgrade").Infof("Upgrading %s to %s", pkg, resolved)
