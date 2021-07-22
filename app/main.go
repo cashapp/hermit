@@ -18,6 +18,7 @@ import (
 	"github.com/mattn/go-isatty"
 
 	"github.com/cashapp/hermit"
+	"github.com/cashapp/hermit/shell"
 	"github.com/cashapp/hermit/state"
 	"github.com/cashapp/hermit/ui"
 	"github.com/cashapp/hermit/util/debug"
@@ -37,6 +38,9 @@ type Config struct {
 	Version     string
 	LogLevel    ui.Level
 	BaseDistURL string
+	// SHA256 checksums for all known versions of per-environment scripts.
+	// If empty shell.ScriptSHAs will be used.
+	SHA256Sums  []string
 	HTTP        func(HTTPTransportConfig) *http.Client
 	State       state.Config
 	KongOptions []kong.Option
@@ -58,6 +62,9 @@ func Main(config Config) {
 			}
 			return &http.Client{Transport: transport}
 		}
+	}
+	if len(config.SHA256Sums) == 0 {
+		config.SHA256Sums = shell.ScriptSHAs
 	}
 	var (
 		err         error
@@ -133,6 +140,7 @@ func Main(config Config) {
 		kong.UsageOnError(),
 		kong.Description(hermitHelp),
 		kong.BindTo(cli, (*cliCommon)(nil)),
+		kong.Bind(userConfig, config),
 		kong.Vars{
 			"version": config.Version,
 			"env":     envPath,
