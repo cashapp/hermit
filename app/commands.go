@@ -480,6 +480,9 @@ func (e *execCmd) Run(l *ui.UI, sta *state.State, env *hermit.Env, globalState G
 	if err != nil {
 		return errors.WithStack(err)
 	}
+	if err := pkg.EnsureSupported(); err != nil {
+		return errors.Wrapf(err, "execution failed")
+	}
 	installed, err := env.ListInstalled(l)
 	if err != nil {
 		return errors.WithStack(err)
@@ -914,7 +917,11 @@ func listPackages(pkgs manifest.Packages, allVersions bool) {
 				continue
 			}
 			clr := ""
-			if pkg.Linked {
+			suffix := ""
+			if pkg.Unsupported() {
+				clr = "^1"
+				suffix = " (architecture not supported)"
+			} else if pkg.Linked {
 				switch pkg.State {
 				case manifest.PackageStateRemote:
 					clr = "^1"
@@ -924,7 +931,7 @@ func listPackages(pkgs manifest.Packages, allVersions bool) {
 					clr = "^2"
 				}
 			}
-			versions = append(versions, fmt.Sprintf("%s%s^R", clr, pkg.Reference.StringNoName()))
+			versions = append(versions, fmt.Sprintf("%s%s%s^R", clr, pkg.Reference.StringNoName(), suffix))
 		}
 		colour.Println("^B^2" + name + "^R (" + strings.Join(versions, ", ") + ")")
 		doc.ToText(os.Stdout, pkgs[0].Description, "  ", "", w-2)

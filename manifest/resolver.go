@@ -150,6 +150,19 @@ func (p *Package) DeprecationWarningf(format string, args ...interface{}) {
 	p.Warnings = append(p.Warnings, fmt.Sprintf("DEPRECATED: "+format, args...))
 }
 
+// Unsupported package in this environment.
+func (p *Package) Unsupported() bool {
+	return p.Source == ""
+}
+
+// EnsureSupported returns an error if the package is not supported on this platform
+func (p *Package) EnsureSupported() error {
+	if p.Unsupported() {
+		return errors.Errorf("package %s is not supported on this architecture", p.Reference)
+	}
+	return nil
+}
+
 // Resolver of packages.
 type Resolver struct {
 	config  Config
@@ -433,12 +446,14 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 			files[k] = v
 		}
 	}
+	// If no source was defined, this architecture is not supported.
+	if p.Source == "" {
+		return p, nil
+	}
+
 	// Validate.
 	if len(p.Binaries) == 0 && len(p.Apps) == 0 {
 		return nil, errors.Errorf("%s: %s: no binaries or apps provided", manifest.Path, found)
-	}
-	if p.Source == "" {
-		return nil, errors.Errorf("%s: %s: no source provided", manifest.Path, found)
 	}
 
 	// Expand variables.
