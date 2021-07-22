@@ -7,6 +7,7 @@ As of early 2021 Hermit has support for the following language SDKs.
 
 | SDK              | Status
 |------------------|------------------------
+| [Crystal](https://github.com/cashapp/hermit-packages/blob/master/crystal.hcl) | Crystal is a general-purpose, object-oriented programming language with a Ruby-inspired syntax.
 | [Elm](https://github.com/cashapp/hermit-packages/blob/master/elm.hcl) | Elm is distributed as a single binary, so everything works as you would expect!
 | [Flutter (Dart)](https://github.com/cashapp/hermit-packages/blob/master/flutter.hcl) | Flutter is available, though not well tested.
 | [GraalVM](https://github.com/cashapp/hermit-packages/blob/master/graalvm.hcl) | GraalVM is supported and reasonably well tested.
@@ -17,4 +18,5 @@ As of early 2021 Hermit has support for the following language SDKs.
 | [Node](https://github.com/cashapp/hermit-packages/blob/master/node.hcl) | Packages are completely isolated within the Hermit environment. Global packages (`npm install -g`) are installed into `${HERMIT_ENV}/.hermit/node` while local packages are installed in `${HERMIT_ENV}/node_modules`. `bin` directories for both global and local packages are added to the `${PATH}`.
 | [Python](https://github.com/cashapp/hermit-packages/blob/master/python3.hcl) | Python is fully supported and isolated. Python packages installed within an active Hermit environment will be located in `${HERMIT_ENV}/.hermit/python` and `${HERMIT_ENV}/.hermit/python/bin` is added to the `${PATH}`.
 | [Rust](https://github.com/cashapp/hermit-packages/blob/master/rust.hcl) | Rust stable and nightly are both supported along with all standard tooling. Nightly will be updated daily.
+| [TinyGo](https://github.com/cashapp/hermit-packages/blob/master/tinygo.hcl) | A Go Compiler For Small Places.
 | [Zig](https://github.com/cashapp/hermit-packages/blob/master/zig.hcl) | Zig is supported and works as expected, though not well tested.
