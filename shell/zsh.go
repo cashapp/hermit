@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-const zshShellHooks = commonHooks + `
+var zshShellHooks = `
 precmd_functions+=(change_hermit_env)
 
 # shellcheck disable=SC2154
@@ -43,6 +43,6 @@ func (sh *Zsh) ActivationHooksInstallation() (path, script string, err error) { 
 	return fileName, `eval "$(test -x $HOME/bin/hermit && $HOME/bin/hermit shell-hooks --print --zsh)"`, nil
 }
 
-func (sh *Zsh) ActivationHooksCode() (script string, err error) { // nolint: golint
-	return zshShellHooks, err
+func (sh *Zsh) ActivationHooksCode([]string) (script string, err error) { // nolint: golint
+	return makeCommonHooks(ScriptSHAs...) + zshShellHooks, nil
 }

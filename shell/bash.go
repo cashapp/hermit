@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-const bashShellHooks = commonHooks + `
+var bashShellHooks = `
 if test -n "${PROMPT_COMMAND+_}"; then 
   PROMPT_COMMAND="change_hermit_env; $PROMPT_COMMAND"
 else
@@ -43,6 +43,6 @@ func (sh *Bash) ActivationHooksInstallation() (path, script string, err error) {
 	return fileName, `eval "$(test -x $HOME/bin/hermit && $HOME/bin/hermit shell-hooks --print --bash)"`, nil
 }
 
-func (sh *Bash) ActivationHooksCode() (script string, err error) { // nolint: golint
-	return bashShellHooks, err
+func (sh *Bash) ActivationHooksCode([]string) (script string, err error) { // nolint: golint
+	return makeCommonHooks(ScriptSHAs...) + bashShellHooks, nil
 }

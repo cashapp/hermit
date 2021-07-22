@@ -10,10 +10,11 @@ import (
 	"github.com/mitchellh/go-ps"
 	"github.com/pkg/errors"
 
+	"github.com/willdonnelly/passwd"
+
 	"github.com/cashapp/hermit/envars"
 	"github.com/cashapp/hermit/ui"
 	"github.com/cashapp/hermit/util"
-	"github.com/willdonnelly/passwd"
 )
 
 // ActivationConfig for shells.
@@ -29,7 +30,7 @@ type Shell interface {
 	// ActivationHooksInstallation returns the path and shell fragment for injecting activation code to the shell initialisation.
 	ActivationHooksInstallation() (path, script string, err error)
 	// ActivationHooksCode returns the shell fragment for activation/deactivation hooks
-	ActivationHooksCode() (script string, err error)
+	ActivationHooksCode(sha256sums []string) (script string, err error)
 	// ActivationScript for this shell.
 	ActivationScript(w io.Writer, config ActivationConfig) error
 	// ApplyEnvars writes the shell fragment required to apply the given envars.
@@ -70,11 +71,13 @@ func InstallHooks(l *ui.UI, shell Shell) error {
 }
 
 // PrintHooks for the given shell.
-func PrintHooks(shell Shell) error {
+//
+// "sha256sums" is the union of all known SHA256 sums for per-environment scripts.
+func PrintHooks(shell Shell, sha256sums []string) error {
 	if shell == nil {
 		return nil
 	}
-	code, err := shell.ActivationHooksCode()
+	code, err := shell.ActivationHooksCode(ScriptSHAs)
 	if err != nil {
 		return errors.WithStack(err)
 	}

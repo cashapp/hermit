@@ -937,7 +937,7 @@ type shellHooksCmd struct {
 	Print bool `help:"Prints out the hook configuration code" hidden:"" `
 }
 
-func (s *shellHooksCmd) Run(l *ui.UI) error {
+func (s *shellHooksCmd) Run(l *ui.UI, config Config) error {
 	var (
 		sh  shell.Shell
 		err error
@@ -955,7 +955,7 @@ func (s *shellHooksCmd) Run(l *ui.UI) error {
 	if !s.Print {
 		return errors.WithStack(shell.InstallHooks(l, sh))
 	}
-	return errors.WithStack(shell.PrintHooks(sh))
+	return errors.WithStack(shell.PrintHooks(sh, config.SHA256Sums))
 }
 
 type dumpDBCmd struct{}
