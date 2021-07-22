@@ -1,5 +1,5 @@
 change_hermit_env() {
-  CUR=${PWD}
+  local CUR=${PWD}
   while [ "$CUR" != "/" ]; do
     if [ "${CUR}" -ef "${HERMIT_ENV}" ]; then return; fi
     if [ -f "${CUR}/bin/activate-hermit" ]; then
@@ -10,6 +10,7 @@ change_hermit_env() {
           . "${CUR}/bin/activate-hermit"
         fi
       fi
+      return
     fi
     CUR="$(dirname "${CUR}")"
   done
