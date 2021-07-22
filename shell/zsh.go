@@ -43,6 +43,6 @@ func (sh *Zsh) ActivationHooksInstallation() (path, script string, err error) { 
 	return fileName, `eval "$(test -x $HOME/bin/hermit && $HOME/bin/hermit shell-hooks --print --zsh)"`, nil
 }
 
-func (sh *Zsh) ActivationHooksCode([]string) (script string, err error) { // nolint: golint
-	return makeCommonHooks(ScriptSHAs...) + zshShellHooks, nil
+func (sh *Zsh) ActivationHooksCode() (script string, err error) { // nolint: golint
+	return commonHooks + zshShellHooks, nil
 }

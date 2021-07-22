@@ -1,9 +1,12 @@
 package app
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"go/doc"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -55,9 +58,12 @@ type unactivated struct {
 	Level       ui.Level         `help:"Set minimum log level." env:"HERMIT_LOG" default:"info" enum:"trace,debug,info,warn,error,fatal"`
 	GlobalState
 
-	Init       initCmd       `cmd:"" help:"Initialise an environment (idempotent)." group:"env"`
-	Version    versionCmd    `cmd:"" help:"Show version." group:"global"`
-	Validate   validateCmd   `hidden:"" cmd:"" help:"Check a package manifest source for errors." group:"global"`
+	Init     initCmd    `cmd:"" help:"Initialise an environment (idempotent)." group:"env"`
+	Version  versionCmd `cmd:"" help:"Show version." group:"global"`
+	Validate struct {
+		Source validateSourceCmd `default:"withargs" cmd:"" help:"Check a package manifest source for errors." group:"global"`
+		Env    validateEnvCmd    `cmd:"" help:"Validate an environment." group:"global"`
+	} `cmd:"" help:"Hermit validation." group:"global"`
 	Manifest   manifestCmd   `cmd:"" help:"Commands for manipulating manifests."`
 	Info       infoCmd       `cmd:"" help:"Show information on packages." group:"global"`
 	ShellHooks shellHooksCmd `cmd:"" help:"Manage Hermit auto-activation hooks of a shell." group:"global" aliases:"install-hooks"`
@@ -851,11 +857,44 @@ func (g *upgradeCmd) Run(l *ui.UI, env *hermit.Env) error {
 	return nil
 }
 
-type validateCmd struct {
+type validateEnvCmd struct {
+	Env string `arg:"" type:"existingdir" help:"Path to environment root."`
+}
+
+func (v *validateEnvCmd) Run(l *ui.UI, config Config) error {
+next:
+	for _, path := range []string{"bin/activate-hermit", "bin/hermit"} {
+		path = filepath.Join(v.Env, path)
+		hasher := sha256.New()
+		r, err := os.Open(path)
+		if os.IsNotExist(err) {
+			return errors.Errorf("%s is missing, not a Hermit environment?", path)
+		} else if err != nil {
+			return errors.WithStack(err)
+		}
+		_, err = io.Copy(hasher, r)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		hash := hex.EncodeToString(hasher.Sum(nil))
+		l.Debugf("%s %s\n", hash, path)
+		for _, candidate := range config.SHA256Sums {
+			if hash == candidate {
+				l.Infof("%s validated as %s", path, hash)
+				continue next
+			}
+		}
+		return errors.Errorf("%s has an unknown SHA256 signature (%s); verify that you trust this environment and run 'hermit init %s'", path, hash, v.Env)
+	}
+	l.Infof("%s ok", v.Env)
+	return nil
+}
+
+type validateSourceCmd struct {
 	Source string `arg:"" optional:"" name:"source" help:"The manifest source to validate."`
 }
 
-func (g *validateCmd) Run(l *ui.UI, env *hermit.Env, sta *state.State) error {
+func (g *validateSourceCmd) Run(l *ui.UI, env *hermit.Env, sta *state.State) error {
 	var (
 		srcs    *sources.Sources
 		err     error
@@ -990,8 +1029,8 @@ func (s *autoVersionCmd) Run(l *ui.UI) error {
 }
 
 type manifestCmd struct {
-	Validate    validateCmd    `cmd:"" help:"Check a package manifest source for errors." group:"global"`
-	AutoVersion autoVersionCmd `cmd:"" help:"Upgrade manifest versions automatically where possible." group:"global"`
+	Validate    validateSourceCmd `cmd:"" help:"Check a package manifest source for errors." group:"global"`
+	AutoVersion autoVersionCmd    `cmd:"" help:"Upgrade manifest versions automatically where possible." group:"global"`
 }
 
 type dumpUserConfigSchema struct{}
