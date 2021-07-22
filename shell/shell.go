@@ -30,7 +30,7 @@ type Shell interface {
 	// ActivationHooksInstallation returns the path and shell fragment for injecting activation code to the shell initialisation.
 	ActivationHooksInstallation() (path, script string, err error)
 	// ActivationHooksCode returns the shell fragment for activation/deactivation hooks
-	ActivationHooksCode(sha256sums []string) (script string, err error)
+	ActivationHooksCode() (script string, err error)
 	// ActivationScript for this shell.
 	ActivationScript(w io.Writer, config ActivationConfig) error
 	// ApplyEnvars writes the shell fragment required to apply the given envars.
@@ -77,7 +77,7 @@ func PrintHooks(shell Shell, sha256sums []string) error {
 	if shell == nil {
 		return nil
 	}
-	code, err := shell.ActivationHooksCode(ScriptSHAs)
+	code, err := shell.ActivationHooksCode()
 	if err != nil {
 		return errors.WithStack(err)
 	}

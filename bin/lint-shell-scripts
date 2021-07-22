@@ -9,4 +9,4 @@ mkdir -p build
 go run ./cmd/hermit shell-hooks --zsh --print > $tmpzsh
 go run ./cmd/hermit shell-hooks --bash --print > $tmpbash
 go run ./cmd/geninstaller --dest=./build/install.sh --dist-url=https://github.com/cashapp/hermit/releases/download/stable
-shellcheck -s bash ./build/install.sh ./files/hermit ./files/activate-hermit "$tmpzsh" "$tmpbash"
+shellcheck -s bash ./build/install.sh ./files/hermit ./files/activate-hermit shell/files/sh_common_hooks.sh "$tmpzsh" "$tmpbash"
