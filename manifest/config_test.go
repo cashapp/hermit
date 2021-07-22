@@ -2,6 +2,7 @@ package manifest
 
 import (
 	"os"
+	"sort"
 	"testing"
 
 	"github.com/cashapp/hermit/sources"
@@ -277,6 +278,91 @@ func TestManifest(t *testing.T) {
 					repr.String(test.expected, repr.Indent("  ")),
 					repr.String(pkg, repr.Indent("  ")))
 			}
+		})
+	}
+}
+
+func TestValidation(t *testing.T) {
+	tests := []struct {
+		name     string
+		manifest string
+		expected []string
+	}{{
+		name: "Error if no source defined at all",
+		manifest: `
+				description = "Test"
+				binaries = ["bin/t"]
+				version "1.13.5" "1.14.4" {}
+		`,
+		expected: []string{"no source defined for 1.13.5,1.14.4"},
+	}, {
+		name: "Work if source defined for just some architectures",
+		manifest: `
+				description = "Test"
+				binaries = ["bin/t"]
+				version "1.13.5" "1.14.4" {
+					platform darwin {
+						source = "www.example.com"
+					}
+				}
+		`,
+		expected: []string{},
+	}, {
+		name: "Work if source defined at the top",
+		manifest: `
+				source = "www.example.com"
+				description = "Test"
+				binaries = ["bin/t"]
+				version "1.13.5" "1.14.4" {
+					darwin {}
+					linux {}
+				}
+				channel "foo" {
+					update = "24h"
+				}
+		`,
+		expected: []string{},
+	}, {
+		name: "Fail if no source defined at a leaf block",
+		manifest: `
+				description = "Test"
+				binaries = ["bin/t"]
+				version "1.13.5" {
+					darwin { source = "www.example.com" }
+					linux {}
+				}
+		`,
+		expected: []string{"no source defined for 1.13.5:linux"},
+	}, {
+		name: "Fail if no source defined at a leaf platform block",
+		manifest: `
+				description = "Test"
+				binaries = ["bin/t"]
+				version "1.13.5" {
+					platform darwin arm64 { source = "www.example.com" }
+					platform darwin amd64 {}
+					linux {}
+				}
+		`,
+		expected: []string{"no source defined for 1.13.5:darwin:amd64", "no source defined for 1.13.5:linux"},
+	},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			sources := sources.New("", []sources.Source{sources.NewMemSource("test.hcl", test.manifest)})
+			loader := NewLoader(sources)
+			manifest, err := loader.Get("test")
+			require.NoError(t, err)
+
+			result := manifest.Validate()
+			strings := make([]string, len(result))
+			for i, e := range result {
+				strings[i] = e.Error()
+			}
+			sort.Strings(test.expected)
+			sort.Strings(strings)
+
+			require.Equal(t, test.expected, strings)
 		})
 	}
 }

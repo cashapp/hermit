@@ -1043,6 +1043,20 @@ func writeFileToEnvBin(l *ui.Task, useGit bool, src, envDir string, vars map[str
 	return nil
 }
 
+// ValidatePackage checks that the package with the given name is semantically correct
+func (e *Env) ValidatePackage(l *ui.UI, name string) []error {
+	sources, err := e.sources(l)
+	if err != nil {
+		return []error{err}
+	}
+	loader := manifest.NewLoader(sources)
+	mnf, err := loader.Get(name)
+	if err != nil {
+		return []error{err}
+	}
+	return mnf.Validate()
+}
+
 func (e *Env) sources(l *ui.UI) (*sources.Sources, error) {
 	if e.lazySources != nil {
 		return e.lazySources, nil

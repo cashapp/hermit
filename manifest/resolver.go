@@ -401,47 +401,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 		if len(layer.Env) > 0 {
 			layerEnvars = append(layerEnvars, layer.Env)
 		}
-		if layer.Arch != "" {
-			p.Arch = layer.Arch
-		}
-		if layer.SHA256 != "" {
-			p.SHA256 = layer.SHA256
-		}
-		if layer.Test != nil {
-			p.Test = *layer.Test
-		}
-		if layer.Source != "" {
-			p.Source = layer.Source
-		}
-		if len(layer.Mirrors) > 0 {
-			p.Mirrors = layer.Mirrors
-		}
-		if layer.Root != "" {
-			p.Root = layer.Root
-		}
-		if layer.Dest != "" {
-			p.Dest = layer.Dest
-		}
-		if len(layer.Apps) != 0 {
-			p.Apps = append(p.Apps, layer.Apps...)
-		}
-		if len(layer.Binaries) != 0 {
-			p.Binaries = append(p.Binaries, layer.Binaries...)
-		}
-		if len(layer.Requires) != 0 {
-			p.Requires = append(p.Requires, layer.Requires...)
-		}
-		if len(layer.Provides) != 0 {
-			p.Provides = append(p.Provides, layer.Provides...)
-		}
-		for k, v := range layer.Rename {
-			p.Rename[k] = v
-		}
-		if len(layer.Triggers) > 0 {
-			for _, trigger := range layer.Triggers {
-				p.Triggers[trigger.Event] = append(p.Triggers[trigger.Event], trigger.Ordered()...)
-			}
-		}
+		applyLayer(layer, p)
 		for k, v := range layer.Files {
 			files[k] = v
 		}
@@ -611,6 +571,50 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 		return nil, errors.WithStack(err)
 	}
 	return p, err
+}
+
+func applyLayer(layer *Layer, p *Package) {
+	if layer.Arch != "" {
+		p.Arch = layer.Arch
+	}
+	if layer.SHA256 != "" {
+		p.SHA256 = layer.SHA256
+	}
+	if layer.Test != nil {
+		p.Test = *layer.Test
+	}
+	if layer.Source != "" {
+		p.Source = layer.Source
+	}
+	if len(layer.Mirrors) > 0 {
+		p.Mirrors = layer.Mirrors
+	}
+	if layer.Root != "" {
+		p.Root = layer.Root
+	}
+	if layer.Dest != "" {
+		p.Dest = layer.Dest
+	}
+	if len(layer.Apps) != 0 {
+		p.Apps = append(p.Apps, layer.Apps...)
+	}
+	if len(layer.Binaries) != 0 {
+		p.Binaries = append(p.Binaries, layer.Binaries...)
+	}
+	if len(layer.Requires) != 0 {
+		p.Requires = append(p.Requires, layer.Requires...)
+	}
+	if len(layer.Provides) != 0 {
+		p.Provides = append(p.Provides, layer.Provides...)
+	}
+	for k, v := range layer.Rename {
+		p.Rename[k] = v
+	}
+	if len(layer.Triggers) > 0 {
+		for _, trigger := range layer.Triggers {
+			p.Triggers[trigger.Event] = append(p.Triggers[trigger.Event], trigger.Ordered()...)
+		}
+	}
 }
 
 func resolveFiles(manifest *AnnotatedManifest, pkg *Package, files map[string]string) error {

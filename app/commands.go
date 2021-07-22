@@ -395,6 +395,12 @@ func (t *testCmd) Run(l *ui.UI, env *hermit.Env) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
+		if errs := env.ValidatePackage(l, pkg.Reference.Name); len(errs) > 0 {
+			for _, err := range errs {
+				l.Errorf(err.Error())
+			}
+			return errors.Wrapf(err, "package %s manifest is not valid", pkg.Reference.Name)
+		}
 		if err = env.Test(l, pkg); err != nil {
 			return errors.WithStack(err)
 		}

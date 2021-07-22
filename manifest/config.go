@@ -3,6 +3,7 @@ package manifest
 import (
 	"reflect"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -164,7 +165,57 @@ func (m *Manifest) layers(ref Reference, os string, arch string) (layers, error)
 	return nil, nil
 }
 
+// Validate that this manifest is correctly defined for all architectures
+func (m *Manifest) Validate() []error {
+	var result []error
+	// Note, we are copying this struct to validate the different layers.
+	// As the maps within will not be copied, those can not be validated for now.
+	pkg := Package{Triggers: map[Event][]Action{}}
+	applyLayer(&m.Layer, &pkg)
+
+	for _, version := range m.Versions {
+		result = append(result, validateLayer(strings.Join(version.Version, ","), &version.Layer, pkg)...)
+	}
+	for _, channel := range m.Channels {
+		if channel.Version != "" {
+			continue
+		}
+		result = append(result, validateLayer("@"+channel.Name, &channel.Layer, pkg)...)
+	}
+
+	return result
+}
+
+func validateLayer(id string, layer *Layer, pkg Package) []error {
+	var result []error
+	applyLayer(layer, &pkg)
+
+	if isLeaf(layer) {
+		if pkg.Source == "" {
+			result = append(result, errors.Errorf("no source defined for %s", id))
+		}
+		return result
+	}
+
+	for _, l := range layer.Darwin {
+		result = append(result, validateLayer(id+":darwin", l, pkg)...)
+	}
+	for _, l := range layer.Linux {
+		result = append(result, validateLayer(id+":linux", l, pkg)...)
+	}
+	for _, l := range layer.Platform {
+		attrs := strings.Join(l.Attrs, ":")
+		result = append(result, validateLayer(id+":"+attrs, &l.Layer, pkg)...)
+	}
+
+	return result
+}
+
 type layers []*Layer
+
+func isLeaf(l *Layer) bool {
+	return len(l.Platform) == 0 && len(l.Linux) == 0 && len(l.Darwin) == 0
+}
 
 // Return the last non-zero value for a field in the stack of layers.
 func (ls layers) field(key string, seed interface{}) interface{} {
