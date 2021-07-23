@@ -401,6 +401,13 @@ func (t *testCmd) Run(l *ui.UI, env *hermit.Env) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
+		warnings, err := env.ValidateCompatibility(l, selector.Name())
+		for _, warning := range warnings {
+			l.Warnf("%s: %s", name, warning)
+		}
+		if err != nil {
+			return errors.WithStack(err)
+		}
 		if err = env.Test(l, pkg); err != nil {
 			return errors.WithStack(err)
 		}

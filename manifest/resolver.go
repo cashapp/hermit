@@ -24,6 +24,13 @@ import (
 
 // ErrUnknownPackage is returned when a package cannot be resolved.
 var ErrUnknownPackage = errors.New("unknown package")
+
+// ErrNoBinaries is returned when a resolved package does not contain binaries or apps
+var ErrNoBinaries = errors.New("no binaries or apps provided")
+
+// ErrNoSource is returned when a resolved package does not contain source
+var ErrNoSource = errors.New("no source provided")
+
 var xarch = map[string]string{
 	"amd64": "x86_64",
 	"386":   "i386",
@@ -225,11 +232,12 @@ func (r *Resolver) Search(l ui.Logger, pattern string) (Packages, error) {
 				ref := Reference{Name: manifest.Name, Version: ParseVersion(vstr)}
 				// If the reference doesn't resolve, discard it.
 				pkg, err := newPackage(manifest, r.config, ExactSelector(ref))
-				if err != nil {
+				if errors.Is(err, ErrNoSource) || errors.Is(err, ErrNoBinaries) || err == nil {
+					pkgs = append(pkgs, pkg)
+				} else {
 					l.Warnf("invalid manifest reference %s in %s.hcl: %s", ref, manifest.Name, err)
 					continue
 				}
-				pkgs = append(pkgs, pkg)
 			}
 		}
 		for _, channel := range manifest.Channels {
@@ -446,14 +454,12 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 			files[k] = v
 		}
 	}
-	// If no source was defined, this architecture is not supported.
-	if p.Source == "" {
-		return p, nil
-	}
-
 	// Validate.
 	if len(p.Binaries) == 0 && len(p.Apps) == 0 {
-		return nil, errors.Errorf("%s: %s: no binaries or apps provided", manifest.Path, found)
+		return p, errors.Wrapf(ErrNoBinaries, "%s: %s", manifest.Path, found)
+	}
+	if p.Source == "" {
+		return p, errors.Wrapf(ErrNoSource, "%s: %s", manifest.Path, found)
 	}
 
 	// Expand variables.

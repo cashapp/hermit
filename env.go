@@ -581,6 +581,73 @@ func (e *Env) Resolve(l *ui.UI, selector manifest.Selector, syncOnMissing bool) 
 	return resolved, nil
 }
 
+// ValidateCompatibility of a package on a set of predefined systems.
+// Returns the resolution errors for versions as warnings.
+// If a version fails to resolve for all systems, returns an error
+func (e *Env) ValidateCompatibility(l *ui.UI, name string) (warnings []string, err error) {
+	type system struct {
+		os   string
+		arch string
+	}
+
+	systems := []system{
+		{"darwin", "arm64"},
+		{"darwin", "amd64"},
+		{"linux", "arm64"},
+		{"linux", "amd64"},
+	}
+
+	sources, err := e.sources(l)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	loader := manifest.NewLoader(sources)
+	mnf, err := loader.Get(name)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	versions := mnf.GetVersions()
+	channels := mnf.GetChannels()
+
+	refs := make([]manifest.Reference, len(versions)+len(channels))
+	for i, v := range versions {
+		refs[i] = manifest.Reference{Name: name, Version: v}
+	}
+	for i, c := range channels {
+		refs[i+len(versions)] = manifest.Reference{Name: name, Channel: c}
+	}
+
+	for _, ref := range refs {
+		fails := 0
+		for _, system := range systems {
+			resolver, err := manifest.New(sources, manifest.Config{
+				Env:   e.envDir,
+				State: e.state.Root(),
+				OS:    system.os,
+				Arch:  system.arch,
+			})
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+
+			pkg, err := resolver.Resolve(l, manifest.ExactSelector(ref))
+			if err != nil {
+				fails++
+				warnings = append(warnings, fmt.Sprintf("%s:%s: %s", system.os, system.arch, err.Error()))
+			} else {
+				warnings = append(warnings, pkg.Warnings...)
+			}
+		}
+		if fails >= len(systems) {
+			return warnings, errors.Errorf("%s failed to resolve on all platforms", ref)
+		}
+	}
+
+	return warnings, nil
+}
+
 // ResolveVirtual references to concrete packages.
 func (e *Env) ResolveVirtual(l *ui.UI, name string) ([]*manifest.Package, error) {
 	resolver, err := e.resolver(l)
