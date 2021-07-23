@@ -164,6 +164,26 @@ func (m *Manifest) layers(ref Reference, os string, arch string) (layers, error)
 	return nil, nil
 }
 
+// GetVersions returns all the versions defined in this manifest
+func (m *Manifest) GetVersions() []Version {
+	var result []Version
+	for _, vs := range m.Versions {
+		for _, v := range vs.Version {
+			result = append(result, ParseVersion(v))
+		}
+	}
+	return result
+}
+
+// GetChannels returns all the channels defined in this manifest.
+func (m *Manifest) GetChannels() []string {
+	result := make([]string, len(m.Channels))
+	for i, c := range m.Channels {
+		result[i] = c.Name
+	}
+	return result
+}
+
 type layers []*Layer
 
 // Return the last non-zero value for a field in the stack of layers.
