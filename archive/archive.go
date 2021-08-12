@@ -31,10 +31,12 @@ import (
 )
 
 // Extract from "source" to package destination.
-func Extract(b *ui.Task, source string, pkg *manifest.Package) (err error) {
+//
+// "finalise" must be called to complete extraction of the package.
+func Extract(b *ui.Task, source string, pkg *manifest.Package) (finalise func() error, err error) {
 	task := b.SubTask("unpack")
 	if _, err := os.Stat(pkg.Dest); err == nil {
-		return errors.Errorf("destination %s already exists", pkg.Dest)
+		return finalise, errors.Errorf("destination %s already exists", pkg.Dest)
 	}
 	task.Debugf("Extracting %s to %s", source, pkg.Dest)
 	// Do we need to rename the result to the final pkg.Dest?
@@ -43,20 +45,31 @@ func Extract(b *ui.Task, source string, pkg *manifest.Package) (err error) {
 	ext := filepath.Ext(source)
 	switch ext {
 	case ".pkg":
-		return extractMacPKG(task, source, pkg.Dest, pkg.Strip)
+		return finalise, extractMacPKG(task, source, pkg.Dest, pkg.Strip)
 
 	case ".dmg":
-		return installMacDMG(task, source, pkg)
+		return finalise, installMacDMG(task, source, pkg)
 	}
 
 	parentDir := filepath.Dir(pkg.Dest)
 	if err := os.MkdirAll(parentDir, 0700); err != nil {
-		return errors.WithStack(err)
+		return finalise, errors.WithStack(err)
 	}
 
 	tmpDest, err := ioutil.TempDir(parentDir, filepath.Base(pkg.Dest)+"-*")
 	if err != nil {
-		return errors.WithStack(err)
+		return finalise, errors.WithStack(err)
+	}
+
+	// Make the unpacked destination files read-only.
+	finalise = func() error {
+		return errors.WithStack(filepath.Walk(pkg.Dest, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			task.Tracef("chmod a-w %q", path)
+			return errors.WithStack(os.Chmod(path, info.Mode()&^0222))
+		}))
 	}
 
 	// Cleanup or finalise temporary directory.
@@ -66,45 +79,21 @@ func Extract(b *ui.Task, source string, pkg *manifest.Package) (err error) {
 			_ = os.RemoveAll(tmpDest)
 			return
 		}
-		tmpRoot := filepath.Join(tmpDest, strings.TrimPrefix(pkg.Root, pkg.Dest))
-		for old, new := range pkg.Rename {
-			task.Tracef("  mv %q %q", old, new)
-			err = errors.WithStack(os.Rename(filepath.Join(tmpRoot, old), filepath.Join(tmpRoot, new)))
-			if err != nil {
-				break
-			}
-		}
-		// Make the unpacked destination files read-only.
-		err = filepath.Walk(tmpDest, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			task.Tracef("chmod a-w %q", path)
-			return errors.WithStack(os.Chmod(path, info.Mode()&^0222))
-		})
-		if err != nil {
-			return
-		}
-		// Make the base directory writeable so we can rename it.
-		task.Tracef("chmod 700 %q", tmpDest)
-		if err = errors.WithStack(os.Chmod(tmpDest, 0700)); err != nil { // nolint: gosec
-			return
-		}
-		task.Tracef("mv %q %q", tmpDest, pkg.Dest)
 		if renameResult {
+			task.Tracef("mv %q %q", tmpDest, pkg.Dest)
 			err = errors.WithStack(os.Rename(tmpDest, pkg.Dest))
 		}
 	}()
 
 	f, r, mime, err := openArchive(source)
 	if err != nil {
-		return err
+		return finalise, err
 	}
 	defer f.Close() // nolint: gosec
 
 	info, err := f.Stat()
 	if err != nil {
-		return errors.WithStack(err)
+		return finalise, errors.WithStack(err)
 	}
 
 	task.Size(int(info.Size()))
@@ -114,27 +103,27 @@ func Extract(b *ui.Task, source string, pkg *manifest.Package) (err error) {
 	// Archive is a single executable.
 	switch mime.String() {
 	case "application/zip":
-		return extractZip(task, f, info, tmpDest, pkg.Strip)
+		return finalise, extractZip(task, f, info, tmpDest, pkg.Strip)
 
 	case "application/x-7z-compressed":
-		return extract7Zip(f, info.Size(), tmpDest, pkg.Strip)
+		return finalise, extract7Zip(f, info.Size(), tmpDest, pkg.Strip)
 
 	case "application/x-mach-binary", "application/x-elf",
 		"application/x-executable", "application/x-sharedlib":
-		return extractExecutable(r, tmpDest, path.Base(pkg.Source))
+		return finalise, extractExecutable(r, tmpDest, path.Base(pkg.Source))
 
 	case "application/x-tar":
-		return extractPackageTarball(task, r, tmpDest, pkg.Strip)
+		return finalise, extractPackageTarball(task, r, tmpDest, pkg.Strip)
 
 	case "application/vnd.debian.binary-package":
 		renameResult = false
-		return extractDebianPackage(task, r, tmpDest, pkg)
+		return finalise, extractDebianPackage(task, r, tmpDest, pkg)
 
 	case "application/x-rpm":
-		return extractRpmPackage(r, tmpDest, pkg)
+		return finalise, extractRpmPackage(r, tmpDest, pkg)
 
 	default:
-		return errors.Errorf("don't know how to extract archive %s of type %s", source, mime)
+		return finalise, errors.Errorf("don't know how to extract archive %s of type %s", source, mime)
 	}
 
 }
@@ -464,7 +453,8 @@ func extractDebianPackage(b *ui.Task, r io.Reader, dest string, pkg *manifest.Pa
 			if err != nil {
 				return errors.WithStack(err)
 			}
-			return Extract(b, filename, pkg)
+			_, err = Extract(b, filename, pkg)
+			return err
 		}
 	}
 }

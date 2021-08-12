@@ -1,22 +1,27 @@
 package state_test
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
+	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/manifest/manifesttest"
 	"github.com/cashapp/hermit/ui"
-	"github.com/stretchr/testify/require"
 )
 
 func TestCacheAndUnpackDownloadsOnlyWhenNeeded(t *testing.T) {
 	calls := 0
 	fixture := NewStateTestFixture(t).
 		WithHTTPHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			dat, err := ioutil.ReadFile("../archive/testdata/archive.tar.gz")
+			fr, err := os.Open("../archive/testdata/archive.tar.gz")
 			require.NoError(t, err)
-			_, err = w.Write(dat)
+			defer fr.Close() // nolint
+			_, err = io.Copy(w, fr)
 			require.NoError(t, err)
 			calls++
 		}))
@@ -35,4 +40,39 @@ func TestCacheAndUnpackDownloadsOnlyWhenNeeded(t *testing.T) {
 	err = state.CacheAndUnpack(log.Task("test"), pkg)
 	require.NoError(t, err)
 	require.Equal(t, 1, calls)
+}
+
+func TestCacheAndUnpackHooksRunOnMutablePackage(t *testing.T) {
+	fixture := NewStateTestFixture(t).
+		WithHTTPHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			fr, err := os.Open("../archive/testdata/archive.tar.gz")
+			require.NoError(t, err)
+			defer fr.Close() // nolint
+			_, err = io.Copy(w, fr)
+			require.NoError(t, err)
+		}))
+	defer fixture.Clean()
+	state := fixture.State()
+
+	log, _ := ui.NewForTesting()
+	pkg := manifesttest.NewPkgBuilder(state.PkgDir()).
+		WithTrigger(manifest.EventUnpack, &manifest.RenameAction{
+			From: filepath.Join(state.PkgDir(), "linux_exe"),
+			To:   filepath.Join(state.PkgDir(), "linux_exe_renamed"),
+		}).
+		WithSource(fixture.Server.URL).
+		Result()
+
+	err := state.CacheAndUnpack(log.Task("test"), pkg)
+	require.NoError(t, err)
+
+	require.FileExists(t, filepath.Join(state.PkgDir(), "linux_exe_renamed"))
+
+	info, err := os.Stat(state.PkgDir())
+	require.NoError(t, err)
+	require.Equal(t, os.FileMode(0500), info.Mode()&0777, info.Mode().String())
+
+	info, err = os.Stat(filepath.Join(state.PkgDir(), "linux_exe_renamed"))
+	require.NoError(t, err)
+	require.Equal(t, os.FileMode(0500), info.Mode()&0777, info.Mode().String())
 }

@@ -23,7 +23,6 @@ func NewPkgBuilder(root string) PkgBuilder {
 		&manifest.Package{
 			Reference: ref,
 			Binaries:  []string{"darwin_exe", "linux_exe"},
-			Rename:    map[string]string{},
 			Root:      root,
 			Dest:      root,
 			Triggers:  map[manifest.Event][]manifest.Action{},
@@ -77,12 +76,6 @@ func (b PkgBuilder) WithSource(src string) PkgBuilder {
 // WithWarnings sets the warnings in the package
 func (b PkgBuilder) WithWarnings(warnings ...string) PkgBuilder {
 	b.result.Warnings = warnings
-	return b
-}
-
-// WithRename sets the rename mappings for the package
-func (b PkgBuilder) WithRename(from, to string) PkgBuilder {
-	b.result.Rename[from] = to
 	return b
 }
 

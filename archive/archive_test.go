@@ -39,12 +39,13 @@ func TestExtract(t *testing.T) {
 			defer os.RemoveAll(dest)
 
 			dest = filepath.Join(dest, "extracted")
-			err = Extract(
+			finalise, err := Extract(
 				p.Task("extract"),
 				filepath.Join("testdata", test.file),
 				&manifest.Package{Dest: dest, Source: test.file},
 			)
 			require.NoError(t, err)
+			require.NoError(t, finalise())
 			for _, expected := range test.expected {
 				info, err := os.Stat(filepath.Join(dest, expected))
 				require.NoError(t, err)

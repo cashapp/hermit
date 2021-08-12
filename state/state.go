@@ -290,7 +290,7 @@ func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 		path = s.cache.Path(p.SHA256, p.Source)
 	}
 
-	err = archive.Extract(b, path, p)
+	finalise, err := archive.Extract(b, path, p)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -305,7 +305,7 @@ func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 		_ = os.RemoveAll(p.Dest)
 		return errors.WithStack(err)
 	}
-	return nil
+	return errors.WithStack(finalise())
 }
 
 func (s *State) isCached(p *manifest.Package) bool {

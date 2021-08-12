@@ -242,9 +242,6 @@ func TestManifest(t *testing.T) {
 				if test.expected.Files == nil {
 					test.expected.Files = []*ResolvedFileRef{}
 				}
-				if test.expected.Rename == nil {
-					test.expected.Rename = map[string]string{}
-				}
 				if !test.expected.Reference.IsFullyQualified() {
 					test.expected.Reference = ParseReference(test.pkg)
 				}
