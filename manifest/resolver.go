@@ -81,7 +81,6 @@ type Package struct {
 	Apps           []string
 	Requires       []string
 	Provides       []string
-	Rename         map[string]string `json:"-"`
 	Env            envars.Ops
 	Source         string
 	Mirrors        []string
@@ -372,7 +371,6 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	p := &Package{
 		Description:    manifest.Description,
 		Reference:      found,
-		Rename:         map[string]string{},
 		Root:           "${dest}",
 		Dest:           root,
 		Triggers:       map[Event][]Action{},
@@ -441,9 +439,6 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 		}
 		if len(layer.Provides) != 0 {
 			p.Provides = append(p.Provides, layer.Provides...)
-		}
-		for k, v := range layer.Rename {
-			p.Rename[k] = v
 		}
 		if len(layer.Triggers) > 0 {
 			for _, trigger := range layer.Triggers {
@@ -560,13 +555,6 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	}
 	for i, provides := range p.Provides {
 		p.Provides[i] = expand(provides, false)
-	}
-	if len(p.Rename) > 0 {
-		p.DeprecationWarningf(`rename = {"X": "Y"} must be replaced by on unpack { rename { from="${root}/X" to="${root}/Y" } }`)
-	}
-	for k, v := range p.Rename {
-		delete(p.Rename, k)
-		p.Rename[expand(k, true)] = expand(v, true)
 	}
 	p.Source = expand(p.Source, false)
 	for i, mirror := range p.Mirrors {

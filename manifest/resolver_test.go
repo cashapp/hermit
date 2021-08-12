@@ -113,29 +113,6 @@ func TestResolver_Resolve(t *testing.T) {
 			).
 			Result(),
 	}, {
-		name: "Returns warnings on deprecated features",
-		files: map[string]string{
-			"test.hcl": `
-                description = ""
-				binaries = ["bin"]
-				rename = {
-  					"a": "b",
-				}
-				version "1.0.0" {
-				  source = "www.example.com"
-				}
-            `,
-		},
-		reference: "test",
-		wantPkg: manifesttest.NewPkgBuilder(config.State+"/pkg/test-1.0.0").
-			WithName("test").
-			WithBinaries("bin").
-			WithVersion("1.0.0").
-			WithSource("www.example.com").
-			WithWarnings(`DEPRECATED: rename = {"X": "Y"} must be replaced by on unpack { rename { from="${root}/X" to="${root}/Y" } }`).
-			WithRename("a", "b").
-			Result(),
-	}, {
 		name: "Infer",
 		files: map[string]string{
 			"test.hcl": `

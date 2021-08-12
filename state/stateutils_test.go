@@ -1,10 +1,12 @@
 package state_test
 
 import (
+	"io/fs"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -36,10 +38,15 @@ func NewStateTestFixture(t *testing.T) *StateTestFixture {
 }
 
 func (f *StateTestFixture) Clean() {
+	f.t.Helper()
 	if f.Server != nil {
 		f.Server.Close()
 	}
 	for r := range f.roots {
+		_ = filepath.Walk(r, func(path string, info fs.FileInfo, err error) error {
+			_ = os.Chmod(path, 0700) // nolint
+			return nil
+		})
 		err := os.RemoveAll(r)
 		require.NoError(f.t, err)
 	}
