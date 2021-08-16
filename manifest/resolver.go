@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alecthomas/participle"
 	"github.com/gobwas/glob"
 
 	"github.com/pkg/errors"
@@ -571,18 +572,36 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 					action.Args[i] = expand(arg, false)
 				}
 				action.Command = expand(action.Command, false)
+				if err := mustAbs(action, action.Command); err != nil {
+					return nil, err
+				}
 				action.Dir = expand(action.Dir, false)
+				if err := mustAbs(action, action.Dir); err != nil {
+					return nil, err
+				}
 
 			case *CopyAction:
 				action.From = expand(action.From, false)
 				action.To = expand(action.To, false)
+				if err := mustAbs(action, action.To); err != nil {
+					return nil, err
+				}
 
 			case *ChmodAction:
 				action.File = expand(action.File, false)
+				if err := mustAbs(action, action.File); err != nil {
+					return nil, err
+				}
 
 			case *RenameAction:
 				action.From = expand(action.From, false)
+				if err := mustAbs(action, action.From); err != nil {
+					return nil, err
+				}
 				action.To = expand(action.To, false)
+				if err := mustAbs(action, action.To); err != nil {
+					return nil, err
+				}
 
 			case *MessageAction:
 				action.Text = expand(action.Text, false)
@@ -607,25 +626,28 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	return p, err
 }
 
-func resolveFiles(manifest *AnnotatedManifest, pkg *Package, files map[string]string) error {
-	if len(files) == 0 {
-		return nil
+// HighestMatch returns the VersionBlock with highest version number matching the given Glob
+func (m *Manifest) HighestMatch(to glob.Glob) (result *VersionBlock, highest *Version) {
+	versions := m.Versions
+	for _, v := range versions {
+		block := v
+		for _, vstr := range v.Version {
+			parsed := ParseVersion(vstr)
+			if to.Match(vstr) && (highest == nil || highest.Less(parsed)) {
+				highest = &parsed
+				result = &block
+			}
+		}
 	}
+	return
+}
 
-	for k, v := range files {
-		f, err := manifest.FS.Open(k)
-		if err != nil {
-			return errors.WithStack(err)
+// ChannelByName returns the channel with the given name, or nil if not found
+func (m *Manifest) ChannelByName(name string) *ChannelBlock {
+	for _, c := range m.Channels {
+		if c.Name == name {
+			return &c
 		}
-		err = f.Close()
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		pkg.Files = append(pkg.Files, &ResolvedFileRef{
-			FromPath: k,
-			FS:       manifest.FS,
-			ToPAth:   v,
-		})
 	}
 	return nil
 }
@@ -661,28 +683,32 @@ func (m *Manifest) validate() []error {
 	return result
 }
 
-// HighestMatch returns the VersionBlock with highest version number matching the given Glob
-func (m *Manifest) HighestMatch(to glob.Glob) (result *VersionBlock, highest *Version) {
-	versions := m.Versions
-	for _, v := range versions {
-		block := v
-		for _, vstr := range v.Version {
-			parsed := ParseVersion(vstr)
-			if to.Match(vstr) && (highest == nil || highest.Less(parsed)) {
-				highest = &parsed
-				result = &block
-			}
-		}
+func resolveFiles(manifest *AnnotatedManifest, pkg *Package, files map[string]string) error {
+	if len(files) == 0 {
+		return nil
 	}
-	return
-}
 
-// ChannelByName returns the channel with the given name, or nil if not found
-func (m *Manifest) ChannelByName(name string) *ChannelBlock {
-	for _, c := range m.Channels {
-		if c.Name == name {
-			return &c
+	for k, v := range files {
+		f, err := manifest.FS.Open(k)
+		if err != nil {
+			return errors.WithStack(err)
 		}
+		err = f.Close()
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		pkg.Files = append(pkg.Files, &ResolvedFileRef{
+			FromPath: k,
+			FS:       manifest.FS,
+			ToPAth:   v,
+		})
 	}
 	return nil
+}
+
+func mustAbs(action Action, path string) error {
+	if path == "" || filepath.IsAbs(path) {
+		return nil
+	}
+	return participle.Errorf(action.position(), "%q must be an absolute path", path)
 }

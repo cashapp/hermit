@@ -84,7 +84,7 @@ func TestResolver_Resolve(t *testing.T) {
 				binaries = ["bin"]
 				on "unpack" {
 					copy { from = "foo/bar" to = "${root}/fizz" }
-					run { cmd = "test" dir = "${root}" }
+					run { cmd = "/test" dir = "${root}" }
 					copy { from = "foo/baz" to = "${root}/biz" }
 					message { text = "hello" }
 				}
@@ -105,7 +105,7 @@ func TestResolver_Resolve(t *testing.T) {
 			WithTrigger(EventUnpack,
 				&CopyAction{From: "foo/bar", To: config.State + "/pkg/test-1.0.0/fizz"},
 				&RunAction{
-					Command: "test",
+					Command: "/test",
 					Dir:     config.State + "/pkg/test-1.0.0",
 				},
 				&CopyAction{From: "foo/baz", To: config.State + "/pkg/test-1.0.0/biz"},
