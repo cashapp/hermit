@@ -249,10 +249,13 @@ func (s *State) removePackage(b *ui.Task, dest string) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		if info.Mode()&os.ModeSymlink == os.ModeSymlink {
+		err = os.Chmod(path, info.Mode()|0200)
+
+		if errors.Is(err, os.ErrNotExist) {
+			task.Debugf("file did not exist during removal %q", path)
 			return nil
 		}
-		return os.Chmod(path, info.Mode()|0200)
+		return errors.WithStack(err)
 	})
 	task.Debugf("rm -rf %s", dest)
 	return errors.WithStack(os.RemoveAll(dest))
