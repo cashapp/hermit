@@ -67,6 +67,11 @@ func Extract(b *ui.Task, source string, pkg *manifest.Package) (finalise func() 
 			if err != nil {
 				return err
 			}
+
+			if info.Mode()&os.ModeSymlink == os.ModeSymlink {
+				task.Tracef("skipping symlink %q", path)
+				return nil
+			}
 			task.Tracef("chmod a-w %q", path)
 			return errors.WithStack(os.Chmod(path, info.Mode()&^0222))
 		}))

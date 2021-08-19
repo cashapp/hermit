@@ -249,6 +249,9 @@ func (s *State) removePackage(b *ui.Task, dest string) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
+		if info.Mode()&os.ModeSymlink == os.ModeSymlink {
+			return nil
+		}
 		return os.Chmod(path, info.Mode()|0200)
 	})
 	task.Debugf("rm -rf %s", dest)
