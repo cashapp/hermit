@@ -397,13 +397,17 @@ func (t *testCmd) Run(l *ui.UI, env *hermit.Env) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		pkg, err := env.Resolve(l, selector, false)
+		warnings, err := env.ValidateCompatibility(l, selector.Name())
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		warnings, err := env.ValidateCompatibility(l, selector.Name())
 		for _, warning := range warnings {
 			l.Warnf("%s: %s", name, warning)
+		}
+		pkg, err := env.Resolve(l, selector, false)
+		if errors.Is(err, manifest.ErrNoSource) {
+			l.Warnf("No sources found for package %s on this architecture. Skipping the test", name)
+			continue
 		}
 		if err != nil {
 			return errors.WithStack(err)

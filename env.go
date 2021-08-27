@@ -605,7 +605,15 @@ func (e *Env) ValidateCompatibility(l *ui.UI, name string) (warnings []string, e
 	loader := manifest.NewLoader(sources)
 	mnf, err := loader.Get(name)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		err := sources.Sync(l, true)
+		if err != nil {
+			return nil, errors.Wrap(err, err.Error())
+		}
+		// Try again.
+		mnf, err = loader.Get(name)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
 	}
 
 	versions := mnf.GetVersions()
