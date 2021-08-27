@@ -35,6 +35,9 @@ import (
 // "finalise" must be called to complete extraction of the package.
 func Extract(b *ui.Task, source string, pkg *manifest.Package) (finalise func() error, err error) {
 	task := b.SubTask("unpack")
+	finalise = func() error {
+		return nil
+	}
 	if _, err := os.Stat(pkg.Dest); err == nil {
 		return finalise, errors.Errorf("destination %s already exists", pkg.Dest)
 	}
