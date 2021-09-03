@@ -1,6 +1,7 @@
 package manifesttest
 
 import (
+	"github.com/cashapp/hermit/platform"
 	"io/fs"
 	"time"
 
@@ -128,5 +129,11 @@ func (b PkgBuilder) WithRequires(reqs ...string) PkgBuilder {
 // WithProvides sets the virtual packages this package provides
 func (b PkgBuilder) WithProvides(provs ...string) PkgBuilder {
 	b.result.Provides = provs
+	return b
+}
+
+// WithUnsupportedPlatforms sets the unsupported platforms for the package
+func (b PkgBuilder) WithUnsupportedPlatforms(platforms []platform.Platform) PkgBuilder {
+	b.result.UnsupportedPlatforms = platforms
 	return b
 }

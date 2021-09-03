@@ -19,6 +19,7 @@ package ui
 import (
 	"bytes"
 	"fmt"
+	"github.com/pkg/errors"
 	"hash/fnv"
 	"io"
 	"os"
@@ -321,4 +322,20 @@ func (w *UI) Printf(format string, args ...interface{}) {
 	w.lock.Lock()
 	fmt.Fprintf(w.stdout, format, args...)
 	w.lock.Unlock()
+}
+
+// Confirmation from the user with y/N options to proceed
+func (w *UI) Confirmation(message string, args ...interface{}) (bool, error) {
+	w.lock.Lock()
+	defer w.lock.Unlock()
+
+	fmt.Fprintf(w.stdout, "hermit: "+message+"\n", args...)
+	s := ""
+	if _, err := fmt.Scan(&s); err != nil {
+		return false, errors.WithStack(err)
+	}
+
+	s = strings.TrimSpace(s)
+	s = strings.ToLower(s)
+	return s == "y" || s == "yes", nil
 }
