@@ -2,6 +2,7 @@ package manifest
 
 import (
 	"fmt"
+	"github.com/cashapp/hermit/platform"
 	"io/fs"
 	"os"
 	"path"
@@ -33,9 +34,9 @@ var ErrNoBinaries = errors.New("no binaries or apps provided")
 var ErrNoSource = errors.New("no source provided")
 
 var xarch = map[string]string{
-	"amd64": "x86_64",
-	"386":   "i386",
-	"arm64": "aarch64",
+	platform.Amd64: "x86_64",
+	"386":          "i386",
+	platform.Arm64: "aarch64",
 }
 
 // Config required for loading manifests.
@@ -75,26 +76,27 @@ type ResolvedFileRef struct {
 
 // Package resolved from a manifest.
 type Package struct {
-	Description    string
-	Reference      Reference
-	Arch           string
-	Binaries       []string
-	Apps           []string
-	Requires       []string
-	Provides       []string
-	Env            envars.Ops
-	Source         string
-	Mirrors        []string
-	Root           string
-	SHA256         string
-	Dest           string
-	Test           string
-	Strip          int
-	Triggers       map[Event][]Action `json:"-"` // Triggers keyed by event.
-	UpdateInterval time.Duration      // How often should we check for updates? 0, if never
-	Files          []*ResolvedFileRef `json:"-"`
-	FS             fs.FS              `json:"-"` // FS the Package was loaded from.
-	Warnings       []string           `json:"-"`
+	Description          string
+	Reference            Reference
+	Arch                 string
+	Binaries             []string
+	Apps                 []string
+	Requires             []string
+	Provides             []string
+	Env                  envars.Ops
+	Source               string
+	Mirrors              []string
+	Root                 string
+	SHA256               string
+	Dest                 string
+	Test                 string
+	Strip                int
+	Triggers             map[Event][]Action  `json:"-"` // Triggers keyed by event.
+	UpdateInterval       time.Duration       // How often should we check for updates? 0, if never
+	Files                []*ResolvedFileRef  `json:"-"`
+	FS                   fs.FS               `json:"-"` // FS the Package was loaded from.
+	Warnings             []string            `json:"-"`
+	UnsupportedPlatforms []platform.Platform // Unsupported core platforms
 
 	// Filled in by Env.
 	Linked    bool `json:"-"` // Linked into environment.
@@ -370,14 +372,15 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 
 	root := filepath.Join(config.State, "pkg", found.String())
 	p := &Package{
-		Description:    manifest.Description,
-		Reference:      found,
-		Root:           "${dest}",
-		Dest:           root,
-		Triggers:       map[Event][]Action{},
-		UpdateInterval: foundUpdateInterval,
-		Files:          []*ResolvedFileRef{},
-		FS:             manifest.FS,
+		Description:          manifest.Description,
+		Reference:            found,
+		Root:                 "${dest}",
+		Dest:                 root,
+		Triggers:             map[Event][]Action{},
+		UpdateInterval:       foundUpdateInterval,
+		Files:                []*ResolvedFileRef{},
+		FS:                   manifest.FS,
+		UnsupportedPlatforms: manifest.unsupported(found, platform.Core),
 	}
 
 	files := map[string]string{}

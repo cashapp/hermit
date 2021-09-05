@@ -1,6 +1,7 @@
 package manifest_test
 
 import (
+	"github.com/cashapp/hermit/platform"
 	"os"
 	"testing"
 	"time"
@@ -22,8 +23,8 @@ func TestResolver_Resolve(t *testing.T) {
 	config := Config{
 		Env:   "/home/user/project",
 		State: "/home/user/.cache/hermit",
-		OS:    "Linux",
-		Arch:  "x86_64",
+		OS:    platform.Linux,
+		Arch:  platform.Amd64,
 	}
 	tests := []struct {
 		name           string
@@ -227,6 +228,26 @@ func TestResolver_Resolve(t *testing.T) {
 			"memory:///test.hcl": {"@testc: no version found matching 2.0"},
 		},
 		wantErr: "@testc: no version found matching 2.0",
+	}, {
+		name: "Returns unsupported core platforms",
+		files: map[string]string{
+			"test.hcl": `
+                description = ""
+				binaries = ["bin"]
+
+				version "1.0.0" {
+					linux { source = "www.example.com/${version}" }
+				}
+            `,
+		},
+		reference: "test-1.0.0",
+		wantPkg: manifesttest.NewPkgBuilder(config.State + "/pkg/test-1.0.0").
+			WithName("test").
+			WithBinaries("bin").
+			WithVersion("1.0.0").
+			WithSource("www.example.com/1.0.0").
+			WithUnsupportedPlatforms([]platform.Platform{{platform.Darwin, platform.Amd64}, {platform.Darwin, platform.Arm64}}).
+			Result(),
 	},
 	}
 	for _, tt := range tests {

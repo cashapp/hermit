@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
+	"github.com/cashapp/hermit/platform"
 	"io/fs"
 	"io/ioutil"
 	"os"
@@ -413,6 +414,7 @@ func (e *Env) Install(l *ui.UI, pkg *manifest.Package) (*shell.Changes, error) {
 
 	allChanges := shell.NewChanges(envars.Parse(os.Environ()))
 
+	didUninstall := false
 	for _, ipkg := range installed {
 		if ipkg.Reference.Name == pkg.Reference.Name {
 			changes, err := e.uninstall(task, ipkg)
@@ -420,6 +422,18 @@ func (e *Env) Install(l *ui.UI, pkg *manifest.Package) (*shell.Changes, error) {
 				return nil, errors.WithStack(err)
 			}
 			allChanges = allChanges.Merge(changes)
+			didUninstall = true
+		}
+	}
+
+	if !didUninstall && len(pkg.UnsupportedPlatforms) > 0 {
+
+		resp, err := l.Confirmation("%s is not supported on these Hermit platforms: %s, are you sure you want to install it? [y/N]", pkg.Reference, pkg.UnsupportedPlatforms)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		if !resp {
+			return allChanges, nil
 		}
 	}
 
@@ -585,16 +599,11 @@ func (e *Env) Resolve(l *ui.UI, selector manifest.Selector, syncOnMissing bool) 
 // Returns the resolution errors for versions as warnings.
 // If a version fails to resolve for all systems, returns an error
 func (e *Env) ValidateCompatibility(l *ui.UI, name string) (warnings []string, err error) {
-	type system struct {
-		os   string
-		arch string
-	}
-
-	systems := []system{
-		{"darwin", "arm64"},
-		{"darwin", "amd64"},
-		{"linux", "arm64"},
-		{"linux", "amd64"},
+	platforms := []platform.Platform{
+		{platform.Darwin, platform.Arm64},
+		{platform.Darwin, platform.Amd64},
+		{platform.Linux, platform.Arm64},
+		{platform.Linux, platform.Amd64},
 	}
 
 	sources, err := e.sources(l)
@@ -629,12 +638,12 @@ func (e *Env) ValidateCompatibility(l *ui.UI, name string) (warnings []string, e
 
 	for _, ref := range refs {
 		fails := 0
-		for _, system := range systems {
+		for _, p := range platforms {
 			resolver, err := manifest.New(sources, manifest.Config{
 				Env:   e.envDir,
 				State: e.state.Root(),
-				OS:    system.os,
-				Arch:  system.arch,
+				OS:    p.OS,
+				Arch:  p.Arch,
 			})
 			if err != nil {
 				return nil, errors.WithStack(err)
@@ -643,12 +652,12 @@ func (e *Env) ValidateCompatibility(l *ui.UI, name string) (warnings []string, e
 			pkg, err := resolver.Resolve(l, manifest.ExactSelector(ref))
 			if err != nil {
 				fails++
-				warnings = append(warnings, fmt.Sprintf("%s:%s: %s", system.os, system.arch, err.Error()))
+				warnings = append(warnings, fmt.Sprintf("%s: %s", p, err.Error()))
 			} else {
 				warnings = append(warnings, pkg.Warnings...)
 			}
 		}
-		if fails >= len(systems) {
+		if fails >= len(platforms) {
 			return warnings, errors.Errorf("%s failed to resolve on all platforms", ref)
 		}
 	}

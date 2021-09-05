@@ -1,6 +1,7 @@
 package manifest
 
 import (
+	"github.com/cashapp/hermit/platform"
 	"reflect"
 	"regexp"
 	"time"
@@ -150,7 +151,6 @@ func (m *Manifest) layers(ref Reference, os string, arch string) (layers, error)
 				return append(m.Layer.layers(os, arch), l...), nil
 			}
 		}
-
 	}
 	for _, ch := range m.Channels {
 		if ch.Name == ref.Channel {
@@ -162,6 +162,22 @@ func (m *Manifest) layers(ref Reference, os string, arch string) (layers, error)
 		}
 	}
 	return nil, nil
+}
+
+// unsupported returns the platforms not supported in the given Reference
+func (m *Manifest) unsupported(ref Reference, platforms []platform.Platform) []platform.Platform {
+	var result []platform.Platform
+platformsNext:
+	for _, p := range platforms {
+		lrs, _ := m.layers(ref, p.OS, p.Arch)
+		for _, l := range lrs {
+			if l.Source != "" {
+				continue platformsNext
+			}
+		}
+		result = append(result, p)
+	}
+	return result
 }
 
 // GetVersions returns all the versions defined in this manifest
