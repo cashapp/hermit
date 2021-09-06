@@ -55,12 +55,7 @@ func NewLoader(sources *sources.Sources) *Loader {
 	}
 }
 
-// Get manifest for the given package.
-//
-// Will return a wrapped ErrUnknownPackage if the package could not be found.
-//
-// If any errors occur during the load, the first error will be returned.
-func (l *Loader) Get(name string) (*AnnotatedManifest, error) {
+func (l *Loader) get(name string) (*AnnotatedManifest, error) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 	// If we have already loaded it, just return it.
@@ -83,6 +78,27 @@ func (l *Loader) Get(name string) (*AnnotatedManifest, error) {
 		return nil, errors.WithStack(file.Errors[0])
 	}
 	return file, nil
+}
+
+// Load a manifest for the given package.
+// Syncs the sources if the manifest is not initially found.
+// Will return a wrapped ErrUnknownPackage if the package could not be found.
+//
+// If any errors occur during the load, the first error will be returned.
+func (l *Loader) Load(u *ui.UI, name string) (*AnnotatedManifest, error) {
+	mnf, err := l.get(name)
+	if err != nil {
+		err := l.sources.Sync(u, true)
+		if err != nil {
+			return nil, errors.Wrap(err, err.Error())
+		}
+		// Try again.
+		mnf, err = l.get(name)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+	}
+	return mnf, nil
 }
 
 // All loads all package manifests and returns them.

@@ -397,7 +397,7 @@ func (t *testCmd) Run(l *ui.UI, env *hermit.Env) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		warnings, err := env.ValidateCompatibility(l, selector.Name())
+		warnings, err := env.ValidateManifest(l, selector.Name())
 		if err != nil {
 			return errors.WithStack(err)
 		}

@@ -290,17 +290,9 @@ func (r *Resolver) ResolveVirtual(name string) (pkgs []*Package, err error) {
 //
 // Returns the highest version matching the given reference
 func (r *Resolver) Resolve(l *ui.UI, selector Selector) (pkg *Package, err error) {
-	manifest, err := r.loader.Get(selector.Name())
+	manifest, err := r.loader.Load(l, selector.Name())
 	if err != nil {
-		err := r.Sync(l, true)
-		if err != nil {
-			return nil, errors.Wrap(err, err.Error())
-		}
-		// Try again.
-		manifest, err = r.loader.Get(selector.Name())
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
+		return nil, errors.WithStack(err)
 	}
 	return newPackage(manifest, r.config, selector)
 }
