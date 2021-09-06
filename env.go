@@ -599,13 +599,6 @@ func (e *Env) Resolve(l *ui.UI, selector manifest.Selector, syncOnMissing bool) 
 // Returns the resolution errors for versions as warnings.
 // If a version fails to resolve for all systems, returns an error
 func (e *Env) ValidateCompatibility(l *ui.UI, name string) (warnings []string, err error) {
-	platforms := []platform.Platform{
-		{platform.Darwin, platform.Arm64},
-		{platform.Darwin, platform.Amd64},
-		{platform.Linux, platform.Arm64},
-		{platform.Linux, platform.Amd64},
-	}
-
 	sources, err := e.sources(l)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -638,7 +631,7 @@ func (e *Env) ValidateCompatibility(l *ui.UI, name string) (warnings []string, e
 
 	for _, ref := range refs {
 		fails := 0
-		for _, p := range platforms {
+		for _, p := range platform.Core {
 			resolver, err := manifest.New(sources, manifest.Config{
 				Env:   e.envDir,
 				State: e.state.Root(),
@@ -657,7 +650,7 @@ func (e *Env) ValidateCompatibility(l *ui.UI, name string) (warnings []string, e
 				warnings = append(warnings, pkg.Warnings...)
 			}
 		}
-		if fails >= len(platforms) {
+		if fails >= len(platform.Core) {
 			return warnings, errors.Errorf("%s failed to resolve on all platforms", ref)
 		}
 	}
