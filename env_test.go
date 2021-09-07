@@ -451,3 +451,30 @@ func TestDependencyResolution(t *testing.T) {
 	err = f.Env.ResolveWithDeps(f.P, installed, manifest.NameSelector("pkg4"), map[string]*manifest.Package{})
 	require.Errorf(t, err, "multiple packages satisfy the required dependency \"virtual2\", please install one of the following manually: pkg1, pkg2")
 }
+
+func TestManifestValidation(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/bar" {
+			w.WriteHeader(http.StatusNotFound)
+		} else {
+			w.WriteHeader(http.StatusOK)
+		}
+	})
+
+	f := hermittest.NewEnvTestFixture(t, handler)
+	f.WithManifests(map[string]string{
+		"test.hcl": `
+			description = ""
+			binaries = ["bin1"]
+			version "1.0.0" {
+		      linux { source = "` + f.Server.URL + `/foo" }
+              darwin { source = "` + f.Server.URL + `/bar" }
+			}
+		`,
+	})
+	defer f.Clean()
+
+	_, err := f.Env.ValidateManifest(f.P, "test")
+	require.Error(t, err)
+	require.Equal(t, "test-1.0.0: darwin-amd64: could not retrieve source archive from "+f.Server.URL+"/bar: 404 Not Found", err.Error())
+}

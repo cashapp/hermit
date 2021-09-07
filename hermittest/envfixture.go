@@ -56,7 +56,7 @@ func NewEnvTestFixture(t *testing.T, handler http.Handler) *EnvTestFixture {
 		Builtin: sources.NewBuiltInSource(vfs.InMemoryFS(nil)),
 	}, server.Client(), server.Client())
 	require.NoError(t, err)
-	env, err := hermit.OpenEnv(envDir, sta, envars.Envars{})
+	env, err := hermit.OpenEnv(envDir, sta, envars.Envars{}, server.Client())
 	require.NoError(t, err)
 
 	return &EnvTestFixture{
@@ -103,7 +103,7 @@ func (f *EnvTestFixture) NewEnv() *hermit.Env {
 	log, _ := ui.NewForTesting()
 	err = hermit.Init(log, envDir, "", f.State.Root(), hermit.Config{})
 	require.NoError(f.t, err)
-	env, err := hermit.OpenEnv(envDir, f.State, envars.Envars{})
+	env, err := hermit.OpenEnv(envDir, f.State, envars.Envars{}, f.Server.Client())
 	require.NoError(f.t, err)
 	return env
 }

@@ -2,11 +2,13 @@ package hermit
 
 import (
 	"bytes"
+	"context"
 	"embed"
 	"fmt"
 	"github.com/cashapp/hermit/platform"
 	"io/fs"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -87,6 +89,7 @@ type Env struct {
 	ephemeralEnvars envars.Ops
 	config          *Config
 	configFile      string
+	httpClient      *http.Client
 
 	// Lazily initialized fields
 	lazyResolver *manifest.Resolver
@@ -206,7 +209,7 @@ func readConfig(configFile string) (*Config, error) {
 // OpenEnv opens a Hermit environment.
 //
 // The environment may not exist, in which case this will succeed but subsequent operations will fail.
-func OpenEnv(envDir string, state *state.State, ephemeral envars.Envars) (*Env, error) {
+func OpenEnv(envDir string, state *state.State, ephemeral envars.Envars, httpClient *http.Client) (*Env, error) {
 	binDir := filepath.Join(envDir, "bin")
 	configFile := filepath.Join(binDir, "hermit.hcl")
 	config, err := readConfig(configFile)
@@ -225,6 +228,7 @@ func OpenEnv(envDir string, state *state.State, ephemeral envars.Envars) (*Env, 
 		binDir:          binDir,
 		configFile:      configFile,
 		ephemeralEnvars: envars.Infer(ephemeral.System()),
+		httpClient:      httpClient,
 	}
 	return e, nil
 }
@@ -641,14 +645,37 @@ func (e *Env) validateReference(l *ui.UI, srcs *sources.Sources, ref manifest.Re
 		if err != nil {
 			fails++
 			warnings = append(warnings, fmt.Sprintf("%s: %s", p, err.Error()))
-		} else {
-			warnings = append(warnings, pkg.Warnings...)
+			continue
 		}
+
+		if err := e.validatePackageSource(pkg.Source); err != nil {
+			return nil, errors.Wrapf(err, "%s: %s", ref, p)
+		}
+
+		warnings = append(warnings, pkg.Warnings...)
 	}
 	if fails >= len(platform.Core) {
 		return nil, errors.Errorf("%s failed to resolve on all platforms", ref)
 	}
 	return warnings, nil
+}
+
+func (e *Env) validatePackageSource(url string) error {
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodHead, url, nil)
+	if err != nil {
+		return errors.Wrap(err, url)
+	}
+	resp, err := e.httpClient.Do(req)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return errors.Errorf("could not retrieve source archive from %s: %s", url, resp.Status)
+	}
+
+	return nil
 }
 
 // ResolveVirtual references to concrete packages.
