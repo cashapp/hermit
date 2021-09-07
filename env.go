@@ -595,66 +595,59 @@ func (e *Env) Resolve(l *ui.UI, selector manifest.Selector, syncOnMissing bool) 
 	return resolved, nil
 }
 
-// ValidateCompatibility of a package on a set of predefined systems.
-// Returns the resolution errors for versions as warnings.
-// If a version fails to resolve for all systems, returns an error
-func (e *Env) ValidateCompatibility(l *ui.UI, name string) (warnings []string, err error) {
+// ValidateManifest with given name.
+//
+// Returns the resolution errors for core systems as warnings.
+// If a version fails to resolve for all systems, returns an error.
+func (e *Env) ValidateManifest(l *ui.UI, name string) ([]string, error) {
 	sources, err := e.sources(l)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	loader := manifest.NewLoader(sources)
-	mnf, err := loader.Get(name)
+	mnf, err := manifest.NewLoader(sources).Load(l, name)
 	if err != nil {
-		err := sources.Sync(l, true)
-		if err != nil {
-			return nil, errors.Wrap(err, err.Error())
-		}
-		// Try again.
-		mnf, err = loader.Get(name)
+		return nil, errors.WithStack(err)
+	}
+
+	refs := mnf.References(name)
+	var warnings []string
+	for _, ref := range refs {
+		w, err := e.validateReference(l, sources, ref)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
+		warnings = append(warnings, w...)
 	}
 
-	versions := mnf.GetVersions()
-	channels := mnf.GetChannels()
+	return warnings, nil
+}
 
-	refs := make([]manifest.Reference, len(versions)+len(channels))
-	for i, v := range versions {
-		refs[i] = manifest.Reference{Name: name, Version: v}
-	}
-	for i, c := range channels {
-		refs[i+len(versions)] = manifest.Reference{Name: name, Channel: c}
-	}
-
-	for _, ref := range refs {
-		fails := 0
-		for _, p := range platform.Core {
-			resolver, err := manifest.New(sources, manifest.Config{
-				Env:   e.envDir,
-				State: e.state.Root(),
-				OS:    p.OS,
-				Arch:  p.Arch,
-			})
-			if err != nil {
-				return nil, errors.WithStack(err)
-			}
-
-			pkg, err := resolver.Resolve(l, manifest.ExactSelector(ref))
-			if err != nil {
-				fails++
-				warnings = append(warnings, fmt.Sprintf("%s: %s", p, err.Error()))
-			} else {
-				warnings = append(warnings, pkg.Warnings...)
-			}
+func (e *Env) validateReference(l *ui.UI, srcs *sources.Sources, ref manifest.Reference) ([]string, error) {
+	fails := 0
+	var warnings []string
+	for _, p := range platform.Core {
+		resolver, err := manifest.New(srcs, manifest.Config{
+			Env:   e.envDir,
+			State: e.state.Root(),
+			OS:    p.OS,
+			Arch:  p.Arch,
+		})
+		if err != nil {
+			return nil, errors.WithStack(err)
 		}
-		if fails >= len(platform.Core) {
-			return warnings, errors.Errorf("%s failed to resolve on all platforms", ref)
+
+		pkg, err := resolver.Resolve(l, manifest.ExactSelector(ref))
+		if err != nil {
+			fails++
+			warnings = append(warnings, fmt.Sprintf("%s: %s", p, err.Error()))
+		} else {
+			warnings = append(warnings, pkg.Warnings...)
 		}
 	}
-
+	if fails >= len(platform.Core) {
+		return nil, errors.Errorf("%s failed to resolve on all platforms", ref)
+	}
 	return warnings, nil
 }
 

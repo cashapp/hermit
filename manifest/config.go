@@ -200,6 +200,21 @@ func (m *Manifest) GetChannels() []string {
 	return result
 }
 
+// References defined in this manifest
+func (m *Manifest) References(name string) References {
+	versions := m.GetVersions()
+	channels := m.GetChannels()
+
+	refs := make(References, len(versions)+len(channels))
+	for i, v := range versions {
+		refs[i] = Reference{Name: name, Version: v}
+	}
+	for i, c := range channels {
+		refs[i+len(versions)] = Reference{Name: name, Channel: c}
+	}
+	return refs
+}
+
 type layers []*Layer
 
 // Return the last non-zero value for a field in the stack of layers.

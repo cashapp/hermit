@@ -1,6 +1,7 @@
 package manifest
 
 import (
+	"github.com/cashapp/hermit/ui"
 	"os"
 	"testing"
 
@@ -9,13 +10,15 @@ import (
 )
 
 func TestLoader(t *testing.T) {
+	l, _ := ui.NewForTesting()
+
 	stateDir := t.TempDir()
 	srcs := sources.New(stateDir, []sources.Source{
 		sources.NewLocalSource("test://", os.DirFS("./testdata")),
 	})
 	loader := NewLoader(srcs)
 	require.Len(t, srcs.Sources(), 1)
-	manifest, err := loader.Get("protoc")
+	manifest, err := loader.Load(l, "protoc")
 	require.NoError(t, err)
 	require.Equal(t, "protoc is a compiler for protocol buffers definitions files.", manifest.Description)
 
