@@ -66,6 +66,26 @@ type Config struct {
 	CI bool
 }
 
+func (c Config) fastHTTPClient() *http.Client {
+	client := c.HTTP(HTTPTransportConfig{
+		ResponseHeaderTimeout: time.Second * 5,
+		DialTimeout:           time.Second,
+		KeepAlive:             30 * time.Second,
+	})
+	if debug.Flags.FailHTTP {
+		client.Timeout = time.Millisecond
+	}
+	return client
+}
+
+func (c Config) normalHTTPClient() *http.Client {
+	client := c.HTTP(HTTPTransportConfig{})
+	if debug.Flags.FailHTTP {
+		client.Timeout = time.Millisecond
+	}
+	return client
+}
+
 // Main runs the Hermit command-line application with the given config.
 func Main(config Config) {
 	if config.HTTP == nil {
@@ -173,13 +193,13 @@ func Main(config Config) {
 		log.Fatalf("failed to initialise CLI: %s", err)
 	}
 
-	sta, err = openState(config.State, config.HTTP)
+	sta, err = openState(config.State, config)
 	if err != nil {
 		log.Fatalf("failed to open state: %s", err)
 	}
 
 	if isActivated {
-		env, err = hermit.OpenEnv(envPath, sta, cli.getGlobalState().Env)
+		env, err = hermit.OpenEnv(envPath, sta, cli.getGlobalState().Env, config.normalHTTPClient())
 		if err != nil {
 			log.Fatalf("failed to open environment: %s", err)
 		}
@@ -222,18 +242,8 @@ func Main(config Config) {
 	}
 }
 
-func openState(config state.Config, newHTTPClient func(HTTPTransportConfig) *http.Client) (*state.State, error) {
-	client := newHTTPClient(HTTPTransportConfig{})
-	fastFailClient := newHTTPClient(HTTPTransportConfig{
-		ResponseHeaderTimeout: time.Second * 5,
-		DialTimeout:           time.Second,
-		KeepAlive:             30 * time.Second,
-	})
-	if debug.Flags.FailHTTP {
-		client.Timeout = time.Millisecond
-		fastFailClient.Timeout = time.Millisecond
-	}
-	return state.Open(hermit.UserStateDir, config, client, fastFailClient)
+func openState(stateConfig state.Config, config Config) (*state.State, error) {
+	return state.Open(hermit.UserStateDir, stateConfig, config.normalHTTPClient(), config.fastHTTPClient())
 }
 
 func configureLogging(cli cliCommon, cmd string, p *ui.UI) {

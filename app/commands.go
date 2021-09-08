@@ -239,12 +239,12 @@ type activateCmd struct {
 	Dir string `arg:"" help:"Directory of environment to activate (${default})" default:"${env}"`
 }
 
-func (a *activateCmd) Run(l *ui.UI, sta *state.State, globalState GlobalState) error {
+func (a *activateCmd) Run(l *ui.UI, sta *state.State, globalState GlobalState, config Config) error {
 	realdir, err := resolveActivationDir(a.Dir)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	env, err := hermit.OpenEnv(realdir, sta, globalState.Env)
+	env, err := hermit.OpenEnv(realdir, sta, globalState.Env, config.normalHTTPClient())
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -451,13 +451,13 @@ type execCmd struct {
 	Args   []string `arg:"" help:"Arguments to pass to executable (use -- to separate)." optional:""`
 }
 
-func (e *execCmd) Run(l *ui.UI, sta *state.State, env *hermit.Env, globalState GlobalState) error {
+func (e *execCmd) Run(l *ui.UI, sta *state.State, env *hermit.Env, globalState GlobalState, config Config) error {
 	envDir, err := hermit.EnvDirFromProxyLink(e.Binary)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	if env == nil {
-		env, err = hermit.OpenEnv(envDir, sta, globalState.Env)
+		env, err = hermit.OpenEnv(envDir, sta, globalState.Env, config.normalHTTPClient())
 		if err != nil {
 			return errors.WithStack(err)
 		}
