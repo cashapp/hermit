@@ -19,9 +19,9 @@ import (
 
 // ActivationConfig for shells.
 type ActivationConfig struct {
-	Root        string
-	ShortPrompt bool
-	Env         envars.Envars
+	Root   string
+	Prompt string
+	Env    envars.Envars
 }
 
 // Shell abstracts shell specific functionality

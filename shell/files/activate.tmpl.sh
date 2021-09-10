@@ -33,7 +33,9 @@ _hermit_deactivate() {
   precmd_functions=(${precmd_functions:#update_hermit_env})
 {{- end}}
 
+{{- if ne .Prompt "none"}}
   if test -n "${_HERMIT_OLD_PS1+_}"; then export PS1="${_HERMIT_OLD_PS1}"; unset _HERMIT_OLD_PS1; fi
+{{- end}}
 
 }
 
@@ -48,7 +50,9 @@ export ACTIVE_HERMIT=$HERMIT_ENV
 export HERMIT_DEACTIVATION="$(${HERMIT_ENV}/bin/hermit env --deactivate)"
 export HERMIT_BIN_CHANGE=$(date -r ${HERMIT_ENV}/bin +"%s")
 
-if test -n "${PS1+_}"; then export _HERMIT_OLD_PS1="${PS1}"; export PS1="{{if not .ShortPrompt}}{{ .EnvName }}{{end}}🐚 ${PS1}"; fi
+{{- if ne .Prompt "none" }}
+if test -n "${PS1+_}"; then export _HERMIT_OLD_PS1="${PS1}"; export PS1="{{if eq .Prompt "env"}}{{ .EnvName }}{{end}}🐚 ${PS1}"; fi
+{{- end}}
 
 update_hermit_env() {
   local CURRENT=$(date -r ${HERMIT_ENV}/bin +"%s")

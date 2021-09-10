@@ -33,8 +33,7 @@ import (
 
 // GlobalState configurable by user to be passed through to Hermit.
 type GlobalState struct {
-	Env         envars.Envars `help:"Extra environment variables to apply to environments."`
-	ShortPrompt bool          `help:"Use a minimal prompt in active environments."`
+	Env envars.Envars `help:"Extra environment variables to apply to environments."`
 }
 
 type cliCommon interface {
@@ -236,7 +235,9 @@ type noopCmd struct{}
 func (n *noopCmd) Run() error { return nil }
 
 type activateCmd struct {
-	Dir string `arg:"" help:"Directory of environment to activate (${default})" default:"${env}"`
+	Dir         string `arg:"" help:"Directory of environment to activate (${default})" default:"${env}"`
+	Prompt      string `enum:"env,short,none" default:"env" help:"Include hermit environment, just icon or nothing in shell prompt"`
+	ShortPrompt bool   `help:"Use a minimal prompt in active environments." hidden:""`
 }
 
 func (a *activateCmd) Run(l *ui.UI, sta *state.State, globalState GlobalState) error {
@@ -271,10 +272,14 @@ func (a *activateCmd) Run(l *ui.UI, sta *state.State, globalState GlobalState) e
 		return errors.WithStack(err)
 	}
 	environ := envars.Parse(os.Environ()).Apply(env.Root(), ops).Changed(true)
+	prompt := a.Prompt
+	if a.ShortPrompt {
+		prompt = "short"
+	}
 	return shell.ActivateHermit(os.Stdout, sh, shell.ActivationConfig{
-		Env:         environ,
-		Root:        env.Root(),
-		ShortPrompt: globalState.ShortPrompt,
+		Env:    environ,
+		Root:   env.Root(),
+		Prompt: prompt,
 	})
 }
 

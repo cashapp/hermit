@@ -25,17 +25,19 @@ var userConfigSchema = func() string {
 
 // UserConfig is stored in ~/.hermit.hcl
 type UserConfig struct {
-	ShortPrompt bool `hcl:"short-prompt,optional" help:"If true use a short prompt when an environment is activated."`
-	NoGit       bool `hcl:"no-git,optional" help:"If true Hermit will never add/remove files from Git automatically."`
+	Prompt      string `hcl:"prompt,optional" default:"env" enum:"env,short,none" help:"Modify prompt to include hermit environment (env), just an icon (short) or nothing (none)"`
+	ShortPrompt bool   `hcl:"short-prompt,optional" help:"If true use a short prompt when an environment is activated."`
+	NoGit       bool   `hcl:"no-git,optional" help:"If true Hermit will never add/remove files from Git automatically."`
 }
 
 // LoadUserConfig from disk.
 func LoadUserConfig() (UserConfig, error) {
 	config := UserConfig{}
+	// always return a valid config on error, with defaults set.
+	_ = hcl.Unmarshal([]byte{}, &config)
 	data, err := ioutil.ReadFile(kong.ExpandPath(userConfigPath))
 	if os.IsNotExist(err) {
-		err = hcl.Unmarshal([]byte{}, &config)
-		return config, errors.WithStack(err)
+		return config, nil
 	} else if err != nil {
 		return config, errors.WithStack(err)
 	}
@@ -58,6 +60,9 @@ func (u *userConfigResolver) Resolve(context *kong.Context, parent *kong.Path, f
 	switch flag.Name {
 	case "no-git":
 		return u.config.NoGit, nil
+
+	case "prompt":
+		return u.config.Prompt, nil
 
 	case "short-prompt":
 		return u.config.ShortPrompt, nil
