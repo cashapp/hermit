@@ -2,10 +2,8 @@ package hermit
 
 import (
 	"bytes"
-	"context"
 	"embed"
 	"fmt"
-	"github.com/cashapp/hermit/platform"
 	"io/fs"
 	"io/ioutil"
 	"net/http"
@@ -16,6 +14,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/cashapp/hermit/platform"
 
 	"github.com/alecthomas/hcl"
 	"github.com/kballard/go-shellquote"
@@ -648,7 +648,7 @@ func (e *Env) validateReference(l *ui.UI, srcs *sources.Sources, ref manifest.Re
 			continue
 		}
 
-		if err := e.validatePackageSource(pkg.Source); err != nil {
+		if err := manifest.ValidatePackageSource(e.httpClient, pkg.Source); err != nil {
 			return nil, errors.Wrapf(err, "%s: %s", ref, p)
 		}
 
@@ -658,24 +658,6 @@ func (e *Env) validateReference(l *ui.UI, srcs *sources.Sources, ref manifest.Re
 		return nil, errors.Errorf("%s failed to resolve on all platforms", ref)
 	}
 	return warnings, nil
-}
-
-func (e *Env) validatePackageSource(url string) error {
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodHead, url, nil)
-	if err != nil {
-		return errors.Wrap(err, url)
-	}
-	resp, err := e.httpClient.Do(req)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 400 {
-		return errors.Errorf("could not retrieve source archive from %s: %s", url, resp.Status)
-	}
-
-	return nil
 }
 
 // ResolveVirtual references to concrete packages.

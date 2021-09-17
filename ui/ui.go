@@ -19,13 +19,14 @@ package ui
 import (
 	"bytes"
 	"fmt"
-	"github.com/pkg/errors"
 	"hash/fnv"
 	"io"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
+
+	"github.com/pkg/errors"
 
 	"golang.org/x/crypto/ssh/terminal"
 )

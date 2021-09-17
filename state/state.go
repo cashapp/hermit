@@ -16,6 +16,7 @@ import (
 
 	"github.com/cashapp/hermit/archive"
 	"github.com/cashapp/hermit/cache"
+	"github.com/cashapp/hermit/github"
 	"github.com/cashapp/hermit/internal/dao"
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/sources"
@@ -65,7 +66,7 @@ type State struct {
 }
 
 // Open the global Hermit state.
-func Open(stateDir string, config Config, client *http.Client, fastFailClient *http.Client) (*State, error) {
+func Open(stateDir string, config Config, ghClient *github.Client, client *http.Client, fastFailClient *http.Client) (*State, error) {
 	if config.Builtin == nil {
 		return nil, errors.Errorf("state.Config.Builtin not provided")
 	}
@@ -73,7 +74,7 @@ func Open(stateDir string, config Config, client *http.Client, fastFailClient *h
 	pkgDir := filepath.Join(stateDir, "pkg")
 	cacheDir := filepath.Join(stateDir, "cache")
 	sourcesDir := filepath.Join(stateDir, "sources")
-	cache, err := cache.Open(cacheDir, client, fastFailClient)
+	cache, err := cache.Open(cacheDir, ghClient, client, fastFailClient)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
