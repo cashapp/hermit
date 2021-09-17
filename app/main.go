@@ -18,6 +18,7 @@ import (
 	"github.com/mattn/go-isatty"
 
 	"github.com/cashapp/hermit"
+	"github.com/cashapp/hermit/github"
 	"github.com/cashapp/hermit/state"
 	"github.com/cashapp/hermit/ui"
 	"github.com/cashapp/hermit/util/debug"
@@ -66,24 +67,27 @@ type Config struct {
 	CI bool
 }
 
-func (c Config) fastHTTPClient() *http.Client {
-	client := c.HTTP(HTTPTransportConfig{
+// Make a HTTP client.
+func (c Config) makeHTTPClient(githubToken string, config HTTPTransportConfig) *http.Client {
+	client := c.HTTP(config)
+	if debug.Flags.FailHTTP {
+		client.Timeout = time.Millisecond
+	}
+	client.Transport = github.TokenAuthenticatedTransport(client.Transport, githubToken)
+	return client
+}
+
+// Make a HTTP client with very short timeouts for issuing optional requests.
+func (c Config) fastHTTPClient(githubToken string) *http.Client {
+	return c.makeHTTPClient(githubToken, HTTPTransportConfig{
 		ResponseHeaderTimeout: time.Second * 5,
 		DialTimeout:           time.Second,
 		KeepAlive:             30 * time.Second,
 	})
-	if debug.Flags.FailHTTP {
-		client.Timeout = time.Millisecond
-	}
-	return client
 }
 
-func (c Config) normalHTTPClient() *http.Client {
-	client := c.HTTP(HTTPTransportConfig{})
-	if debug.Flags.FailHTTP {
-		client.Timeout = time.Millisecond
-	}
-	return client
+func (c Config) defaultHTTPClient(githubToken string) *http.Client {
+	return c.makeHTTPClient(githubToken, HTTPTransportConfig{})
 }
 
 // Main runs the Hermit command-line application with the given config.
@@ -166,7 +170,12 @@ func Main(config Config) {
 		log.Printf("%s: %s", userConfigPath, err)
 	}
 
-	hermitHelp := help + "\n\nConfiguration format for ~/.hermit.hcl:\n    " + strings.Join(strings.Split(userConfigSchema, "\n"), "\n    ")
+	githubToken := os.Getenv("HERMIT_GITHUB_TOKEN")
+
+	hermitHelp := help
+	hermitHelp += "\n\nConfiguration format for ~/.hermit.hcl:\n"
+	hermitHelp += "    " + strings.Join(strings.Split(userConfigSchema, "\n"), "\n    ")
+	hermitHelp += "\nHERMIT_GITHUB_TOKEN can be set to retrieve private GitHub release assets."
 
 	kongOptions := []kong.Option{
 		kong.Groups{
@@ -193,13 +202,16 @@ func Main(config Config) {
 		log.Fatalf("failed to initialise CLI: %s", err)
 	}
 
-	sta, err = openState(config.State, config)
+	defaultHTTPClient := config.defaultHTTPClient(githubToken)
+	ghClient := github.New(defaultHTTPClient)
+
+	sta, err = state.Open(hermit.UserStateDir, config.State, ghClient, defaultHTTPClient, config.fastHTTPClient(githubToken))
 	if err != nil {
 		log.Fatalf("failed to open state: %s", err)
 	}
 
 	if isActivated {
-		env, err = hermit.OpenEnv(envPath, sta, cli.getGlobalState().Env, config.normalHTTPClient())
+		env, err = hermit.OpenEnv(envPath, sta, cli.getGlobalState().Env, defaultHTTPClient)
 		if err != nil {
 			log.Fatalf("failed to open environment: %s", err)
 		}
@@ -234,16 +246,12 @@ func Main(config Config) {
 		err = pprof.WriteHeapProfile(f)
 		fatalIfError(p, err)
 	}
-	err = ctx.Run(env, p, sta, config, cli.getGlobalState())
+	err = ctx.Run(env, p, sta, config, cli.getGlobalState(), ghClient, defaultHTTPClient)
 	if err != nil && p.WillLog(ui.LevelDebug) {
 		p.Fatalf("%+v", err)
 	} else {
 		fatalIfError(p, err)
 	}
-}
-
-func openState(stateConfig state.Config, config Config) (*state.State, error) {
-	return state.Open(hermit.UserStateDir, stateConfig, config.normalHTTPClient(), config.fastHTTPClient())
 }
 
 func configureLogging(cli cliCommon, cmd string, p *ui.UI) {

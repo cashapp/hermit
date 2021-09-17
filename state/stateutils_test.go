@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/cashapp/hermit/github"
 	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/state"
 	"github.com/cashapp/hermit/ui"
@@ -64,9 +65,10 @@ func (f *StateTestFixture) State() *state.State {
 		f.Server = httptest.NewServer(f.handler)
 	}
 	f.roots[root] = true
+	client := f.Server.Client()
 	sta, err := state.Open(root, state.Config{
 		Builtin: sources.NewBuiltInSource(vfs.InMemoryFS(nil)),
-	}, f.Server.Client(), f.Server.Client())
+	}, github.New(client), client, client)
 	require.NoError(f.t, err)
 	return sta
 }

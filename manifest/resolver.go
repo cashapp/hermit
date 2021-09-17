@@ -2,7 +2,6 @@ package manifest
 
 import (
 	"fmt"
-	"github.com/cashapp/hermit/platform"
 	"io/fs"
 	"os"
 	"path"
@@ -12,6 +11,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/cashapp/hermit/platform"
 
 	"github.com/alecthomas/participle"
 	"github.com/gobwas/glob"
@@ -32,12 +33,6 @@ var ErrNoBinaries = errors.New("no binaries or apps provided")
 
 // ErrNoSource is returned when a resolved package does not contain source
 var ErrNoSource = errors.New("no source provided")
-
-var xarch = map[string]string{
-	platform.Amd64: "x86_64",
-	"386":          "i386",
-	platform.Arm64: "aarch64",
-}
 
 // Config required for loading manifests.
 type Config struct {
@@ -487,9 +482,8 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 				return config.Arch
 
 			case "xarch":
-				subst, ok := xarch[config.Arch]
-				if ok {
-					return subst
+				if xarch := platform.ArchToXArch(config.Arch); xarch != "" {
+					return xarch
 				}
 				return config.Arch
 

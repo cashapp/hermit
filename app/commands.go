@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"go/doc"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -17,12 +18,14 @@ import (
 	"time"
 
 	"github.com/alecthomas/colour"
+	"github.com/alecthomas/hcl"
 	"github.com/alecthomas/kong"
 	"github.com/pkg/errors"
 	sshterminal "golang.org/x/crypto/ssh/terminal"
 
 	"github.com/cashapp/hermit"
 	"github.com/cashapp/hermit/envars"
+	"github.com/cashapp/hermit/github"
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/shell"
 	"github.com/cashapp/hermit/sources"
@@ -240,12 +243,12 @@ type activateCmd struct {
 	ShortPrompt bool   `help:"Use a minimal prompt in active environments." hidden:""`
 }
 
-func (a *activateCmd) Run(l *ui.UI, sta *state.State, globalState GlobalState, config Config) error {
+func (a *activateCmd) Run(l *ui.UI, sta *state.State, globalState GlobalState, config Config, defaultClient *http.Client) error {
 	realdir, err := resolveActivationDir(a.Dir)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	env, err := hermit.OpenEnv(realdir, sta, globalState.Env, config.normalHTTPClient())
+	env, err := hermit.OpenEnv(realdir, sta, globalState.Env, defaultClient)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -456,13 +459,13 @@ type execCmd struct {
 	Args   []string `arg:"" help:"Arguments to pass to executable (use -- to separate)." optional:""`
 }
 
-func (e *execCmd) Run(l *ui.UI, sta *state.State, env *hermit.Env, globalState GlobalState, config Config) error {
+func (e *execCmd) Run(l *ui.UI, sta *state.State, env *hermit.Env, globalState GlobalState, config Config, defaultHTTPClient *http.Client) error {
 	envDir, err := hermit.EnvDirFromProxyLink(e.Binary)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	if env == nil {
-		env, err = hermit.OpenEnv(envDir, sta, globalState.Env, config.normalHTTPClient())
+		env, err = hermit.OpenEnv(envDir, sta, globalState.Env, defaultHTTPClient)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -1047,11 +1050,30 @@ func (s *autoVersionCmd) Run(l *ui.UI) error {
 type manifestCmd struct {
 	Validate    validateSourceCmd `cmd:"" help:"Check a package manifest source for errors." group:"global"`
 	AutoVersion autoVersionCmd    `cmd:"" help:"Upgrade manifest versions automatically where possible." group:"global"`
+	Create      manifestCreateCmd `cmd:"" help:"Create a new manifest from an existing package artefact URL." group:"global"`
 }
 
 type dumpUserConfigSchema struct{}
 
 func (dumpUserConfigSchema) Run() error {
 	fmt.Print(userConfigSchema)
+	return nil
+}
+
+type manifestCreateCmd struct {
+	PkgVersion string `help:"Explicit version if required."`
+	URL        string `arg:"" required:"" help:"URL of a package artefact."`
+}
+
+func (m *manifestCreateCmd) Run(p *ui.UI, defaultHTTPClient *http.Client, ghClient *github.Client) error {
+	pkg, err := manifest.InferFromArtefact(p, defaultHTTPClient, ghClient, m.URL, m.PkgVersion)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	data, err := hcl.Marshal(pkg)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	fmt.Printf("%s\n", data)
 	return nil
 }

@@ -6,8 +6,8 @@ github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d h1:licZJFw2RwpH
 github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d/go.mod h1:asat636LX7Bqt5lYEZ27JNDcqxfjdBQuJ/MM4CN/Lzo=
 github.com/alecthomas/colour v0.1.0 h1:nOE9rJm6dsZ66RGWYSFrXw461ZIt9A6+nHgL7FRrDUk=
 github.com/alecthomas/colour v0.1.0/go.mod h1:QO9JBoKquHd+jz9nshCh40fOfO+JzsoXy8qTHF68zU0=
-github.com/alecthomas/hcl v0.1.13 h1:gU7Ki8hftG1MsTAF9JkqzUfabakHFMnVjPgY6bLjQ+o=
-github.com/alecthomas/hcl v0.1.13/go.mod h1:VEYcgruQ39ELu6c0Bb+VRm3trQPt7dQUdAwF7QrG7AQ=
+github.com/alecthomas/hcl v0.1.15 h1:OmJy3NIscubHSE9LvX/e75dGTJ9Bg4sY3BLq/fsHmF8=
+github.com/alecthomas/hcl v0.1.15/go.mod h1:VEYcgruQ39ELu6c0Bb+VRm3trQPt7dQUdAwF7QrG7AQ=
 github.com/alecthomas/kong v0.2.2/go.mod h1:kQOmtJgV+Lb4aj+I2LEn40cbtawdWJ9Y8QLq+lElKxE=
 github.com/alecthomas/kong v0.2.18-0.20210713035501-d1a818b5a1a8 h1:FQGpNQn+YtyEiECNxpdrWUqiCX6++xcVj+BxmKPw/D4=
 github.com/alecthomas/kong v0.2.18-0.20210713035501-d1a818b5a1a8/go.mod h1:ka3VZ8GZNPXv9Ov+j4YNLkI8mTuhXyr/0ktSlqIydQQ=
