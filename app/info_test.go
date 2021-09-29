@@ -2,10 +2,11 @@ package app
 
 import (
 	"encoding/json"
+	"testing"
+
 	"github.com/cashapp/hermit/hermittest"
 	"github.com/cashapp/hermit/ui"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 // Test that the json output from info command matches what is expected in the IJ plugin
@@ -26,7 +27,7 @@ func TestCommandInfoJson(t *testing.T) {
 	require.NoError(t, cmd.Run(l, f.Env, f.State))
 
 	var jss []map[string]json.RawMessage
-	require.NoError(t, json.Unmarshal([]byte(buf.String()), &jss))
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &jss))
 	require.Equal(t, 1, len(jss))
 	js := jss[0]
 
