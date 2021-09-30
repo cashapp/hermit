@@ -45,6 +45,15 @@ func Extract(b *ui.Task, source string, pkg *manifest.Package) (finalise func() 
 	// Do we need to rename the result to the final pkg.Dest?
 	// This is set to false if we are recursively extracting packages within one another
 	renameResult := true
+
+	isDir, err := isDirectory(source)
+	if err != nil {
+		return finalise, errors.WithStack(err)
+	}
+	if isDir {
+		return finalise, installFromDirectory(source, pkg)
+	}
+
 	ext := filepath.Ext(source)
 	switch ext {
 	case ".pkg":
@@ -143,6 +152,72 @@ type hdiEntry struct {
 
 type hdi struct {
 	SystemEntities []*hdiEntry `plist:"system-entities"`
+}
+
+func isDirectory(path string) (bool, error) {
+	fileInfo, err := os.Stat(path)
+	if err != nil {
+		return false, errors.WithStack(err)
+	}
+	return fileInfo.IsDir(), nil
+}
+
+func installFromDirectory(source string, pkg *manifest.Package) error {
+	dest := pkg.Dest
+	return errors.WithStack(filepath.Walk(source, func(path string, info os.FileInfo, err error) error {
+		relative, err := filepath.Rel(source, path)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		isDir, err := isDirectory(path)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		target, err := makeDestPath(dest, relative, pkg.Strip)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		if target == "" {
+			return nil
+		}
+		if !isDir {
+			if err := copyFile(path, target); err != nil {
+				return errors.WithStack(err)
+			}
+		}
+		return nil
+	}))
+}
+
+func copyFile(from, to string) error {
+	err := ensureDirExists(to)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	info, err := os.Stat(from)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	srcFile, err := os.Open(from)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer srcFile.Close() // nolint: gosec
+
+	destFile, err := os.OpenFile(to, os.O_WRONLY|os.O_CREATE, info.Mode())
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer destFile.Close() // nolint: gosec
+
+	_, err = io.Copy(destFile, srcFile)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	return errors.WithStack(destFile.Sync())
 }
 
 func installMacDMG(b *ui.Task, source string, pkg *manifest.Package) error {

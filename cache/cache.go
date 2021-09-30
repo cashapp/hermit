@@ -134,7 +134,7 @@ func (c *Cache) ETag(b *ui.Task, uri string, mirrors ...string) (etag string, er
 		if err != nil {
 			return "", errors.WithStack(err)
 		}
-		result, err := source.ETag(c)
+		result, err := source.ETag(b, c)
 		if err != nil {
 			b.Debugf("%s failed: %s", uri, err)
 			continue

@@ -29,6 +29,7 @@ func TestExtract(t *testing.T) {
 		{"linux_exe.gz", []string{"linux_exe"}},
 		{"bzip2_1.0.6-9.2_deb10u1_amd64.deb", []string{"/bin/bzip2"}},
 		{"bzip2-1.0.6-13.el7.x86_64.rpm", []string{"/usr/bin/bzip2"}},
+		{"directory", []string{"foo"}},
 	}
 	for _, test := range tests {
 		t.Run(test.file, func(t *testing.T) {
