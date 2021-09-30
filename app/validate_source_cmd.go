@@ -4,15 +4,15 @@ import (
 	"runtime"
 	"strconv"
 
+	"github.com/pkg/errors"
+
 	"github.com/cashapp/hermit"
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/state"
 	"github.com/cashapp/hermit/ui"
-	"github.com/pkg/errors"
 )
 
-// validateSourceCmd -
 type validateSourceCmd struct {
 	Source string `arg:"" optional:"" name:"source" help:"The manifest source to validate."`
 }

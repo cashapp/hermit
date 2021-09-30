@@ -7,8 +7,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/cashapp/hermit/ui"
 	"github.com/pkg/errors"
+
+	"github.com/cashapp/hermit/ui"
 )
 
 type validateEnvCmd struct {

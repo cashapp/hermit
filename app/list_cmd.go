@@ -8,12 +8,12 @@ import (
 	"strings"
 
 	"github.com/alecthomas/colour"
+	"github.com/pkg/errors"
+	"golang.org/x/crypto/ssh/terminal"
+
 	"github.com/cashapp/hermit"
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/ui"
-	"github.com/pkg/errors"
-
-	sshterminal "golang.org/x/crypto/ssh/terminal"
 )
 
 type listCmd struct {
@@ -46,7 +46,7 @@ func listPackages(pkgs manifest.Packages, allVersions bool) {
 		names = append(names, name)
 	}
 	sort.Strings(names)
-	w, _, _ := sshterminal.GetSize(0)
+	w, _, _ := terminal.GetSize(0)
 	if w == -1 {
 		w = 80
 	}

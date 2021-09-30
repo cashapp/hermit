@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/cashapp/hermit/hermittest"
 	"github.com/cashapp/hermit/ui"
-	"github.com/stretchr/testify/require"
 )
 
 // Test that the json output from info command matches what is expected in the IJ plugin
