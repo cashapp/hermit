@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -75,22 +74,11 @@ func (c *Cache) Create(checksum, uri string) (*os.File, error) {
 
 // OpenLocal opens a local cached copy of "uri", or errors.
 func (c *Cache) OpenLocal(checksum, uri string) (*os.File, error) {
-	u, err := url.Parse(uri)
+	source, err := getSource(uri)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	switch u.Scheme {
-	case "", "file":
-		f, err := os.Open(u.Path)
-		return f, errors.WithStack(err)
-
-	case "http", "https":
-		f, err := os.Open(c.Path(checksum, uri))
-		return f, errors.WithStack(err)
-
-	default:
-		return nil, errors.Errorf("unsupported URI: %s", uri)
-	}
+	return source.OpenLocal(c, checksum)
 }
 
 // Open a local or remote artifact, transparently caching it. Subsequent accesses will use the cached copy.
@@ -119,31 +107,16 @@ func (c *Cache) Open(b *ui.Task, checksum, uri string, mirrors ...string) (*os.F
 //
 // If checksum is present it must be the SHA256 hash of the downloaded artifact.
 func (c *Cache) Download(b *ui.Task, checksum, uri string, mirrors ...string) (path string, etag string, err error) {
-	cachePath := c.Path(checksum, uri)
 	uris := append([]string{uri}, mirrors...)
 	for _, uri := range uris {
 		defer ui.LogElapsed(b, "Download %s", uri)()
-		var u *url.URL
-		u, err = url.Parse(uri)
+		source, err := getSource(uri)
 		if err != nil {
 			return "", "", errors.WithStack(err)
 		}
-
-		// Temporary file location.
-		switch u.Scheme {
-		case "", "file":
-			// TODO: Checksum it again?
-			// Local file, just open it.
-			return u.Path, "", nil
-
-		case "http", "https":
-			path, etag, err = c.downloadHTTP(b, checksum, uri, cachePath)
-
-		default:
-			return "", "", errors.Errorf("unsupported URI %s", uri)
-		}
+		path, etag, err = source.Download(b, c, checksum)
 		if err == nil {
-			return
+			return path, etag, nil
 		}
 		b.Debugf("%s: %s", uri, err)
 	}
@@ -157,30 +130,16 @@ func (c *Cache) Download(b *ui.Task, checksum, uri string, mirrors ...string) (p
 // Otherwise an empty string is returned
 func (c *Cache) ETag(b *ui.Task, uri string, mirrors ...string) (etag string, err error) {
 	for _, uri := range append([]string{uri}, mirrors...) {
-		u, err := url.Parse(uri)
+		source, err := getSource(uri)
 		if err != nil {
 			return "", errors.WithStack(err)
 		}
-		switch u.Scheme {
-		case "http", "https":
-			req, err := http.NewRequestWithContext(context.Background(), http.MethodHead, uri, nil)
-			if err != nil {
-				return "", errors.Wrap(err, uri)
-			}
-			resp, err := c.fastFailHTTPClient.Do(req)
-			if err != nil {
-				b.Debugf("%s failed: %s", uri, err)
-				continue
-			}
-			defer resp.Body.Close()
-			// Normal HTTP error, log and try the next mirror.
-			if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-				b.Debugf("%s failed: %d", uri, resp.StatusCode)
-				continue
-			}
-			etag := resp.Header.Get("ETag")
-			return etag, nil
+		result, err := source.ETag(c)
+		if err != nil {
+			b.Debugf("%s failed: %s", uri, err)
+			continue
 		}
+		return result, nil
 	}
 	return "", nil
 }
