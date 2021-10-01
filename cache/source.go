@@ -8,17 +8,21 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
 
-type packageSource interface {
+// PackageSource for a specific version / system of a package
+type PackageSource interface {
 	OpenLocal(cache *Cache, checksum string) (*os.File, error)
 	Download(b *ui.Task, cache *Cache, checksum string) (path string, etag string, err error)
 	ETag(b *ui.Task, cache *Cache) (etag string, err error)
+	Validate(httpClient *http.Client) error
 }
 
-func getSource(uri string) (packageSource, error) {
+// GetSource for the given uri, or an error if the uri can not be parsed as a source
+func GetSource(uri string) (PackageSource, error) {
 	if strings.HasSuffix(uri, ".git") {
 		return &gitSource{URL: uri}, nil
 	}
@@ -58,6 +62,11 @@ func (s *fileSource) ETag(_ *ui.Task, _ *Cache) (etag string, err error) {
 	return "", nil
 }
 
+func (s *fileSource) Validate(_ *http.Client) error {
+	_, err := os.Stat(s.Path)
+	return errors.Wrapf(err, "invalid file location")
+}
+
 type httpSource struct {
 	URL string
 }
@@ -89,6 +98,24 @@ func (s *httpSource) ETag(_ *ui.Task, c *Cache) (etag string, err error) {
 	}
 	result := resp.Header.Get("ETag")
 	return result, nil
+}
+
+func (s *httpSource) Validate(httpClient *http.Client) error {
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodHead, s.URL, nil)
+	if err != nil {
+		return errors.Wrap(err, s.URL)
+	}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return errors.Errorf("could not retrieve source archive from %s: %s", s.URL, resp.Status)
+	}
+
+	return nil
 }
 
 type gitSource struct {
@@ -126,4 +153,13 @@ func (s *gitSource) ETag(b *ui.Task, c *Cache) (etag string, err error) {
 	}
 
 	return parts[0], nil
+}
+
+func (s *gitSource) Validate(_ *http.Client) error {
+	cmd := exec.Command("git", "ls-remote", s.URL, "HEAD")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return errors.Wrapf(err, "error getting remote HEAD: %s", string(out))
+	}
+	return nil
 }

@@ -74,7 +74,7 @@ func (c *Cache) Create(checksum, uri string) (*os.File, error) {
 
 // OpenLocal opens a local cached copy of "uri", or errors.
 func (c *Cache) OpenLocal(checksum, uri string) (*os.File, error) {
-	source, err := getSource(uri)
+	source, err := GetSource(uri)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -110,7 +110,7 @@ func (c *Cache) Download(b *ui.Task, checksum, uri string, mirrors ...string) (p
 	uris := append([]string{uri}, mirrors...)
 	for _, uri := range uris {
 		defer ui.LogElapsed(b, "Download %s", uri)()
-		source, err := getSource(uri)
+		source, err := GetSource(uri)
 		if err != nil {
 			return "", "", errors.WithStack(err)
 		}
@@ -130,7 +130,7 @@ func (c *Cache) Download(b *ui.Task, checksum, uri string, mirrors ...string) (p
 // Otherwise an empty string is returned
 func (c *Cache) ETag(b *ui.Task, uri string, mirrors ...string) (etag string, err error) {
 	for _, uri := range append([]string{uri}, mirrors...) {
-		source, err := getSource(uri)
+		source, err := GetSource(uri)
 		if err != nil {
 			return "", errors.WithStack(err)
 		}
