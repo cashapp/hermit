@@ -10,3 +10,4 @@ bin/hermit.hcl
 docs/resources/_gen
 docs/public
 .gobin/
+.hermit/
