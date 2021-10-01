@@ -476,5 +476,5 @@ func TestManifestValidation(t *testing.T) {
 
 	_, err := f.Env.ValidateManifest(f.P, "test")
 	require.Error(t, err)
-	require.Equal(t, "test-1.0.0: darwin-amd64: could not retrieve source archive from "+f.Server.URL+"/bar: 404 Not Found", err.Error())
+	require.Equal(t, "test-1.0.0: darwin-amd64: invalid source: could not retrieve source archive from "+f.Server.URL+"/bar: 404 Not Found", err.Error())
 }
