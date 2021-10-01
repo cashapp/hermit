@@ -53,6 +53,9 @@ channel nightly {
 }
 ```
 
+Package source can refer to a remote archive file by using `http://` or `https://` prefixes, to a local file by using `file://` prefix, or to a Git repository by using `.git` suffix. 
+If the source points to an archive file, it is extracted at installation. Git repositories are cloned from the default branch and used as is.
+
 ## Sources
 
 A manifest source is a location where a set of manifests are stored. Hermit
