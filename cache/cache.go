@@ -152,8 +152,8 @@ func (c *Cache) IsCached(checksum, uri string) bool {
 
 // Evict a file from the cache.
 func (c *Cache) Evict(b *ui.Task, checksum, uri string) error {
-	b.SubTask("remove").Debugf("rm -f %s", c.Path(checksum, uri))
-	err := os.Remove(c.Path(checksum, uri))
+	b.SubTask("remove").Debugf("rm -rf %s", c.Path(checksum, uri))
+	err := os.RemoveAll(c.Path(checksum, uri))
 	if err != nil && !os.IsNotExist(err) {
 		return errors.WithStack(err)
 	}
