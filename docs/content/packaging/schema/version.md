@@ -34,6 +34,6 @@ Used by: [&lt;manifest>](../manifest#blocks)
 | `requires` | `[string]?` | Packages this one requires. |
 | `root` | `string?` | Override root for package. |
 | `sha256` | `string?` | SHA256 of source package for verification. |
-| `source` | `string?` | URL for source package. |
+| `source` | `string?` | URL for source package. Valid URLs are Git repositories (using .git suffix), Local Files (using file:// prefix), and Remote Files (using http:// or https:// prefix) |
 | `strip` | `number?` | Number of path prefix elements to strip. |
 | `test` | `string?` | Command that will test the package is operational. |

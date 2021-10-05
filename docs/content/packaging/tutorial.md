@@ -46,6 +46,22 @@ description from their site or GitHub repository:
 description = "jq is like sed for JSON data - you can use it to slice and filter and map and transform structured data with the same ease that sed, awk, grep and friends let you play with text."
 ```
 
+{{< hint ok >}}
+The `hermit` CLI includes a best-effort command to create a stub manifest.
+
+```text
+hermit manifest create https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64`
+```
+
+Currently there a few limitations:
+
+1. It only works for binaries in GitHub releases.
+2. The download link must include `${os}` and either `${arch}` or `${xarch}`.
+
+Hopefully these limitations will be removed over time.
+
+{{< /hint >}}
+
 ## Add a Version
 
 [`version`](../schema/version) blocks tell Hermit what versions of a package
@@ -149,6 +165,14 @@ test = "jq --version"
 
 The Hermit packages CI will run these tests periodically.
 
+To test your package run:
+
+```text
+$ hermit test jq --trace
+debug:jq-1.6:exec: /Users/user/Library/Caches/hermit/pkg/jq-1.6/jq --version
+debug: jq-1.6
+```
+
 ## The End Result
 
 And we're done.
@@ -175,7 +199,7 @@ darwin {
 version "1.6" {}
 ```
 
-## Local Testing
+## Local Manual Testing
 
 As mentioned above, `hermit-packages` is also a Hermit environment. Now we
 have our manifest we can attempt to install it with:
