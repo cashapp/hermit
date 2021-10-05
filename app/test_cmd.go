@@ -9,7 +9,8 @@ import (
 )
 
 type testCmd struct {
-	Pkg []string `arg:"" required:"" help:"Run sanity tests for these packages."`
+	Pkg          []string `arg:"" required:"" help:"Run sanity tests for these packages."`
+	CheckSources bool     `help:"Check that package sources are reachable" default:"true" negatable:""`
 }
 
 func (t *testCmd) Run(l *ui.UI, env *hermit.Env) error {
@@ -18,7 +19,10 @@ func (t *testCmd) Run(l *ui.UI, env *hermit.Env) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		warnings, err := env.ValidateManifest(l, selector.Name())
+		options := &hermit.ValidationOptions{
+			CheckSources: t.CheckSources,
+		}
+		warnings, err := env.ValidateManifest(l, selector.Name(), options)
 		if err != nil {
 			return errors.WithStack(err)
 		}

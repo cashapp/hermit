@@ -599,11 +599,17 @@ func (e *Env) Resolve(l *ui.UI, selector manifest.Selector, syncOnMissing bool) 
 	return resolved, nil
 }
 
+// ValidationOptions for manifest validation
+type ValidationOptions struct {
+	// CheckSources if true, check that the package sources are reachable
+	CheckSources bool
+}
+
 // ValidateManifest with given name.
 //
 // Returns the resolution errors for core systems as warnings.
 // If a version fails to resolve for all systems, returns an error.
-func (e *Env) ValidateManifest(l *ui.UI, name string) ([]string, error) {
+func (e *Env) ValidateManifest(l *ui.UI, name string, options *ValidationOptions) ([]string, error) {
 	sources, err := e.sources(l)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -617,7 +623,7 @@ func (e *Env) ValidateManifest(l *ui.UI, name string) ([]string, error) {
 	refs := mnf.References(name)
 	var warnings []string
 	for _, ref := range refs {
-		w, err := e.validateReference(l, sources, ref)
+		w, err := e.validateReference(l, sources, ref, options)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -627,7 +633,7 @@ func (e *Env) ValidateManifest(l *ui.UI, name string) ([]string, error) {
 	return warnings, nil
 }
 
-func (e *Env) validateReference(l *ui.UI, srcs *sources.Sources, ref manifest.Reference) ([]string, error) {
+func (e *Env) validateReference(l *ui.UI, srcs *sources.Sources, ref manifest.Reference, options *ValidationOptions) ([]string, error) {
 	fails := 0
 	var warnings []string
 	for _, p := range platform.Core {
@@ -648,8 +654,10 @@ func (e *Env) validateReference(l *ui.UI, srcs *sources.Sources, ref manifest.Re
 			continue
 		}
 
-		if err := manifest.ValidatePackageSource(e.httpClient, pkg.Source); err != nil {
-			return nil, errors.Wrapf(err, "%s: %s", ref, p)
+		if options.CheckSources {
+			if err := manifest.ValidatePackageSource(e.httpClient, pkg.Source); err != nil {
+				return nil, errors.Wrapf(err, "%s: %s", ref, p)
+			}
 		}
 
 		warnings = append(warnings, pkg.Warnings...)

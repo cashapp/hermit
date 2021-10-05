@@ -1,6 +1,7 @@
 package hermit_test
 
 import (
+	"github.com/cashapp/hermit"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -474,7 +475,10 @@ func TestManifestValidation(t *testing.T) {
 	})
 	defer f.Clean()
 
-	_, err := f.Env.ValidateManifest(f.P, "test")
+	_, err := f.Env.ValidateManifest(f.P, "test", &hermit.ValidationOptions{CheckSources: true})
 	require.Error(t, err)
 	require.Equal(t, "test-1.0.0: darwin-amd64: invalid source: could not retrieve source archive from "+f.Server.URL+"/bar: 404 Not Found", err.Error())
+
+	_, err = f.Env.ValidateManifest(f.P, "test", &hermit.ValidationOptions{CheckSources: false})
+	require.NoError(t, err)
 }
