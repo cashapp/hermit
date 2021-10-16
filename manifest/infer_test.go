@@ -39,6 +39,10 @@ func TestInfer(t *testing.T) {
 		},
 		Versions: []VersionBlock{{
 			Version: []string{"0.1.1"},
+			AutoVersion: &AutoVersionBlock{
+				GitHubRelease:  "",
+				VersionPattern: "v?(.*)",
+			},
 		}},
 	}
 	require.Equal(t, expected, actual)

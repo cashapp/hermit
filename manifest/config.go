@@ -1,7 +1,6 @@
 package manifest
 
 import (
-	"github.com/cashapp/hermit/platform"
 	"reflect"
 	"regexp"
 	"time"
@@ -9,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/cashapp/hermit/envars"
+	"github.com/cashapp/hermit/platform"
 )
 
 //go:generate stringer -linecomment -type PackageState
@@ -85,7 +85,7 @@ func (c *Layer) match(arch string) bool {
 // AutoVersionBlock represents auto-version configuration.
 type AutoVersionBlock struct {
 	GitHubRelease  string `hcl:"github-release" help:"GitHub <user>/<repo> to retrieve and update versions from the releases API."`
-	VersionPattern string `hcl:"version-pattern" help:"Regex with one capture group to extract the version number from the origin." default:"v?(.*)"`
+	VersionPattern string `hcl:"version-pattern,optional" help:"Regex with one capture group to extract the version number from the origin." default:"v?(.*)"`
 }
 
 // PlatformBlock matches a set of attributes describing a platform (eg. CPU, OS, etc.)
