@@ -38,7 +38,8 @@ func InferFromArtefact(p *ui.UI, httpClient *http.Client, ghClient *github.Clien
 	}
 	// Pull description from GH API if possible.
 	description := ""
-	if repoName := ghClient.ProjectForURL(url); repoName != "" {
+	repoName := ghClient.ProjectForURL(url)
+	if repoName != "" {
 		repo, err := ghClient.Repo(repoName)
 		if err != nil {
 			return nil, errors.WithStack(err)
@@ -87,6 +88,10 @@ func InferFromArtefact(p *ui.UI, httpClient *http.Client, ghClient *github.Clien
 		},
 		Versions: []VersionBlock{{
 			Version: []string{version},
+			AutoVersion: &AutoVersionBlock{
+				GitHubRelease:  repoName,
+				VersionPattern: "v?(.*)", // This is the default, which prevents the attribute being serialised.
+			},
 		}},
 	}, nil
 }

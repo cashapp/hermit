@@ -6,7 +6,7 @@ require (
 	aqwari.net/xml v0.0.0-20200724195937-ae380bb65a55
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 	github.com/alecthomas/colour v0.1.0
-	github.com/alecthomas/hcl v0.1.15
+	github.com/alecthomas/hcl v0.1.16
 	github.com/alecthomas/kong v0.2.18-0.20210713035501-d1a818b5a1a8
 	github.com/alecthomas/participle v0.6.1-0.20200911005820-318127ca69ac
 	github.com/alecthomas/repr v0.0.0-20200325044227-4184120f674c
