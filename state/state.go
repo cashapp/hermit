@@ -84,7 +84,26 @@ func Open(stateDir string, config Config, ghClient *github.Client, client *http.
 		config.Sources = DefaultSources
 	}
 
-	// Validate and compile the auto-mirrors.
+	autoMirrors, err := validateAndCompileAutoMirrors(config)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	s := &State{
+		dao:         dao,
+		autoMirrors: autoMirrors,
+		root:        stateDir,
+		cacheDir:    cacheDir,
+		sourcesDir:  sourcesDir,
+		config:      config,
+		pkgDir:      pkgDir,
+		cache:       cache,
+		lock:        util.NewLock(filepath.Join(stateDir, ".lock"), 1*time.Second),
+	}
+	return s, nil
+}
+
+func validateAndCompileAutoMirrors(config Config) ([]precompiledAutoMirror, error) {
 	autoMirrors := []precompiledAutoMirror{}
 	for _, mirror := range config.AutoMirrors {
 		re, err := regexp.Compile(mirror.Origin)
@@ -111,19 +130,7 @@ func Open(stateDir string, config Config, ghClient *github.Client, client *http.
 		}
 		autoMirrors = append(autoMirrors, pam)
 	}
-
-	s := &State{
-		dao:         dao,
-		autoMirrors: autoMirrors,
-		root:        stateDir,
-		cacheDir:    cacheDir,
-		sourcesDir:  sourcesDir,
-		config:      config,
-		pkgDir:      pkgDir,
-		cache:       cache,
-		lock:        util.NewLock(filepath.Join(stateDir, ".lock"), 1*time.Second),
-	}
-	return s, nil
+	return autoMirrors, nil
 }
 
 // Resolve package reference without an active environment.
@@ -265,12 +272,6 @@ func (s *State) removePackage(b *ui.Task, dest string) error {
 // CacheAndUnpack downloads a package and extracts it if it is not present.
 // If the package has already been extracted, this is a no-op
 func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
-	var (
-		path string
-		etag string
-		err  error
-	)
-
 	// Check if the package is up-to-date, and if so, return before acquiring the lock
 	if (s.isExtracted(p)) || p.Source == "/" {
 		return nil
@@ -285,6 +286,21 @@ func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 	if (s.isExtracted(p)) || p.Source == "/" {
 		return nil
 	}
+
+	err = s.extract(b, p)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
+}
+
+func (s *State) extract(b *ui.Task, p *manifest.Package) error {
+	var (
+		path string
+		etag string
+		err  error
+	)
 
 	if !s.isCached(p) {
 		mirrors := append(p.Mirrors, s.generateMirrors(p.Source)...)
