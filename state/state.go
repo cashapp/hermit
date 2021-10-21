@@ -58,6 +58,7 @@ type State struct {
 	cacheDir    string // Path to the root of the Hermit cache.
 	pkgDir      string // Path to unpacked packages.
 	sourcesDir  string // Path to extracted sources.
+	binaryDir   string // Path to directory with symlinks to package binaries
 	config      Config
 	autoMirrors []precompiledAutoMirror
 	cache       *cache.Cache
@@ -74,6 +75,7 @@ func Open(stateDir string, config Config, ghClient *github.Client, client *http.
 	pkgDir := filepath.Join(stateDir, "pkg")
 	cacheDir := filepath.Join(stateDir, "cache")
 	sourcesDir := filepath.Join(stateDir, "sources")
+	binaryDir := filepath.Join(stateDir, "binaries")
 	cache, err := cache.Open(cacheDir, ghClient, client, fastFailClient)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -95,6 +97,7 @@ func Open(stateDir string, config Config, ghClient *github.Client, client *http.
 		root:        stateDir,
 		cacheDir:    cacheDir,
 		sourcesDir:  sourcesDir,
+		binaryDir:   binaryDir,
 		config:      config,
 		pkgDir:      pkgDir,
 		cache:       cache,
@@ -180,6 +183,11 @@ func (s *State) PkgDir() string {
 	return s.pkgDir
 }
 
+// BinaryDir returns path to the directory for bin symlinks
+func (s *State) BinaryDir() string {
+	return s.binaryDir
+}
+
 func (s *State) resolver(l *ui.UI) (*manifest.Resolver, error) {
 	ss, err := s.Sources(l)
 	if err != nil {
@@ -244,7 +252,15 @@ func (s *State) WritePackageState(p *manifest.Package, binDir string) error {
 	return s.dao.UpdatePackageWithUsage(binDir, p.Reference.String(), pkg)
 }
 
-func (s *State) removePackage(b *ui.Task, dest string) error {
+func (s *State) removeRecursive(b *ui.Task, dest string) error {
+	_, err := os.Stat(dest)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
 	task := b.SubTask("remove")
 	lock, err := s.acquireLock(b)
 	if err != nil {
@@ -273,7 +289,7 @@ func (s *State) removePackage(b *ui.Task, dest string) error {
 // If the package has already been extracted, this is a no-op
 func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 	// Check if the package is up-to-date, and if so, return before acquiring the lock
-	if (s.isExtracted(p)) || p.Source == "/" {
+	if (s.isExtracted(p) && s.areBinariesLinked(p)) || p.Source == "/" {
 		return nil
 	}
 
@@ -283,15 +299,38 @@ func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 	}
 	defer lock.Release(b)
 
-	if (s.isExtracted(p)) || p.Source == "/" {
-		return nil
+	if !s.isExtracted(p) {
+		if err := s.extract(b, p); err != nil {
+			return errors.WithStack(err)
+		}
 	}
 
-	err = s.extract(b, p)
+	if !s.areBinariesLinked(p) {
+		if err := s.linkBinaries(p); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+
+	return nil
+}
+
+func (s *State) linkBinaries(p *manifest.Package) error {
+	dir := filepath.Join(s.binaryDir, p.Reference.String())
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return errors.WithStack(err)
+	}
+
+	bins, err := p.ResolveBinaries()
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
+	for _, bin := range bins {
+		to := filepath.Join(dir, filepath.Base(bin))
+		if err := os.Symlink(bin, to); err != nil {
+			return errors.WithStack(err)
+		}
+	}
 	return nil
 }
 
@@ -340,6 +379,11 @@ func (s *State) isExtracted(p *manifest.Package) bool {
 	return err == nil
 }
 
+func (s *State) areBinariesLinked(p *manifest.Package) bool {
+	_, err := os.Stat(filepath.Join(s.binaryDir, p.Reference.String()))
+	return err == nil
+}
+
 // RecordUninstall updates the package usage records of a package being uninstalled
 func (s *State) RecordUninstall(pkg *manifest.Package, binDir string) error {
 	err := s.dao.PackageRemovedAt(pkg.Reference.String(), binDir)
@@ -358,6 +402,17 @@ func (s *State) CleanPackages(b *ui.UI) error {
 	}
 	defer lock.Release(b)
 
+	bins, err := os.ReadDir(s.binaryDir)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	for _, entry := range bins {
+		path := filepath.Join(s.binaryDir, entry.Name())
+		if err = s.removeRecursive(b.Task(entry.Name()), path); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+
 	entries, err := os.ReadDir(s.pkgDir)
 	if err != nil {
 		return errors.WithStack(err)
@@ -367,10 +422,11 @@ func (s *State) CleanPackages(b *ui.UI) error {
 			continue
 		}
 		path := filepath.Join(s.pkgDir, entry.Name())
-		if err = s.removePackage(b.Task(entry.Name()), path); err != nil {
+		if err = s.removeRecursive(b.Task(entry.Name()), path); err != nil {
 			return errors.WithStack(err)
 		}
 	}
+
 	return nil
 }
 
@@ -485,10 +541,23 @@ func (s *State) GC(p *ui.UI, age time.Duration, pkgResolver func(b *ui.UI, selec
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		err = s.removePackage(task, pkg.Dest)
-		if err != nil {
+
+		if err = s.removePackage(task, pkg); err != nil {
 			return errors.WithStack(err)
 		}
+	}
+	return nil
+}
+
+func (s *State) removePackage(task *ui.Task, pkg *manifest.Package) error {
+	err := s.removeRecursive(task, filepath.Join(s.binaryDir, pkg.Reference.String()))
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	err = s.removeRecursive(task, pkg.Dest)
+	if err != nil {
+		return errors.WithStack(err)
 	}
 	return nil
 }
@@ -503,7 +572,7 @@ func (s *State) evictPackage(b *ui.Task, pkg *manifest.Package) error {
 	if err := s.cache.Evict(b, pkg.SHA256, pkg.Source); err != nil {
 		return errors.WithStack(err)
 	}
-	if err := s.removePackage(b, pkg.Dest); err != nil {
+	if err := s.removePackage(b, pkg); err != nil {
 		return errors.WithStack(err)
 	}
 	return nil

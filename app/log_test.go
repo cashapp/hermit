@@ -65,6 +65,8 @@ func TestLogs(t *testing.T) {
 		tmpl: `
 			debug: rm -rf "{{.State}}/cache"
 			info:tpkg-0.9.0: Clearing tpkg-0.9.0
+			debug:tpkg-0.9.0:remove: chmod -R +w {{.State}}/binaries/tpkg-0.9.0
+			debug:tpkg-0.9.0:remove: rm -rf {{.State}}/binaries/tpkg-0.9.0
 			debug:tpkg-0.9.0:remove: chmod -R +w {{.State}}/pkg/tpkg-0.9.0
 			debug:tpkg-0.9.0:remove: rm -rf {{.State}}/pkg/tpkg-0.9.0`,
 	}, {
