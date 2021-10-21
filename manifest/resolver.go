@@ -77,6 +77,7 @@ type Package struct {
 	Binaries             []string
 	Apps                 []string
 	Requires             []string
+	RuntimeDeps          []Reference
 	Provides             []string
 	Env                  envars.Ops
 	Source               string
@@ -434,6 +435,12 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 		if len(layer.Triggers) > 0 {
 			for _, trigger := range layer.Triggers {
 				p.Triggers[trigger.Event] = append(p.Triggers[trigger.Event], trigger.Ordered()...)
+			}
+		}
+		if len(layer.RuntimeDeps) > 0 {
+			for _, dep := range layer.RuntimeDeps {
+				ref := ParseReference(dep)
+				p.RuntimeDeps = append(p.RuntimeDeps, ref)
 			}
 		}
 		for k, v := range layer.Files {

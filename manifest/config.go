@@ -25,25 +25,26 @@ const (
 
 // A Layer contributes to the final merged manifest definition.
 type Layer struct {
-	Arch     string            `hcl:"arch,optional" help:"CPU architecture to match (amd64, 386, arm, etc.)."`
-	Binaries []string          `hcl:"binaries,optional" help:"Relative glob from $root to individual terminal binaries."`
-	Apps     []string          `hcl:"apps,optional" help:"Relative paths to Mac .app packages to install."`
-	Rename   map[string]string `hcl:"rename,optional" help:"Rename files after unpacking to ${root}."`
-	Requires []string          `hcl:"requires,optional" help:"Packages this one requires."`
-	Provides []string          `hcl:"provides,optional" help:"This package provides the given virtual packages."`
-	Dest     string            `hcl:"dest,optional" help:"Override archive extraction destination for package."`
-	Files    map[string]string `hcl:"files,optional" help:"Files to load strings from to be used in the manifest."`
-	Strip    int               `hcl:"strip,optional" help:"Number of path prefix elements to strip."`
-	Root     string            `hcl:"root,optional" help:"Override root for package."`
-	Test     *string           `hcl:"test,optional" help:"Command that will test the package is operational."`
-	Env      envars.Envars     `hcl:"env,optional" help:"Environment variables to export."`
-	Source   string            `hcl:"source,optional" help:"URL for source package. Valid URLs are Git repositories (using .git suffix), Local Files (using file:// prefix), and Remote Files (using http:// or https:// prefix)"`
-	Mirrors  []string          `hcl:"mirrors,optional" help:"Mirrors to use if the primary source is unavailable."`
-	SHA256   string            `hcl:"sha256,optional" help:"SHA256 of source package for verification."`
-	Darwin   []*Layer          `hcl:"darwin,block" help:"Darwin-specific configuration."`
-	Linux    []*Layer          `hcl:"linux,block" help:"Linux-specific configuration."`
-	Platform []*PlatformBlock  `hcl:"platform,block" help:"Platform-specific configuration. <attr> is a set regexes that must all match against one of CPU, OS, etc.."`
-	Triggers []*Trigger        `hcl:"on,block" help:"Triggers to run on lifecycle events."`
+	Arch        string            `hcl:"arch,optional" help:"CPU architecture to match (amd64, 386, arm, etc.)."`
+	Binaries    []string          `hcl:"binaries,optional" help:"Relative glob from $root to individual terminal binaries."`
+	Apps        []string          `hcl:"apps,optional" help:"Relative paths to Mac .app packages to install."`
+	Rename      map[string]string `hcl:"rename,optional" help:"Rename files after unpacking to ${root}."`
+	Requires    []string          `hcl:"requires,optional" help:"Packages this one requires."`
+	RuntimeDeps []string          `hcl:"runtime-dependencies,optional" help:"Packages used internally by this package, but not installed to the target environment"`
+	Provides    []string          `hcl:"provides,optional" help:"This package provides the given virtual packages."`
+	Dest        string            `hcl:"dest,optional" help:"Override archive extraction destination for package."`
+	Files       map[string]string `hcl:"files,optional" help:"Files to load strings from to be used in the manifest."`
+	Strip       int               `hcl:"strip,optional" help:"Number of path prefix elements to strip."`
+	Root        string            `hcl:"root,optional" help:"Override root for package."`
+	Test        *string           `hcl:"test,optional" help:"Command that will test the package is operational."`
+	Env         envars.Envars     `hcl:"env,optional" help:"Environment variables to export."`
+	Source      string            `hcl:"source,optional" help:"URL for source package. Valid URLs are Git repositories (using .git suffix), Local Files (using file:// prefix), and Remote Files (using http:// or https:// prefix)"`
+	Mirrors     []string          `hcl:"mirrors,optional" help:"Mirrors to use if the primary source is unavailable."`
+	SHA256      string            `hcl:"sha256,optional" help:"SHA256 of source package for verification."`
+	Darwin      []*Layer          `hcl:"darwin,block" help:"Darwin-specific configuration."`
+	Linux       []*Layer          `hcl:"linux,block" help:"Linux-specific configuration."`
+	Platform    []*PlatformBlock  `hcl:"platform,block" help:"Platform-specific configuration. <attr> is a set regexes that must all match against one of CPU, OS, etc.."`
+	Triggers    []*Trigger        `hcl:"on,block" help:"Triggers to run on lifecycle events."`
 }
 
 func (c Layer) layers(os string, arch string) (out layers) {
