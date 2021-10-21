@@ -57,8 +57,8 @@ func TestCacheAndUnpackHooksRunOnMutablePackage(t *testing.T) {
 	log, _ := ui.NewForTesting()
 	pkg := manifesttest.NewPkgBuilder(state.PkgDir()).
 		WithTrigger(manifest.EventUnpack, &manifest.RenameAction{
-			From: filepath.Join(state.PkgDir(), "linux_exe"),
-			To:   filepath.Join(state.PkgDir(), "linux_exe_renamed"),
+			From: filepath.Join(state.PkgDir(), "file"),
+			To:   filepath.Join(state.PkgDir(), "file_renamed"),
 		}).
 		WithSource(fixture.Server.URL).
 		Result()
@@ -66,13 +66,35 @@ func TestCacheAndUnpackHooksRunOnMutablePackage(t *testing.T) {
 	err := state.CacheAndUnpack(log.Task("test"), pkg)
 	require.NoError(t, err)
 
-	require.FileExists(t, filepath.Join(state.PkgDir(), "linux_exe_renamed"))
+	require.FileExists(t, filepath.Join(state.PkgDir(), "file_renamed"))
 
 	info, err := os.Stat(state.PkgDir())
 	require.NoError(t, err)
 	require.Equal(t, os.FileMode(0500), info.Mode()&0777, info.Mode().String())
 
-	info, err = os.Stat(filepath.Join(state.PkgDir(), "linux_exe_renamed"))
+	info, err = os.Stat(filepath.Join(state.PkgDir(), "file_renamed"))
 	require.NoError(t, err)
 	require.Equal(t, os.FileMode(0500), info.Mode()&0777, info.Mode().String())
+}
+
+func TestCacheAndUnpackCreatesBinarySymlinks(t *testing.T) {
+	fixture := NewStateTestFixture(t).
+		WithHTTPHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			fr, err := os.Open("../archive/testdata/archive.tar.gz")
+			require.NoError(t, err)
+			defer fr.Close() // nolint
+			_, err = io.Copy(w, fr)
+			require.NoError(t, err)
+		}))
+	defer fixture.Clean()
+	state := fixture.State()
+
+	log, _ := ui.NewForTesting()
+	pkg := manifesttest.NewPkgBuilder(state.PkgDir()).
+		WithSource(fixture.Server.URL).
+		Result()
+
+	require.NoError(t, state.CacheAndUnpack(log.Task("test"), pkg))
+	require.FileExists(t, filepath.Join(state.BinaryDir(), pkg.Reference.String(), "darwin_exe"))
+	require.FileExists(t, filepath.Join(state.BinaryDir(), pkg.Reference.String(), "linux_exe"))
 }
