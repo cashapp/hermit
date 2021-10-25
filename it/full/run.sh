@@ -34,6 +34,13 @@ setupEnv() {
 
   ESCAPED_PWD=$(printf '%s\n' "$PWD" | sed -e 's/[\/&]/\\&/g')
   sed -i.bak "s/#PWD/${ESCAPED_PWD}/g" "${to}/bin/hermit.hcl"
+
+  (
+    cd ../testbins
+    tar cvzf testbin1.tar.gz testbin1
+    tar cvzf testbin2.tar.gz testbin2
+  )
+  mv ../testbins/*.tar.gz "${to}/bin/"
 }
 
 beforeEach() {
