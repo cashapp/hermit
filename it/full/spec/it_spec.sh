@@ -189,4 +189,22 @@ Describe "Hermit"
       The stderr should not be blank
     End
   End
+
+  Describe "Runtime dependencies"
+    . bin/activate-hermit
+    It "Does not install runtime-dependencies to the environment"
+      When call hermit install testbin1
+      The status should be success
+      The stderr should be blank
+      The file ./bin/testbin1 should be exist
+      The file ./bin/testbin2 should not be exist
+    End
+
+    It "Calls the runtime dependency correctly"
+      When call ./bin/testbin1
+      The status should be success
+      The stdout should equal "Hello from testbin2"
+      The stderr should be blank
+    End
+  End
 End

@@ -394,7 +394,11 @@ func (e *Env) Test(l *ui.UI, pkg *manifest.Package) error {
 		return errors.Errorf("couldn't find test executable %q in package %s", args[0], pkg)
 	}
 	cmd, _ := util.Command(task, args...)
-	cmd.Env = e.allEnvarsForPackages(true, pkg)
+	deps, err := e.ensureRuntimeDepsPresent(l, pkg)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	cmd.Env = e.allEnvarsForPackages(true, deps, pkg)
 	return cmd.Run()
 }
 
@@ -441,7 +445,7 @@ func (e *Env) Install(l *ui.UI, pkg *manifest.Package) (*shell.Changes, error) {
 		}
 	}
 
-	changes, err := e.install(task, pkg)
+	changes, err := e.install(l, pkg)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -449,19 +453,75 @@ func (e *Env) Install(l *ui.UI, pkg *manifest.Package) (*shell.Changes, error) {
 	return allChanges.Merge(changes), nil
 }
 
+// resolveRuntimeDependencies checks all runtime dependencies for a package are available.
+// aggregate and bin collect the package names and binaries of all runtime dependencies to avoid collisions.
+func (e *Env) resolveRuntimeDependencies(l *ui.UI, p *manifest.Package, aggregate map[string]*manifest.Package, bins map[string]bool) error {
+	for _, ref := range p.RuntimeDeps {
+		previous := aggregate[ref.Name]
+		if previous != nil && previous.Reference.Compare(ref) != 0 {
+			return errors.Errorf("two conflicting runtime-dependencies: %s vs %s", ref, previous.Reference)
+		}
+
+		depPkg, err := e.Resolve(l, manifest.ExactSelector(ref), true)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+
+		for _, bin := range depPkg.Binaries {
+			base := filepath.Base(bin)
+			if bins[base] {
+				return errors.Errorf("conflicting binary in multiple runtime dependencies: %s", base)
+			}
+			bins[base] = true
+		}
+
+		aggregate[depPkg.Reference.Name] = depPkg
+		if err := e.resolveRuntimeDependencies(l, depPkg, aggregate, bins); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (e *Env) ensureRuntimeDepsPresent(l *ui.UI, p *manifest.Package) ([]*manifest.Package, error) {
+	deps := map[string]*manifest.Package{}
+	err := e.resolveRuntimeDependencies(l, p, deps, map[string]bool{})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	result := make([]*manifest.Package, 0, len(deps))
+	for _, pkg := range deps {
+		if err := e.state.CacheAndUnpack(l.Task(p.Reference.String()), pkg); err != nil {
+			return nil, errors.WithStack(err)
+		}
+		// Update usage for runtime dependencies so they wont get GC'd
+		if err := e.state.WritePackageState(pkg, e.binDir); err != nil {
+			return nil, errors.WithStack(err)
+		}
+		result = append(result, pkg)
+	}
+	return result, nil
+}
+
 // install a package
-func (e *Env) install(l *ui.Task, p *manifest.Package) (*shell.Changes, error) {
+func (e *Env) install(l *ui.UI, p *manifest.Package) (*shell.Changes, error) {
+	task := l.Task(p.Reference.String())
+
+	if _, err := e.ensureRuntimeDepsPresent(l, p); err != nil {
+		return nil, errors.WithStack(err)
+	}
 	p.UpdatedAt = time.Now()
-	log := l.SubTask("install")
+	log := task.SubTask("install")
 	log.Infof("Installing %s", p)
 	log.Debugf("From %s", p.Source)
 	log.Debugf("To %s", p.Dest)
-	err := e.state.CacheAndUnpack(l, p)
+	err := e.state.CacheAndUnpack(task, p)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	if _, err := os.Stat(e.pkgLink(p)); os.IsNotExist(err) {
-		if err = e.linkPackage(l, p); err != nil {
+		if err = e.linkPackage(task, p); err != nil {
 			return nil, errors.WithStack(err)
 		}
 		if err = e.state.WritePackageState(p, e.binDir); err != nil {
@@ -544,7 +604,10 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	err = e.EnsureChannelIsUpToDate(l, pkg)
+	if err := e.EnsureChannelIsUpToDate(l, pkg); err != nil {
+		return errors.WithStack(err)
+	}
+	runtimeDeps, err := e.ensureRuntimeDepsPresent(l, pkg)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -552,7 +615,13 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	env, err := e.Envars(l, true)
+
+	installed, err := e.ListInstalled(l)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	env := e.allEnvarsForPackages(true, runtimeDeps, installed...)
+
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -740,7 +809,7 @@ func (e *Env) Envars(l *ui.UI, inherit bool) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return e.allEnvarsForPackages(inherit, pkgs...), nil
+	return e.allEnvarsForPackages(inherit, nil, pkgs...), nil
 }
 
 // EnvOps returns the envar mutation operations for this environment.
@@ -890,7 +959,7 @@ func (e *Env) upgradeVersion(l *ui.UI, pkg *manifest.Package) (*shell.Changes, e
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		ic, err := e.install(l.Task(resolved.Reference.String()), resolved)
+		ic, err := e.install(l, resolved)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -985,9 +1054,10 @@ func (e *Env) pkgLink(pkg *manifest.Package) string {
 // Returns combined system + Hermit + package environment variables, fully expanded.
 //
 // If "inherit" is true, system envars will be included.
-func (e *Env) allEnvarsForPackages(inherit bool, pkgs ...*manifest.Package) []string {
+func (e *Env) allEnvarsForPackages(inherit bool, runtimeDeps []*manifest.Package, pkgs ...*manifest.Package) []string {
 	var ops envars.Ops
 	system := envars.Parse(os.Environ())
+	ops = append(ops, e.hermitRuntimeDepOps(runtimeDeps)...)
 	ops = append(ops, e.envarsForPackages(pkgs...)...)
 	ops = append(ops, e.localEnvarOps()...)
 	ops = append(ops, e.hermitEnvarOps()...)
@@ -1013,13 +1083,22 @@ func (e *Env) localEnvarOps() envars.Ops {
 	return envars.Infer(e.config.Envars.System())
 }
 
-// hermitEnvarOps returns the environment variables created and reuqired by hermit itself
+// hermitEnvarOps returns the environment variables created and required by hermit itself
 func (e *Env) hermitEnvarOps() envars.Ops {
 	return envars.Ops{
 		&envars.Prepend{Name: "PATH", Value: e.binDir},
 		&envars.Force{Name: "HERMIT_BIN", Value: e.binDir},
 		&envars.Force{Name: "HERMIT_ENV", Value: e.envDir},
 	}
+}
+
+// hermitRuntimeDepOps returns the environment variables for runtime dependencies
+func (e *Env) hermitRuntimeDepOps(pkgs []*manifest.Package) envars.Ops {
+	ops := e.envarsForPackages(pkgs...)
+	for _, pkg := range pkgs {
+		ops = append(ops, &envars.Prepend{Name: "PATH", Value: filepath.Join(e.state.BinaryDir(), pkg.Reference.String())})
+	}
+	return ops
 }
 
 func (e *Env) linkApp(app string) error {

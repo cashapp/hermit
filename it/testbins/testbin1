@@ -1,0 +1,4 @@
+#!/bin/bash
+
+result=$(testbin2)
+echo "$result"

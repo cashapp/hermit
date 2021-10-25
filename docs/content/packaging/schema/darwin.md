@@ -32,6 +32,7 @@ Used by: [channel](../channel#blocks) [linux](../linux#blocks) [&lt;manifest>](.
 | `rename` | `{string: string}?` | Rename files after unpacking to ${root}. |
 | `requires` | `[string]?` | Packages this one requires. |
 | `root` | `string?` | Override root for package. |
+| `runtime-dependencies` | `[string]?` | Packages used internally by this package, but not installed to the target environment |
 | `sha256` | `string?` | SHA256 of source package for verification. |
 | `source` | `string?` | URL for source package. Valid URLs are Git repositories (using .git suffix), Local Files (using file:// prefix), and Remote Files (using http:// or https:// prefix) |
 | `strip` | `number?` | Number of path prefix elements to strip. |
