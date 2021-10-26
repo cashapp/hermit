@@ -39,6 +39,8 @@ setupEnv() {
     cd ../testbins
     tar cvzf testbin1.tar.gz testbin1
     tar cvzf testbin2.tar.gz testbin2
+    cd fake
+    tar cvzf ../faketestbin2.tar.gz testbin2
   )
   mv ../testbins/*.tar.gz "${to}/bin/"
 }

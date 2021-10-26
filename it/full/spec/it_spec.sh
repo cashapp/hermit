@@ -200,6 +200,12 @@ Describe "Hermit"
       The file ./bin/testbin2 should not be exist
     End
 
+    It "allows installing packages with binaries conflicting with runtime dependencies"
+      When call hermit install faketestbin2
+      The status should be success
+      The stderr should be blank
+    End
+
     It "Calls the runtime dependency correctly"
       When call ./bin/testbin1
       The status should be success
