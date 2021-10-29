@@ -403,7 +403,7 @@ func (s *State) CleanPackages(b *ui.UI) error {
 	defer lock.Release(b)
 
 	bins, err := os.ReadDir(s.binaryDir)
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return errors.WithStack(err)
 	}
 	for _, entry := range bins {
@@ -414,7 +414,7 @@ func (s *State) CleanPackages(b *ui.UI) error {
 	}
 
 	entries, err := os.ReadDir(s.pkgDir)
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return errors.WithStack(err)
 	}
 	for _, entry := range entries {
