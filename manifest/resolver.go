@@ -344,6 +344,9 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 		channelRefs, foundUpdateInterval, found = matchChannel(manifest, selector)
 		allRefs = append(allRefs, channelRefs...)
 	}
+	if len(allRefs) == 0 {
+		return nil, errors.Errorf("could not find any versions matching %s", selector)
+	}
 	// Finally just pick the most recent version.
 	if !found.IsSet() && !selector.IsFullyQualified() {
 		sort.Sort(allRefs)
