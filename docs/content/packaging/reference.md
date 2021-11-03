@@ -83,6 +83,27 @@ Additionally, Hermit will create several synthetic channels which are checked fo
 
 This allows projects to pin to stable releases.
 
+## Dependencies
+
+Hermit supports two kinds of dependencies between packages, direct dependencies and runtime dependencies.
+
+### Direct dependencies
+
+Direct dependencies are declared in the manifest files using a `requires` definition in the manifest file. 
+This lists the packages that are needed in the environment to use the given package. 
+The package references in the `requires` list can either refer to an explicit package, or to a value defined in the `provides` definition of the dependency.
+For example, `requires = ["jre"]` would work with any package defining `provides = ["jre"]` in its definition.
+
+When a package with `requires` definition is installed, all its dependencies are installed to the target environment as well.
+
+### Runtime dependencies
+
+Runtime dependencies are package dependencies that are not installed into the target environment.
+These are defined using a `runtime-dependencies` definition in the manifest.
+
+Hermit makes sure the runtime dependencies are on the system when a binary from the package is executed, and injects the environment variables from the runtime dependencies to the binary when executed.
+This is a good way on depending on binaries and env variables from other packages in your package without exposing them to the target environment.
+
 ## Variable Interpolation
 
 Hermit manifests support basic variable interpolation to simplify
