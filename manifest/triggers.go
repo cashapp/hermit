@@ -2,10 +2,22 @@ package manifest
 
 import (
 	"sort"
+
+	"github.com/pkg/errors"
 )
 
 // Event in the lifecycle of a package.
 type Event string
+
+func (e *Event) UnmarshalText(text []byte) error {
+	event := Event(text)
+	_, ok := eventMap[event]
+	if !ok {
+		return errors.Errorf("invalid event %q", event)
+	}
+	*e = event
+	return nil
+}
 
 // Lifecycle events.
 const (
@@ -14,9 +26,16 @@ const (
 	EventInstall   Event = "install"
 	EventUninstall Event = "uninstall"
 	// Environment specific events
-	EventEnvActivate   Event = "activate"
-	EventEnvDeactivate Event = "deactivate"
+	EventEnvActivate Event = "activate"
 )
+
+// Valid events.
+var eventMap = map[Event]bool{
+	EventUnpack:      true,
+	EventInstall:     true,
+	EventUninstall:   true,
+	EventEnvActivate: true,
+}
 
 // A Trigger applied when a lifecycle event occurs.
 type Trigger struct {
@@ -26,12 +45,13 @@ type Trigger struct {
 	Copy    []*CopyAction    `hcl:"copy,block" help:"A file to copy when the event is triggered."`
 	Chmod   []*ChmodAction   `hcl:"chmod,block" help:"Change a files mode."`
 	Rename  []*RenameAction  `hcl:"rename,block" help:"Rename a file."`
+	Delete  []*DeleteAction  `hcl:"delete,block" help:"Delete files."`
 	Message []*MessageAction `hcl:"message,block" help:"Display a message to the user."`
 }
 
 // Ordered list of actions.
 func (a *Trigger) Ordered() []Action {
-	out := make([]Action, 0, len(a.Run)+len(a.Copy)+len(a.Chmod)+len(a.Rename))
+	var out []Action // nolint
 	for _, action := range a.Run {
 		out = append(out, action)
 	}
@@ -42,6 +62,9 @@ func (a *Trigger) Ordered() []Action {
 		out = append(out, action)
 	}
 	for _, action := range a.Rename {
+		out = append(out, action)
+	}
+	for _, action := range a.Delete {
 		out = append(out, action)
 	}
 	for _, action := range a.Message {

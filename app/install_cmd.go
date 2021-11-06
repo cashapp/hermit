@@ -91,7 +91,7 @@ func (i *installCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		messages, err := env.Trigger(l, manifest.EventInstall)
+		messages, err := env.TriggerForPackage(l, manifest.EventInstall, pkg)
 		if err != nil {
 			return errors.WithStack(err)
 		}

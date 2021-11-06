@@ -602,6 +602,14 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 					return nil, err
 				}
 
+			case *DeleteAction:
+				for i := range action.Files {
+					action.Files[i] = expand(action.Files[i], false)
+					if err := mustAbs(action, action.Files[i]); err != nil {
+						return nil, err
+					}
+				}
+
 			case *MessageAction:
 				action.Text = expand(action.Text, false)
 
@@ -705,6 +713,7 @@ func resolveFiles(manifest *AnnotatedManifest, pkg *Package, files map[string]st
 	return nil
 }
 
+// mustAbs ensures that "path" is either empty or an absolute file path, after expansion.
 func mustAbs(action Action, path string) error {
 	if path == "" || filepath.IsAbs(path) {
 		return nil

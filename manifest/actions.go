@@ -52,6 +52,28 @@ func (r *RenameAction) Apply(*Package) error { // nolint
 	return os.Rename(r.From, r.To)
 }
 
+// DeleteAction deletes files.
+type DeleteAction struct {
+	Pos       hcl.Position `hcl:"-"`
+	Recursive bool         `hcl:"recursive,optional" help:"Recursively delete."`
+	Files     []string     `hcl:"files" help:"Files to delete."`
+}
+
+func (d *DeleteAction) position() hcl.Position { return d.Pos }
+func (d *DeleteAction) String() string         { return fmt.Sprintf("rm %s", strings.Join(d.Files, " ")) }
+func (d *DeleteAction) Apply(*Package) error { // nolint
+	for _, file := range d.Files {
+		if d.Recursive {
+			if err := os.RemoveAll(file); err != nil {
+				return errors.Wrap(err, file)
+			}
+		} else if err := os.Remove(file); err != nil {
+			return errors.Wrap(err, file)
+		}
+	}
+	return nil
+}
+
 // ChmodAction changes the file mode on a file.
 type ChmodAction struct {
 	Pos hcl.Position `hcl:"-"`
