@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/pkg/errors"
@@ -29,6 +30,8 @@ func (u *uninstallCmd) Run(l *ui.UI, env *hermit.Env) error {
 		}
 		selectors = append(selectors, globs)
 	}
+	w := l.WriterAt(ui.LevelInfo)
+	defer w.Sync() // nolint
 	changes := shell.NewChanges(envars.Parse(os.Environ()))
 next:
 	for _, selector := range selectors {
@@ -39,6 +42,13 @@ next:
 					return errors.WithStack(err)
 				}
 				changes = changes.Merge(c)
+				messages, err := env.TriggerForPackage(l, manifest.EventUninstall, pkg)
+				if err != nil {
+					return errors.WithStack(err)
+				}
+				for _, message := range messages {
+					fmt.Fprintln(w, message)
+				}
 				continue next
 			}
 		}

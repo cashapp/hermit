@@ -1,10 +1,11 @@
 package manifest_test
 
 import (
-	"github.com/cashapp/hermit/platform"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/cashapp/hermit/platform"
 
 	"github.com/cashapp/hermit/sources"
 
@@ -248,6 +249,25 @@ func TestResolver_Resolve(t *testing.T) {
 			WithSource("www.example.com/1.0.0").
 			WithUnsupportedPlatforms([]platform.Platform{{platform.Darwin, platform.Amd64}, {platform.Darwin, platform.Arm64}}).
 			Result(),
+	}, {
+		name: "Validates event enum",
+		files: map[string]string{
+			"test.hcl": `
+			description = ""
+			binaries = ["bin"]
+
+			on invalid {}
+
+			version "1.0.0" {
+				source = "www.example.com"
+			}
+			`,
+		},
+		reference: "test-1.0.0",
+		wantErr:   `5:4: invalid label "event": invalid event "invalid"`,
+		manifestErrors: map[string][]string{
+			"memory:///test.hcl": {`5:4: invalid label "event": invalid event "invalid"`},
+		},
 	},
 	}
 	for _, tt := range tests {

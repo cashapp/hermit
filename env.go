@@ -238,18 +238,27 @@ func (e *Env) Root() string {
 	return e.envDir
 }
 
-// Trigger an event.
+// Trigger an event for all installed packages.
 func (e *Env) Trigger(l *ui.UI, event manifest.Event) (messages []string, err error) {
 	pkgs, err := e.ListInstalled(l)
 	if err != nil {
 		return nil, err
 	}
 	for _, pkg := range pkgs {
-		eventMessages, err := pkg.Trigger(l, event)
+		pkgMessages, err := e.TriggerForPackage(l, event, pkg)
 		if err != nil {
-			return nil, errors.Wrapf(err, "%s: on %s", pkg, event)
+			return nil, err
 		}
-		messages = append(messages, eventMessages...)
+		messages = append(messages, pkgMessages...)
+	}
+	return messages, nil
+}
+
+// TriggerForPackage triggers an event for a single package.
+func (e *Env) TriggerForPackage(l *ui.UI, event manifest.Event, pkg *manifest.Package) (messages []string, err error) {
+	messages, err = pkg.Trigger(l, event)
+	if err != nil {
+		return nil, errors.Wrapf(err, "%s: on %s", pkg, event)
 	}
 	return messages, nil
 }
