@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/PuerkitoBio/rehttp"
 	"github.com/posener/complete"
 	"github.com/willabides/kongplete"
 
@@ -94,13 +95,17 @@ func (c Config) defaultHTTPClient(githubToken string) *http.Client {
 func Main(config Config) {
 	if config.HTTP == nil {
 		config.HTTP = func(config HTTPTransportConfig) *http.Client {
-			transport := &http.Transport{
-				ResponseHeaderTimeout: config.ResponseHeaderTimeout,
-				DialContext: (&net.Dialer{
-					Timeout:   config.DialTimeout,
-					KeepAlive: config.KeepAlive,
-				}).DialContext,
-			}
+			transport := rehttp.NewTransport(
+				&http.Transport{
+					ResponseHeaderTimeout: config.ResponseHeaderTimeout,
+					DialContext: (&net.Dialer{
+						Timeout:   config.DialTimeout,
+						KeepAlive: config.KeepAlive,
+					}).DialContext,
+				},
+				rehttp.RetryAll(rehttp.RetryMaxRetries(3), rehttp.RetryTemporaryErr()), // max 3 retries for Temporary errors
+				rehttp.ConstDelay(time.Second),                                         // wait 1s between retries
+			)
 			return &http.Client{Transport: transport}
 		}
 	}

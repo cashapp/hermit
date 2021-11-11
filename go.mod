@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	aqwari.net/xml v0.0.0-20200724195937-ae380bb65a55
+	github.com/PuerkitoBio/rehttp v1.1.0
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 	github.com/alecthomas/colour v0.1.0
 	github.com/alecthomas/hcl v0.1.17
@@ -34,8 +35,7 @@ require (
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
 	go.etcd.io/bbolt v1.3.5
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
-	golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c
-	golang.org/x/text v0.3.2 // indirect
+	golang.org/x/sys v0.0.0-20210423082822-04245dca01da
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	howett.net/plist v0.0.0-20200419221736-3b63eb3a43b5
 )
