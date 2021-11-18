@@ -108,15 +108,18 @@ func Detect() (Shell, error) {
 	// Next, try to pull the shell from the user's password entry.
 	u, err := user.Current()
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrap(err, "could not retrieve current user")
 	}
 	pw, err := passwd.Parse()
 	if err != nil {
-		return nil, errors.Wrap(err, "couldn't determine user's shells")
+		return nil, errors.Wrap(err, "couldn't locate/parse /etc/passwd database")
 	}
-	entry := pw[u.Name]
+	entry, ok := pw[u.Name]
+	if !ok {
+		return nil, errors.Errorf("/etc/passwd file entry for %q is missing", u.Name)
+	}
 	if entry.Shell == "" {
-		return nil, errors.New("couldn't determine user's shells")
+		return nil, errors.Errorf("/etc/passwd file entry for %q does not contain a shell field", u.Name)
 	}
 	shell, ok := shells[filepath.Base(entry.Shell)]
 	if ok {
