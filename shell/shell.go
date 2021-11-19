@@ -114,12 +114,12 @@ func Detect() (Shell, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't locate/parse /etc/passwd database")
 	}
-	entry, ok := pw[u.Name]
+	entry, ok := pw[u.Username]
 	if !ok {
-		return nil, errors.Errorf("/etc/passwd file entry for %q is missing", u.Name)
+		return nil, errors.Errorf("/etc/passwd file entry for %q is missing", u.Username)
 	}
 	if entry.Shell == "" {
-		return nil, errors.Errorf("/etc/passwd file entry for %q does not contain a shell field", u.Name)
+		return nil, errors.Errorf("/etc/passwd file entry for %q does not contain a shell field", u.Username)
 	}
 	shell, ok := shells[filepath.Base(entry.Shell)]
 	if ok {
