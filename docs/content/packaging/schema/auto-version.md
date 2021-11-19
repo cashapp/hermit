@@ -1,6 +1,6 @@
 +++
 title = "version > auto-version"
-weight = 413
+weight = 414
 +++
 
 Automatically update versions.

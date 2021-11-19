@@ -1,6 +1,6 @@
 +++
 title = "platform <attr>"
-weight = 412
+weight = 413
 +++
 
 Platform-specific configuration. &lt;attr&gt; is a set regexes that must all match against one of CPU, OS, etc..
