@@ -433,7 +433,7 @@ func TestDependencyResolution(t *testing.T) {
 	_, err = f.Env.Install(f.P, pkg)
 	require.NoError(t, err)
 
-	installed, err := f.Env.ListInstalled(f.P)
+	installed, err := f.Env.ListInstalledReferences()
 	require.NoError(t, err)
 
 	// Test that dependencies can be resolved based on the package name

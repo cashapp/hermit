@@ -1145,9 +1145,9 @@ func (e *Env) Sources(l *ui.UI) ([]string, error) {
 }
 
 // ResolveWithDeps collect packages and their dependencies based on the given manifest.Selector into a map
-func (e *Env) ResolveWithDeps(l *ui.UI, installed manifest.Packages, selector manifest.Selector, out map[string]*manifest.Package) (err error) {
+func (e *Env) ResolveWithDeps(l *ui.UI, installed []manifest.Reference, selector manifest.Selector, out map[string]*manifest.Package) (err error) {
 	for _, existing := range installed {
-		if existing.Reference.String() == selector.Name() {
+		if existing.String() == selector.Name() {
 			return nil
 		}
 	}
