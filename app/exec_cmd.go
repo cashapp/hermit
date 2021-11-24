@@ -71,7 +71,7 @@ func (e *execCmd) Run(l *ui.UI, sta *state.State, env *hermit.Env, globalState G
 	if err := pkg.EnsureSupported(); err != nil {
 		return errors.Wrapf(err, "execution failed")
 	}
-	installed, err := env.ListInstalled(l)
+	installed, err := env.ListInstalledReferences()
 	if err != nil {
 		return errors.WithStack(err)
 	}

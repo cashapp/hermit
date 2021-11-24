@@ -26,7 +26,7 @@ into the environment will be downloaded and installed. Packages will be pinned t
 }
 
 func (i *installCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
-	installed, err := env.ListInstalled(l)
+	installed, err := env.ListInstalledReferences()
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -40,9 +40,13 @@ func (i *installCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
 
 	if len(packages) == 0 {
 		// Checking that all the packages are downloaded and unarchived
-		for _, pkg := range installed {
-			task := l.Task(pkg.Reference.String())
-			err := state.CacheAndUnpack(task, pkg)
+		for _, ref := range installed {
+			task := l.Task(ref.String())
+			pkg, err := env.Resolve(l, manifest.ExactSelector(ref), false)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			err = state.CacheAndUnpack(task, pkg)
 			pkg.LogWarnings(l)
 			task.Done()
 			if err != nil {
@@ -59,9 +63,9 @@ func (i *installCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
 			return errors.WithStack(err)
 		}
 		selectors[i] = selector
-		for _, ipkg := range installed {
-			if selector.Matches(ipkg.Reference) {
-				return errors.Errorf("%s cannot be installed as %s is already installed", selector.String(), ipkg.Reference)
+		for _, ref := range installed {
+			if selector.Matches(ref) {
+				return errors.Errorf("%s cannot be installed as %s is already installed", selector.String(), ref)
 			}
 		}
 	}
@@ -77,8 +81,8 @@ func (i *installCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
 	for _, pkg := range pkgs {
 		// Skip possible dependencies that have already been installed
 		exists := false
-		for _, ipkg := range installed {
-			if ipkg.Reference.String() == pkg.Reference.String() {
+		for _, ref := range installed {
+			if ref.String() == pkg.Reference.String() {
 				exists = true
 				break
 			}
