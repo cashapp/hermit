@@ -21,9 +21,21 @@ func Run(log *ui.Task, args ...string) error {
 func Capture(log ui.Logger, args ...string) ([]byte, error) {
 	log.Debugf("%s", shellquote.Join(args...))
 	cmd := exec.Command(args[0], args[1:]...)
+	return captureOutput(log, cmd)
+}
+
+// CaptureInDir runs a command in the given dir, returning combined stdout and stderr.
+func CaptureInDir(log ui.Logger, dir string, args ...string) ([]byte, error) {
+	log.Debugf("%s", shellquote.Join(args...))
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Dir = dir
+	return captureOutput(log, cmd)
+}
+
+func captureOutput(log ui.Logger, cmd *exec.Cmd) ([]byte, error) {
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return out, errors.Wrapf(err, "%s: %s", shellquote.Join(args...), strings.TrimSpace(string(out)))
+		return out, errors.Wrapf(err, "%s: %s", shellquote.Join(cmd.Args...), strings.TrimSpace(string(out)))
 	}
 	_, _ = log.Write(out)
 	return out, nil
