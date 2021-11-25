@@ -185,7 +185,7 @@ func (c *Cache) downloadHTTP(b *ui.Task, checksum string, uri string, cachePath 
 	}
 	// Check for potential private github release
 	if response.StatusCode == 404 {
-		if ghi, ok := getGithubReleaseInfo(uri); ok {
+		if ghi, ok := getGitHubReleaseInfo(uri); ok {
 			_ = response.Body.Close()
 			_ = w.Close()
 			w, response, err = downloadGHPrivate(c.gh, ghi, downloadPath)
@@ -273,7 +273,7 @@ type githubReleaseInfo struct {
 	owner, repo, tag, asset string
 }
 
-func getGithubReleaseInfo(uri string) (*githubReleaseInfo, bool) {
+func getGitHubReleaseInfo(uri string) (*githubReleaseInfo, bool) {
 	g := &githubReleaseInfo{}
 	m := githubRe.FindStringSubmatch(uri)
 	if len(m) != 5 {

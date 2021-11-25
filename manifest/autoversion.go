@@ -1,26 +1,31 @@
 package manifest
 
 import (
-	"encoding/json"
-	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 
 	"github.com/alecthomas/hcl"
 	"github.com/pkg/errors"
+
+	"github.com/cashapp/hermit/github"
 )
+
+// GitHubClient is the GitHub API subset that we need for auto-versioning.
+type GitHubClient interface {
+	LatestRelease(repo string) (*github.Release, error)
+}
 
 // AutoVersion rewrites the given manifest with new version information if applicable.
 //
 // Auto-versioning configuration is defined in a "version > auto-version" block. If a new
 // version is found in the defined location then the version block's versions are updated.
-func AutoVersion(path string) (version string, err error) {
+func AutoVersion(client GitHubClient, path string) (version string, err error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
-	version, content, err = autoVersion(content, realVersioner{})
+	version, content, err = autoVersion(client, content)
 	if err != nil {
 		return "", errors.Wrap(err, path)
 	}
@@ -40,11 +45,7 @@ func AutoVersion(path string) (version string, err error) {
 	return version, errors.WithStack(os.Rename(w.Name(), path))
 }
 
-type versioner interface {
-	latestGitHubRelease(repo string) (string, error)
-}
-
-func autoVersion(manifest []byte, versioner versioner) (string, []byte, error) {
+func autoVersion(client GitHubClient, manifest []byte) (string, []byte, error) {
 	ast, err := hcl.ParseBytes(manifest)
 	if err != nil {
 		return "", nil, errors.WithStack(err)
@@ -71,7 +72,7 @@ func autoVersion(manifest []byte, versioner versioner) (string, []byte, error) {
 	if autoVersion == nil {
 		return "", nil, nil
 	}
-	latestVersion, err := versioner.latestGitHubRelease(autoVersion.GitHubRelease)
+	release, err := client.LatestRelease(autoVersion.GitHubRelease)
 	if err != nil {
 		return "", nil, errors.WithStack(err)
 	}
@@ -79,11 +80,11 @@ func autoVersion(manifest []byte, versioner versioner) (string, []byte, error) {
 	if err != nil {
 		return "", nil, errors.WithStack(err)
 	}
-	groups := versionRe.FindStringSubmatch(latestVersion)
+	groups := versionRe.FindStringSubmatch(release.TagName)
 	if groups == nil {
-		return "", nil, errors.Errorf("%s: latest release must match the pattern %s but is %s", autoVersion.GitHubRelease, autoVersion.VersionPattern, latestVersion)
+		return "", nil, errors.Errorf("%s: latest release must match the pattern %s but is %s", autoVersion.GitHubRelease, autoVersion.VersionPattern, release.TagName)
 	}
-	latestVersion = groups[1]
+	latestVersion := groups[1]
 	// Check if version already exists.
 	for _, label := range autoVersionedBlock.Labels {
 		if label == latestVersion {
@@ -93,24 +94,4 @@ func autoVersion(manifest []byte, versioner versioner) (string, []byte, error) {
 	autoVersionedBlock.Labels = append(autoVersionedBlock.Labels, latestVersion)
 	content, err := hcl.MarshalAST(ast)
 	return latestVersion, content, errors.WithStack(err)
-}
-
-type gitHubLatestReleaseResponse struct {
-	TagName string `json:"tag_name"`
-}
-
-type realVersioner struct{}
-
-func (realVersioner) latestGitHubRelease(repo string) (string, error) {
-	resp, err := http.Get("https://api.github.com/repos/" + repo + "/releases/latest") // nolint
-	if err != nil {
-		return "", errors.WithStack(err)
-	}
-	defer resp.Body.Close()
-	ghResp := gitHubLatestReleaseResponse{}
-	err = json.NewDecoder(resp.Body).Decode(&ghResp)
-	if err != nil {
-		return "", errors.WithStack(err)
-	}
-	return ghResp.TagName, nil
 }
