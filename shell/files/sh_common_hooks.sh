@@ -5,7 +5,7 @@ change_hermit_env() {
     if [ -f "${CUR}/bin/activate-hermit" ]; then
       if [ -n "${HERMIT_ENV+_}"  ]; then type _hermit_deactivate &>/dev/null && _hermit_deactivate; fi
       # shellcheck source=files/activate-hermit
-      if [ "${CUR}" != "${DEACTIVATED_HERMIT}" ]; then
+      if ! [ "${CUR}" -ef "${DEACTIVATED_HERMIT}" ]; then
         if "${HOME}/bin/hermit" --quiet validate env "${CUR}"; then
           . "${CUR}/bin/activate-hermit"
         fi
