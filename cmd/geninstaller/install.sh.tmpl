@@ -58,12 +58,13 @@ if [ "$ARCH" = "x86_64" ]; then
   ARCH="amd64"
 fi
 URL="${HERMIT_DIST_URL}/hermit-${OS}-${ARCH}.gz"
+TMP_FILE="${HERMIT_EXE}.download.${RANDOM}"
 echo "Downloading ${URL} to ${HERMIT_EXE}"
-rm -f "${HERMIT_EXE}"
-curl -fsSL "${URL}" | gzip -dc > "${HERMIT_EXE}~"
-chown "$ID_USER:$ID_GROUP" "${HERMIT_EXE}~"
-chmod u+wx "${HERMIT_EXE}~"
-mv "${HERMIT_EXE}~" "${HERMIT_EXE}"
+chmod -f u+w "${HERMIT_EXE}" 2> /dev/null || true
+curl -fsSL "${URL}" | gzip -dc > "${TMP_FILE}"
+chown "$ID_USER:$ID_GROUP" "${TMP_FILE}"
+chmod u+wx "${TMP_FILE}"
+mv "${TMP_FILE}" "${HERMIT_EXE}"
 
 echo "Hermit installed as ${HERMIT_EXE}"
 
