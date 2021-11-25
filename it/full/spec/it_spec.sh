@@ -213,4 +213,16 @@ Describe "Hermit"
       The stderr should be blank
     End
   End
+
+  Describe "Environments with symbolic links in the path"
+    ln -s . ./symlinked
+    cd ./symlinked
+    . bin/activate-hermit
+    It "Allows calling binaries in the environment"
+      When call ./bin/testbin1
+      The status should be success
+      The stdout should not be blank
+      The stderr should be blank
+    End
+  End
 End

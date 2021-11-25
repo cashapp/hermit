@@ -169,7 +169,10 @@ func EnvDirFromProxyLink(executable string) (string, error) {
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
-	last := links[len(links)-1]
+	last, err := filepath.EvalSymlinks(links[len(links)-1])
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
 	if filepath.Base(last) != "hermit" {
 		return "", errors.Errorf("binary is not a Hermit symlink: %s", links[0])
 	}
