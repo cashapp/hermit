@@ -110,10 +110,10 @@ func Main(config Config) {
 	var (
 		err         error
 		p           *ui.UI
-		stdoutIsTTY = !config.CI && isatty.IsTerminal(os.Stdout.Fd())
-		stderrIsTTY = !config.CI && isatty.IsTerminal(os.Stderr.Fd())
+		stdoutIsTTY = isatty.IsTerminal(os.Stdout.Fd())
+		stderrIsTTY = isatty.IsTerminal(os.Stderr.Fd())
 	)
-	if isatty.IsTerminal(os.Stdout.Fd()) && !config.CI {
+	if stdoutIsTTY {
 		// This is necessary because stdout/stderr are unbuffered and thus _very_ slow.
 		stdout := bufio.NewWriter(os.Stdout)
 		stderr := bufio.NewWriter(os.Stderr)
@@ -136,6 +136,7 @@ func Main(config Config) {
 	} else {
 		p = ui.New(config.LogLevel, os.Stdout, os.Stderr, stdoutIsTTY, stderrIsTTY)
 	}
+	p.SetProgressBarEnabled(!config.CI)
 	defer func() {
 		err := recover()
 		p.Clear()
