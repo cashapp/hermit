@@ -171,11 +171,14 @@ func Main(config Config) {
 	}
 
 	githubToken := os.Getenv("HERMIT_GITHUB_TOKEN")
+	if githubToken == "" {
+		githubToken = os.Getenv("GITHUB_TOKEN")
+	}
 
 	hermitHelp := help
 	hermitHelp += "\n\nConfiguration format for ~/.hermit.hcl:\n"
 	hermitHelp += "    " + strings.Join(strings.Split(userConfigSchema, "\n"), "\n    ")
-	hermitHelp += "\nHERMIT_GITHUB_TOKEN can be set to retrieve private GitHub release assets."
+	hermitHelp += "\nGITHUB_TOKEN can be set to retrieve private GitHub release assets."
 
 	kongOptions := []kong.Option{
 		kong.Groups{

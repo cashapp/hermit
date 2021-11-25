@@ -4,11 +4,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/cashapp/hermit/github"
 )
 
-type testVersioner struct{}
+type testGHAPI struct{}
 
-func (testVersioner) latestGitHubRelease(repo string) (string, error) { return "v3.2.150", nil }
+func (v testGHAPI) LatestRelease(repo string) (*github.Release, error) {
+	return &github.Release{TagName: "v3.2.150"}, nil
+}
 
 func TestGitHubAutoVersion(t *testing.T) {
 	source := `
@@ -34,7 +38,7 @@ channel "stable" {
   version = "3.*"
 }
 `
-	latestVersion, actual, err := autoVersion([]byte(source), testVersioner{})
+	latestVersion, actual, err := autoVersion(testGHAPI{}, []byte(source))
 	require.NoError(t, err)
 	require.Equal(t, "3.2.150", latestVersion)
 	expected := `description = "Jenkins X CLI"

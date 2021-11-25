@@ -102,7 +102,11 @@ func (a *Client) decode(url string, dest interface{}) error {
 		return errors.WithStack(err)
 	}
 	defer resp.Body.Close()
-	err = json.NewDecoder(resp.Body).Decode(dest)
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return errors.Errorf("GitHub API request failed with %s", resp.Status)
+	}
+	dec := json.NewDecoder(resp.Body)
+	err = dec.Decode(dest)
 	if err != nil {
 		return errors.WithStack(err)
 	}
