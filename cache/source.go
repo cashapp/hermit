@@ -133,10 +133,12 @@ func (s *gitSource) Download(b *ui.Task, cache *Cache, checksum string) (string,
 	if err != nil {
 		return "", "", errors.Wrap(err, s.URL)
 	}
-	etag, err := s.ETag(b, cache)
+
+	bts, err := util.CaptureInDir(b, filepath.Join(cache.root, base), "git", "rev-parse", "HEAD")
 	if err != nil {
 		return "", "", errors.Wrap(err, s.URL)
 	}
+	etag := strings.Trim(string(bts), "\n")
 
 	return filepath.Join(cache.root, base), etag, nil
 }
