@@ -108,6 +108,7 @@ func (c *Cache) Open(b *ui.Task, checksum, uri string, mirrors ...string) (*os.F
 // If checksum is present it must be the SHA256 hash of the downloaded artifact.
 func (c *Cache) Download(b *ui.Task, checksum, uri string, mirrors ...string) (path string, etag string, err error) {
 	uris := append([]string{uri}, mirrors...)
+	var lastError error
 	for _, uri := range uris {
 		defer ui.LogElapsed(b, "Download %s", uri)()
 		source, err := GetSource(uri)
@@ -118,12 +119,13 @@ func (c *Cache) Download(b *ui.Task, checksum, uri string, mirrors ...string) (p
 		if err == nil {
 			return path, etag, nil
 		}
+		lastError = err
 		b.Debugf("%s: %s", uri, err)
 	}
-	if err == nil {
+	if lastError == nil {
 		return "", "", errors.Errorf("failed to download from any of %s", strings.Join(uris, ", "))
 	}
-	return "", "", errors.WithStack(err)
+	return "", "", errors.Wrap(lastError, uris[len(uris)-1])
 }
 
 // ETag fetches the etag from given URI if available.
