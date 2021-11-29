@@ -6,9 +6,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/cashapp/hermit/github"
 	"github.com/cashapp/hermit/ui"
-	"github.com/stretchr/testify/require"
 )
 
 func TestInfer(t *testing.T) {
@@ -26,7 +27,7 @@ func TestInfer(t *testing.T) {
 	}))
 	defer srv.Close()
 	p, _ := ui.NewForTesting()
-	actual, err := InferFromArtefact(p, http.DefaultClient, github.New(http.DefaultClient), srv.URL+"/releases/download/0.1.1/pkg-0.1.1-linux-amd64.tgz", "")
+	actual, err := InferFromArtefact(p, http.DefaultClient, github.New(""), srv.URL+"/releases/download/0.1.1/pkg-0.1.1-linux-amd64.tgz", "")
 	require.NoError(t, err)
 	expected := &Manifest{
 		Layer: Layer{
