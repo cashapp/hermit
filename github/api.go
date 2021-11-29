@@ -39,11 +39,12 @@ type Client struct {
 }
 
 // New creates a new GitHub API client.
-//
-// The passed http.Client should be configured
-func New(client *http.Client) *Client {
-	if client == nil {
+func New(token string) *Client {
+	var client *http.Client
+	if token == "" {
 		client = http.DefaultClient
+	} else {
+		client = &http.Client{Transport: TokenAuthenticatedTransport(nil, token)}
 	}
 	return &Client{client: client}
 }
@@ -84,12 +85,15 @@ func (a *Client) Releases(repo string) (releases []Release, err error) {
 	return releases, a.decode(url, &releases)
 }
 
-// PrepareDownload prepares a HTTP client and request for retrieving a file from GitHub.
-func (a *Client) PrepareDownload(asset Asset) (client *http.Client, req *http.Request, err error) {
-	req, err = a.request(asset.URL, http.Header{
+// Download creates a download request for retrieving a release asset from GitHub.
+func (a *Client) Download(asset Asset) (resp *http.Response, err error) {
+	req, err := a.request(asset.URL, http.Header{
 		"Accept": []string{"application/octet-stream"},
 	})
-	return a.client, req, err
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return a.client.Do(req)
 }
 
 func (a *Client) decode(url string, dest interface{}) error {

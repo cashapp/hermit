@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/cashapp/hermit/envars"
-	"github.com/cashapp/hermit/github"
 	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/vfs"
 
@@ -20,9 +19,10 @@ import (
 
 	"github.com/cashapp/hermit/state"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/cashapp/hermit/internal/dao"
 	"github.com/cashapp/hermit/ui"
-	"github.com/stretchr/testify/require"
 )
 
 // EnvTestFixture encapsulates the directories used by Env and the Env itself
@@ -56,7 +56,7 @@ func NewEnvTestFixture(t *testing.T, handler http.Handler) *EnvTestFixture {
 	sta, err := state.Open(stateDir, state.Config{
 		Sources: []string{},
 		Builtin: sources.NewBuiltInSource(vfs.InMemoryFS(nil)),
-	}, github.New(client), client, client)
+	}, nil, client, client)
 	require.NoError(t, err)
 	env, err := hermit.OpenEnv(envDir, sta, envars.Envars{}, server.Client())
 	require.NoError(t, err)

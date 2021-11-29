@@ -11,13 +11,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alecthomas/kong"
+	"github.com/mattn/go-isatty"
 	"github.com/posener/complete"
 	"github.com/willabides/kongplete"
 
-	"github.com/alecthomas/kong"
-	"github.com/mattn/go-isatty"
-
 	"github.com/cashapp/hermit"
+	"github.com/cashapp/hermit/cache"
 	"github.com/cashapp/hermit/github"
 	"github.com/cashapp/hermit/state"
 	"github.com/cashapp/hermit/ui"
@@ -58,36 +58,36 @@ type Config struct {
 	BaseDistURL string
 	// SHA256 checksums for all known versions of per-environment scripts.
 	// If empty shell.ScriptSHAs will be used.
-	SHA256Sums  []string
-	HTTP        func(HTTPTransportConfig) *http.Client
-	State       state.Config
-	KongOptions []kong.Option
-	KongPlugins kong.Plugins
-	// True if we're running in CI.
+	SHA256Sums         []string
+	HTTP               func(HTTPTransportConfig) *http.Client
+	State              state.Config
+	KongOptions        []kong.Option
+	KongPlugins        kong.Plugins
+	DownloadStrategies []cache.DownloadStrategy
+	// True if we're running in CI - disables progress bar.
 	CI bool
 }
 
 // Make a HTTP client.
-func (c Config) makeHTTPClient(githubToken string, config HTTPTransportConfig) *http.Client {
+func (c Config) makeHTTPClient(config HTTPTransportConfig) *http.Client {
 	client := c.HTTP(config)
 	if debug.Flags.FailHTTP {
 		client.Timeout = time.Millisecond
 	}
-	client.Transport = github.TokenAuthenticatedTransport(client.Transport, githubToken)
 	return client
 }
 
 // Make a HTTP client with very short timeouts for issuing optional requests.
-func (c Config) fastHTTPClient(githubToken string) *http.Client {
-	return c.makeHTTPClient(githubToken, HTTPTransportConfig{
+func (c Config) fastHTTPClient() *http.Client {
+	return c.makeHTTPClient(HTTPTransportConfig{
 		ResponseHeaderTimeout: time.Second * 5,
 		DialTimeout:           time.Second,
 		KeepAlive:             30 * time.Second,
 	})
 }
 
-func (c Config) defaultHTTPClient(githubToken string) *http.Client {
-	return c.makeHTTPClient(githubToken, HTTPTransportConfig{})
+func (c Config) defaultHTTPClient() *http.Client {
+	return c.makeHTTPClient(HTTPTransportConfig{})
 }
 
 // Main runs the Hermit command-line application with the given config.
@@ -206,10 +206,15 @@ func Main(config Config) {
 		log.Fatalf("failed to initialise CLI: %s", err)
 	}
 
-	defaultHTTPClient := config.defaultHTTPClient(githubToken)
-	ghClient := github.New(defaultHTTPClient)
+	downloadStrategies := config.DownloadStrategies
+	defaultHTTPClient := config.defaultHTTPClient()
 
-	sta, err = state.Open(hermit.UserStateDir, config.State, ghClient, defaultHTTPClient, config.fastHTTPClient(githubToken))
+	ghClient := github.New(githubToken)
+	if githubToken != "" {
+		downloadStrategies = append(downloadStrategies, cache.GitHubPrivateReleaseDownloadStrategy(ghClient))
+	}
+
+	sta, err = state.Open(hermit.UserStateDir, config.State, downloadStrategies, defaultHTTPClient, config.fastHTTPClient())
 	if err != nil {
 		log.Fatalf("failed to open state: %s", err)
 	}
