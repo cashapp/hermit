@@ -19,6 +19,12 @@ Using Hermit in GitHub Actions is straightforward. Just add the following step t
 eg.
 
 ```yaml
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+name: CI
 jobs:
   test:
     name: Test
@@ -27,7 +33,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Init Hermit
-        run: ./bin/hermit env --raw >> $GITHUB_ENV
+        run: ./bin/hermit env -r >> $GITHUB_ENV
       - name: Test
         run: go test ./...
 ```
