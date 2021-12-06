@@ -5,9 +5,9 @@
 # SC2018: Use '[:lower:]' to support accents and foreign alphabets.
 
 
-set -eo pipefail
+set -euo pipefail
 
-if [ -z "${HERMIT_STATE_DIR}" ]; then
+if [ -z "${HERMIT_STATE_DIR:-}" ]; then
   case "$(uname -s)" in
   Darwin)
     HERMIT_STATE_DIR_RAW="\${HOME}/Library/Caches/hermit"
@@ -33,63 +33,93 @@ HERMIT_CHANNEL="$(basename "${HERMIT_DIST_URL}")"
 HERMIT_EXE_RAW="${HERMIT_STATE_DIR_RAW}/pkg/hermit@${HERMIT_CHANNEL}/hermit"
 eval HERMIT_EXE="\${HERMIT_EXE:-${HERMIT_EXE_RAW}}"
 HERMIT_EXE_DIR="$(dirname "${HERMIT_EXE}")"
-HERMIT_BIN_INSTALL_DIR="${HERMIT_BIN_INSTALL_DIR:-${HOME}/bin}"
 
 ID_USER=$(id -u)
 ID_GROUP=$(id -g)
 
-for dir in "${HERMIT_EXE_DIR}" "${HERMIT_STATE_DIR}"; do
-  if [ ! -e "${dir}" ]; then
-    echo "Creating ${dir}"
-    mkdir -p "${dir}"
-    chown "$ID_USER:$ID_GROUP" "${dir}"
+function user_install() {
+  for dir in "${HERMIT_EXE_DIR}" "${HERMIT_STATE_DIR}"; do
+    if [ ! -e "${dir}" ]; then
+      echo "Creating ${dir}"
+      mkdir -p "${dir}"
+      chown "$ID_USER:$ID_GROUP" "${dir}"
+    fi
+
+    if [ ! -w "${dir}" ]; then
+      echo "${dir} is not writeable, making it so"
+      chown "$ID_USER:$ID_GROUP" "${dir}"
+      chmod u+w "${dir}"
+    fi
+  done
+
+  OS="$(uname -s | tr A-Z a-z)"
+  ARCH="$(uname -m | tr A-Z a-z)"
+  if [ "$ARCH" = "x86_64" ]; then
+    ARCH="amd64"
+  fi
+  URL="${HERMIT_DIST_URL}/hermit-${OS}-${ARCH}.gz"
+  TMP_FILE="${HERMIT_EXE}.download.${RANDOM}"
+  echo "Downloading ${URL} to ${HERMIT_EXE}"
+  chmod -f u+w "${HERMIT_EXE}" 2> /dev/null || true
+  curl -fsSL "${URL}" | gzip -dc > "${TMP_FILE}"
+  chown "$ID_USER:$ID_GROUP" "${TMP_FILE}"
+  chmod u+wx "${TMP_FILE}"
+  mv "${TMP_FILE}" "${HERMIT_EXE}"
+
+  echo "Hermit installed as ${HERMIT_EXE}"
+}
+
+# Install system-wide components
+function system_install() {
+  local HERMIT_INSTALL_NAME=hermit-${HERMIT_CHANNEL}
+  local CREATE_SYMLINK=1
+  # If HERMIT_BIN_INSTALL_DIR is not set, see if we can detect where Hermit was previously installed.
+  if [ -z "${HERMIT_BIN_INSTALL_DIR:-}" ]; then
+    for dir in {{.InstallPaths|words}}; do
+      # shellcheck disable=SC2016
+      if test -x "${dir}/hermit" && grep -Fq ': "${HERMIT' "${dir}/hermit"; then
+        if ! grep -q '{{.DistURL}}' "${dir}/hermit"; then
+          echo "Found Hermit in ${dir}/hermit but it is a different distribution, not overwriting."
+          CREATE_SYMLINK=
+        fi
+        rm "${HERMIT_BIN_INSTALL_DIR}/hermit"
+        HERMIT_BIN_INSTALL_DIR="${dir}"
+        break
+      fi
+    done
+    HERMIT_BIN_INSTALL_DIR="${HERMIT_BIN_INSTALL_DIR:-${HOME}/bin}"
+  fi
+  if [ ! -d "$HERMIT_BIN_INSTALL_DIR" ]; then
+    echo "NOTE: $HERMIT_BIN_INSTALL_DIR should be added to your \$PATH if it is not already"
+    mkdir -p "$HERMIT_BIN_INSTALL_DIR"
   fi
 
-  if [ ! -w "${dir}" ]; then
-    echo "${dir} is not writeable, making it so"
-    chown "$ID_USER:$ID_GROUP" "${dir}"
-    chmod u+w "${dir}"
+  if [ -e "$HERMIT_BIN_INSTALL_DIR/$HERMIT_INSTALL_NAME" ]; then
+    echo "Removing the previous $HERMIT_BIN_INSTALL_DIR/$HERMIT_INSTALL_NAME"
+    rm -f "$HERMIT_BIN_INSTALL_DIR/$HERMIT_INSTALL_NAME"
   fi
-done
-
-OS="$(uname -s | tr A-Z a-z)"
-ARCH="$(uname -m | tr A-Z a-z)"
-if [ "$ARCH" = "x86_64" ]; then
-  ARCH="amd64"
-fi
-URL="${HERMIT_DIST_URL}/hermit-${OS}-${ARCH}.gz"
-TMP_FILE="${HERMIT_EXE}.download.${RANDOM}"
-echo "Downloading ${URL} to ${HERMIT_EXE}"
-chmod -f u+w "${HERMIT_EXE}" 2> /dev/null || true
-curl -fsSL "${URL}" | gzip -dc > "${TMP_FILE}"
-chown "$ID_USER:$ID_GROUP" "${TMP_FILE}"
-chmod u+wx "${TMP_FILE}"
-mv "${TMP_FILE}" "${HERMIT_EXE}"
-
-echo "Hermit installed as ${HERMIT_EXE}"
-
-if [ ! -d "$HERMIT_BIN_INSTALL_DIR" ]; then
-  echo "NOTE: $HERMIT_BIN_INSTALL_DIR should be added to your \$PATH if it is not already"
-  mkdir -p "$HERMIT_BIN_INSTALL_DIR"
-fi
-
-if [ -e "$HERMIT_BIN_INSTALL_DIR/hermit" ]; then
-  echo "Removing the previous $HERMIT_BIN_INSTALL_DIR/hermit"
-  rm -f "$HERMIT_BIN_INSTALL_DIR/hermit"
-fi
-echo "Linking hermit to $HERMIT_BIN_INSTALL_DIR/hermit"
-cat > "$HERMIT_BIN_INSTALL_DIR/hermit" << EOF
+  cat > "$HERMIT_BIN_INSTALL_DIR/$HERMIT_INSTALL_NAME" << EOF
 #!/bin/bash
 : "\${HERMIT_EXE:=${HERMIT_EXE_RAW}}"
 test -x \${HERMIT_EXE} && exec "\${HERMIT_EXE}" "\$@"
 (curl -fsSL "${HERMIT_DIST_URL}/install.sh" | bash) && exec "\${HERMIT_EXE}" "\$@"
 EOF
-chmod +x "$HERMIT_BIN_INSTALL_DIR/hermit"
-
-cat <<-EOF
-
-Hermit is installed as $HERMIT_BIN_INSTALL_DIR/hermit!
+  chmod +x "$HERMIT_BIN_INSTALL_DIR/$HERMIT_INSTALL_NAME"
+  if [ -n "${CREATE_SYMLINK}" ]; then
+    echo "Hermit is installed as $HERMIT_BIN_INSTALL_DIR/hermit"
+    ln -fs "$HERMIT_INSTALL_NAME" "$HERMIT_BIN_INSTALL_DIR/hermit"
+  else
+    echo "Hermit is installed as $HERMIT_BIN_INSTALL_DIR/$HERMIT_INSTALL_NAME"
+  fi
+  cat <<-EOF
 
 See https://cashapp.github.io/hermit/usage/get-started/ for more information.
 
 EOF
+}
+
+# Used by system-wide package managers (eg. Homebrew)
+if [ -z "${HERMIT_SKIP_USER_INSTALL:-}" ]; then
+  user_install
+fi
+system_install

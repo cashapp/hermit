@@ -4,6 +4,7 @@ import (
 	_ "embed" // Embedding.
 	"fmt"
 	"os"
+	"strings"
 	"text/template"
 
 	"github.com/alecthomas/hcl"
@@ -16,13 +17,15 @@ var (
 	installerTemplateSource string
 	installerTemplate       = template.Must(template.New("install.sh").Funcs(template.FuncMap{
 		"string": func(b []byte) string { return string(b) },
+		"words":  func(s []string) string { return strings.Join(s, " ") },
 	}).Parse(installerTemplateSource))
 )
 
 var cli struct {
-	Schema  bool   `help:"Display the global schema."`
-	Dest    string `required:"" placeholder:"FILE" help:"Where to write the installer script."`
-	DistURL string `required:"" placeholder:"URL" help:"Base distribution URL."`
+	Schema       bool     `help:"Display the global schema."`
+	Dest         string   `required:"" placeholder:"FILE" help:"Where to write the installer script."`
+	DistURL      string   `required:"" placeholder:"URL" help:"Base distribution URL."`
+	InstallPaths []string `placeholder:"PATH" help:"Possible system-wide installation paths." default:"$${HOME}/bin,/opt/homebrew/bin,/usr/local/bin"`
 }
 
 func main() {

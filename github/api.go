@@ -99,20 +99,20 @@ func (a *Client) Download(asset Asset) (resp *http.Response, err error) {
 func (a *Client) decode(url string, dest interface{}) error {
 	req, err := a.request(url, http.Header{})
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, url)
 	}
 	resp, err := a.client.Do(req)
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, url)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return errors.Errorf("GitHub API request failed with %s", resp.Status)
+		return errors.Errorf("%s: GitHub API request failed with %s", url, resp.Status)
 	}
 	dec := json.NewDecoder(resp.Body)
 	err = dec.Decode(dest)
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, url)
 	}
 	return nil
 }
