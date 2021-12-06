@@ -809,6 +809,8 @@ func (e *Env) UpdateUsage(pkg *manifest.Package) error {
 }
 
 // ListInstalledReferences from this environment.
+//
+// This function is much faster than ListInstalled, if all you need is the Reference.
 func (e *Env) ListInstalledReferences() ([]manifest.Reference, error) {
 	matches, err := filepath.Glob(filepath.Join(e.binDir, ".*.pkg"))
 	if err != nil {
