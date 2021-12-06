@@ -1,0 +1,52 @@
+#!/bin/bash
+#
+#
+# This script generates stub scripts for every Go "main" package in this
+# repository. These stubs execute the corresponding main package via "go run".
+#
+
+set -euo pipefail
+
+usage() {
+  echo "$(basename $0) [-c] -- create or clean Go main stub scripts"
+  exit 1
+}
+
+bindir="$(dirname $0)"
+root="$(dirname "${bindir}")"
+
+clean() {
+  grep -l "^# go-main-stubs stub script" "${bindir}"/* | grep -v bin/go-main-stubs | xargs rm || true
+}
+
+while getopts ":hc" arg; do
+  case $arg in
+    c)
+      echo "Cleaning old stubs"
+      clean
+      exit 0
+      ;;
+    h | *)
+      usage
+      exit 0
+      ;;
+  esac
+done
+
+clean
+
+echo "Creating Go main stubs in ${bindir}"
+
+echo -n .
+
+for main in $(cd "${root}" && go list -f '{{if eq "main" .Name}}{{.ImportPath}}{{end}}' ./...); do
+  stub_script="${bindir}/$(basename $main)"
+  cat << EOF > ${stub_script}
+#!/bin/bash
+# go-main-stubs stub script
+exec "\$(dirname \$0)/go" run $main "\$@"
+EOF
+  chmod +x "${stub_script}"
+  echo -n .
+done
+echo

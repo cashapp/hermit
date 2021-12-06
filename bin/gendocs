@@ -1,0 +1,3 @@
+#!/bin/bash
+# go-main-stubs stub script
+exec "$(dirname $0)/go" run github.com/cashapp/hermit/cmd/gendocs "$@"
