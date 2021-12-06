@@ -82,7 +82,6 @@ function system_install() {
           echo "Found Hermit in ${dir}/hermit but it is a different distribution, not overwriting."
           CREATE_SYMLINK=
         fi
-        rm "${HERMIT_BIN_INSTALL_DIR}/hermit"
         HERMIT_BIN_INSTALL_DIR="${dir}"
         break
       fi
