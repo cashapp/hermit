@@ -329,7 +329,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 		if strings.HasPrefix(manifest.Default, "@") {
 			selector = ExactSelector(Reference{Name: manifest.Name, Channel: manifest.Default[1:]})
 		} else {
-			m, err := GlobSelector(manifest.Name + "-" + manifest.Default)
+			m, err := ParseGlobSelector(manifest.Name + "-" + manifest.Default)
 			if err != nil {
 				return nil, errors.WithStack(err)
 			}

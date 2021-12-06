@@ -1,10 +1,11 @@
 package manifest
 
 import (
-	"github.com/gobwas/glob"
-	"github.com/pkg/errors"
 	"strings"
 	"unicode"
+
+	"github.com/gobwas/glob"
+	"github.com/pkg/errors"
 )
 
 // Selector is a selector that matches package References and can be used to select a specific version of a package
@@ -35,18 +36,30 @@ func (m qualified) IsFullyQualified() bool {
 	return true
 }
 
-type globSelector struct {
+// GlobSelector selects matching packages using a glob.
+//
+// Can be used directly with Kong.
+type GlobSelector struct {
 	sourced
 	name    string
 	channel string
 	version glob.Glob
 }
 
-func (m globSelector) IsFullyQualified() bool {
+func (m *GlobSelector) UnmarshalText(input []byte) error {
+	gs, err := ParseGlobSelector(string(input))
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	*m = gs
+	return nil
+}
+
+func (m GlobSelector) IsFullyQualified() bool { // nolint
 	return m.name != "" && (m.version != nil || m.channel != "")
 }
 
-func (m globSelector) Matches(ref Reference) bool {
+func (m GlobSelector) Matches(ref Reference) bool { // nolint
 	if ref.Name != m.name {
 		return false
 	}
@@ -59,23 +72,32 @@ func (m globSelector) Matches(ref Reference) bool {
 	return true
 }
 
-func (m globSelector) Name() string {
+func (m GlobSelector) Name() string { // nolint
 	return m.name
 }
 
-// GlobSelector parses the given search string into a Glob based selector
-func GlobSelector(from string) (Selector, error) {
+// ParseGlobSelector parses the given search string into a Glob based selector
+func ParseGlobSelector(from string) (GlobSelector, error) {
 	name, v, c := splitNameAndQualifier(from)
 	var g glob.Glob
 	if v != "" {
 		compiled, err := glob.Compile(v)
 		if err != nil {
-			return globSelector{}, errors.WithStack(err)
+			return GlobSelector{}, errors.WithStack(err)
 		}
 		g = compiled
 	}
 
-	return globSelector{sourced{from}, name, c, g}, nil
+	return GlobSelector{sourced{from}, name, c, g}, nil
+}
+
+// MustParseGlobSelector or die.
+func MustParseGlobSelector(from string) GlobSelector {
+	sel, err := ParseGlobSelector(from)
+	if err != nil {
+		panic(err)
+	}
+	return sel
 }
 
 func splitNameAndQualifier(from string) (name string, version string, channel string) {

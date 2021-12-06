@@ -12,6 +12,7 @@ import (
 	"github.com/acarl005/stripansi"
 	"github.com/cashapp/hermit/cache"
 	"github.com/cashapp/hermit/hermittest"
+	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/ui"
 	"github.com/stretchr/testify/require"
 )
@@ -24,7 +25,9 @@ func TestLogs(t *testing.T) {
 	}{{
 		name: "install",
 		fn: func(l *ui.UI, f *hermittest.EnvTestFixture) {
-			cmd := installCmd{Packages: []string{"tpkg-0.9.0"}}
+			cmd := installCmd{Packages: []manifest.GlobSelector{
+				manifest.MustParseGlobSelector("tpkg-0.9.0"),
+			}}
 			err := cmd.Run(l, f.Env, f.State)
 			require.NoError(t, err)
 		},
@@ -72,7 +75,7 @@ func TestLogs(t *testing.T) {
 	}, {
 		name: "uninstall",
 		fn: func(l *ui.UI, f *hermittest.EnvTestFixture) {
-			cmd := uninstallCmd{Packages: []string{"tpkg"}}
+			cmd := uninstallCmd{Packages: []manifest.GlobSelector{manifest.MustParseGlobSelector("tpkg")}}
 			err := cmd.Run(l, f.Env)
 			require.NoError(t, err)
 		},

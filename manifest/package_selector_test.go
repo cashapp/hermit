@@ -1,8 +1,9 @@
 package manifest
 
 import (
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestSelector_Matches(t *testing.T) {
@@ -85,7 +86,7 @@ func TestSelector_Matches(t *testing.T) {
 
 func newGlobSelector(t *testing.T, str string) Selector {
 	t.Helper()
-	m, err := GlobSelector(str)
+	m, err := ParseGlobSelector(str)
 	require.NoError(t, err)
 	return m
 }

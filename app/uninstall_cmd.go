@@ -14,7 +14,7 @@ import (
 )
 
 type uninstallCmd struct {
-	Packages []string `arg:"" help:"Packages to uninstall from this environment." predictor:"installed-package"`
+	Packages []manifest.GlobSelector `arg:"" help:"Packages to uninstall from this environment." predictor:"installed-package"`
 }
 
 func (u *uninstallCmd) Run(l *ui.UI, env *hermit.Env) error {
@@ -22,19 +22,11 @@ func (u *uninstallCmd) Run(l *ui.UI, env *hermit.Env) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	selectors := []manifest.Selector{}
-	for _, pkg := range u.Packages {
-		globs, err := manifest.GlobSelector(pkg)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		selectors = append(selectors, globs)
-	}
 	w := l.WriterAt(ui.LevelInfo)
 	defer w.Sync() // nolint
 	changes := shell.NewChanges(envars.Parse(os.Environ()))
 next:
-	for _, selector := range selectors {
+	for _, selector := range u.Packages {
 		for _, pkg := range installed {
 			if selector.Matches(pkg.Reference) {
 				c, err := env.Uninstall(l, pkg)

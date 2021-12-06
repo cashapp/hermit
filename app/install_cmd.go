@@ -15,7 +15,7 @@ import (
 )
 
 type installCmd struct {
-	Packages []string `arg:"" optional:"" name:"package" help:"Packages to install (<name>[-<version>]). Version can be a glob to find the latest version with." predictor:"package"`
+	Packages []manifest.GlobSelector `arg:"" optional:"" name:"package" help:"Packages to install (<name>[-<version>]). Version can be a glob to find the latest version with." predictor:"package"`
 }
 
 func (i *installCmd) Help() string {
@@ -31,14 +31,14 @@ func (i *installCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
 		return errors.WithStack(err)
 	}
 	pkgs := map[string]*manifest.Package{}
-	packages := i.Packages
+	selectors := i.Packages
 
 	err = env.Sync(l, false)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	if len(packages) == 0 {
+	if len(selectors) == 0 {
 		// Checking that all the packages are downloaded and unarchived
 		for _, ref := range installed {
 			task := l.Task(ref.String())
@@ -55,24 +55,18 @@ func (i *installCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
 		}
 		return nil
 	}
-	selectors := make([]manifest.Selector, len(packages))
 	// Check that we are not installing an already existing package
-	for i, search := range packages {
-		selector, err := manifest.GlobSelector(search)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		selectors[i] = selector
+	for _, selector := range selectors {
 		for _, ref := range installed {
 			if selector.Matches(ref) {
-				return errors.Errorf("%s cannot be installed as %s is already installed", selector.String(), ref)
+				return errors.Errorf("%s cannot be installed as %s is already installed", selector, ref)
 			}
 		}
 	}
-	for i, search := range packages {
+	for i, search := range selectors {
 		err := env.ResolveWithDeps(l, installed, selectors[i], pkgs)
 		if err != nil {
-			return errors.Wrap(err, search)
+			return errors.Wrap(err, search.String())
 		}
 	}
 	changes := shell.NewChanges(envars.Parse(os.Environ()))

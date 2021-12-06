@@ -12,7 +12,7 @@ beforeAll() {
   export HERMIT_BIN_INSTALL_DIR=$PWD/userbin
 
   pushd ../packages
-  git init .
+  git init --template=/dev/null .
   git add .
   git config user.email "you@example.com"
   git config user.name "Your Name"

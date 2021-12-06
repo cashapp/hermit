@@ -19,18 +19,15 @@ import (
 )
 
 type infoCmd struct {
-	Packages []string `arg:"" required:"" help:"Packages to retrieve information for" predictor:"package"`
-	JSON     bool     `help:"Format information as a JSON array" default:"false"`
+	Packages []manifest.GlobSelector `arg:"" required:"" help:"Packages to retrieve information for" predictor:"package"`
+	JSON     bool                    `help:"Format information as a JSON array" default:"false"`
 }
 
 func (i *infoCmd) Run(l *ui.UI, env *hermit.Env, sta *state.State) error {
 	var installed map[string]*manifest.Package
+	var err error
 	packages := []*manifest.Package{}
-	for _, name := range i.Packages {
-		selector, err := manifest.GlobSelector(name)
-		if err != nil {
-			return errors.WithStack(err)
-		}
+	for _, selector := range i.Packages {
 		var pkg *manifest.Package
 		if env != nil {
 			if installed == nil {

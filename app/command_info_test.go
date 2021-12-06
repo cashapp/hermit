@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/cashapp/hermit/hermittest"
+	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/ui"
 )
 
@@ -24,7 +25,7 @@ func TestCommandInfoJson(t *testing.T) {
 	})
 	defer f.Clean()
 
-	cmd := infoCmd{Packages: []string{"test-version-1.1"}, JSON: true}
+	cmd := infoCmd{Packages: []manifest.GlobSelector{manifest.MustParseGlobSelector("test-version-1.1")}, JSON: true}
 	require.NoError(t, cmd.Run(l, f.Env, f.State))
 
 	var jss []map[string]json.RawMessage
