@@ -214,7 +214,11 @@ func Main(config Config) {
 		downloadStrategies = append(downloadStrategies, cache.GitHubPrivateReleaseDownloadStrategy(ghClient))
 	}
 
-	sta, err = state.Open(hermit.UserStateDir, config.State, downloadStrategies, defaultHTTPClient, config.fastHTTPClient())
+	cache, err := cache.Open(hermit.UserStateDir, downloadStrategies, defaultHTTPClient, config.fastHTTPClient())
+	if err != nil {
+		log.Fatalf("failed to open cache: %s", err)
+	}
+	sta, err = state.Open(hermit.UserStateDir, config.State, cache)
 	if err != nil {
 		log.Fatalf("failed to open state: %s", err)
 	}

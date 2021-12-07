@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/cashapp/hermit/cache"
 	"github.com/cashapp/hermit/envars"
 	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/vfs"
@@ -53,10 +54,12 @@ func NewEnvTestFixture(t *testing.T, handler http.Handler) *EnvTestFixture {
 
 	server := httptest.NewServer(handler)
 	client := server.Client()
+	cache, err := cache.Open(stateDir, nil, client, client)
+	require.NoError(t, err)
 	sta, err := state.Open(stateDir, state.Config{
 		Sources: []string{},
 		Builtin: sources.NewBuiltInSource(vfs.InMemoryFS(nil)),
-	}, nil, client, client)
+	}, cache)
 	require.NoError(t, err)
 	env, err := hermit.OpenEnv(envDir, sta, envars.Envars{}, server.Client())
 	require.NoError(t, err)

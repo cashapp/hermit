@@ -40,18 +40,21 @@ func BasePath(checksum, uri string) string {
 
 // Open or create a Cache at the given directory, using the given http client.
 //
+// "stateDir" is the root of the Hermit state directory.
+//
 // "fastFailClient" is a HTTP client configured to fail quickly if a remote
 // server is unavailable, for use in optional checks.
 //
 // "strategies" are used to download URLS, attempted in order.
 // A default raw HTTP download strategy will always be the first strategy attempted.
-func Open(root string, strategies []DownloadStrategy, client *http.Client, fastFailClient *http.Client) (*Cache, error) {
-	err := os.MkdirAll(root, os.ModePerm)
+func Open(stateDir string, strategies []DownloadStrategy, client *http.Client, fastFailClient *http.Client) (*Cache, error) {
+	stateDir = filepath.Join(stateDir, "cache")
+	err := os.MkdirAll(stateDir, os.ModePerm)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	c := &Cache{
-		root:               root,
+		root:               stateDir,
 		httpClient:         client,
 		fastFailHTTPClient: fastFailClient,
 	}
