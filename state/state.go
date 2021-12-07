@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -66,7 +65,9 @@ type State struct {
 }
 
 // Open the global Hermit state.
-func Open(stateDir string, config Config, downloadStrategies []cache.DownloadStrategy, client *http.Client, fastFailClient *http.Client) (*State, error) {
+//
+// See cache.Open for details on downloadStrategies.
+func Open(stateDir string, config Config, cache *cache.Cache) (*State, error) {
 	if config.Builtin == nil {
 		return nil, errors.Errorf("state.Config.Builtin not provided")
 	}
@@ -75,11 +76,6 @@ func Open(stateDir string, config Config, downloadStrategies []cache.DownloadStr
 	cacheDir := filepath.Join(stateDir, "cache")
 	sourcesDir := filepath.Join(stateDir, "sources")
 	binaryDir := filepath.Join(stateDir, "binaries")
-	cache, err := cache.Open(cacheDir, downloadStrategies, client, fastFailClient)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
 	dao := dao.Open(stateDir)
 	if config.Sources == nil {
 		config.Sources = DefaultSources
