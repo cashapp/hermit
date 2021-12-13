@@ -4,3 +4,5 @@ prompt = string # (optional)
 short-prompt = boolean # (optional)
 # If true Hermit will never add/remove files from Git automatically.
 no-git = boolean # (optional)
+# If true Hermit will try to add the IntelliJ IDEA plugin automatically.
+idea = boolean # (optional)
