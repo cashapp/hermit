@@ -28,6 +28,7 @@ type UserConfig struct {
 	Prompt      string `hcl:"prompt,optional" default:"env" enum:"env,short,none" help:"Modify prompt to include hermit environment (env), just an icon (short) or nothing (none)"`
 	ShortPrompt bool   `hcl:"short-prompt,optional" help:"If true use a short prompt when an environment is activated."`
 	NoGit       bool   `hcl:"no-git,optional" help:"If true Hermit will never add/remove files from Git automatically."`
+	Idea        bool   `hcl:"idea,optional" help:"If true Hermit will try to add the IntelliJ IDEA plugin automatically."`
 }
 
 // LoadUserConfig from disk.
@@ -66,6 +67,9 @@ func (u *userConfigResolver) Resolve(context *kong.Context, parent *kong.Path, f
 
 	case "short-prompt":
 		return u.config.ShortPrompt, nil
+
+	case "idea":
+		return u.config.Idea, nil
 
 	default:
 		return nil, nil

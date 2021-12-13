@@ -3,7 +3,7 @@ Describe "Hermit"
 
   Describe "Initialisation"
     It "runs successfully"
-      When run command hermit init .
+      When run command hermit init . --idea
       The status should be success
       The stdout should be blank
       The stderr should be blank
@@ -13,6 +13,9 @@ Describe "Hermit"
     End
     It "creates hermit activation script in ./bin/activate-hermit"
       The file ./bin/activate-hermit should be exist
+    End
+    It "creates intellij idea plugin configuration in ./.idea/externalDependencies.xml"
+      The file ./.idea/externalDependencies.xml should be exist
     End
   End
 
