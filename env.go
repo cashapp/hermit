@@ -75,9 +75,10 @@ const (
 
 // Config for a Hermit environment.
 type Config struct {
-	Envars    envars.Envars `hcl:"env,optional" help:"Extra environment variables."`
-	Sources   []string      `hcl:"sources,optional" help:"Package manifest sources."`
-	ManageGit bool          `hcl:"manage-git,optional" default:"true" help:"Whether Hermit should automatically 'git add' new packages."`
+	Envars      envars.Envars `hcl:"env,optional" help:"Extra environment variables."`
+	Sources     []string      `hcl:"sources,optional" help:"Package manifest sources."`
+	ManageGit   bool          `hcl:"manage-git,optional" default:"true" help:"Whether Hermit should automatically 'git add' new packages."`
+	AddIJPlugin bool          `hcl:"idea,optional" default:"false" help:"Whether Hermit should automatically add the IntelliJ IDEA plugin."`
 }
 
 // Env is a Hermit environment.
@@ -95,6 +96,9 @@ type Env struct {
 	lazyResolver *manifest.Resolver
 	lazySources  *sources.Sources
 }
+
+//go:embed files/externalDependencies.xml
+var extDepData []byte
 
 // Init a new Env.
 func Init(l *ui.UI, env string, distURL string, stateDir string, config Config) error {
@@ -122,6 +126,31 @@ func Init(l *ui.UI, env string, distURL string, stateDir string, config Config) 
 		if err := writeFileToEnvBin(b, useGit, file, env, vars, perm); err != nil {
 			return err
 		}
+	}
+
+	if config.AddIJPlugin {
+		ideaPath := filepath.Join(env, ".idea")
+		extDepPath := filepath.Join(ideaPath, "externalDependencies.xml")
+
+		if _, err := os.Stat(extDepPath); errors.Is(err, os.ErrNotExist) {
+			if err := os.MkdirAll(ideaPath, os.ModePerm); err != nil && !os.IsExist(err) {
+				return errors.WithStack(err)
+			}
+
+			err = ioutil.WriteFile(extDepPath, extDepData, 0600)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+
+			if useGit {
+				if err = util.RunInDir(b, env, "git", "add", "-f", extDepPath); err != nil {
+					return errors.WithStack(err)
+				}
+			}
+		} else {
+			l.Infof("IntelliJ IDEA configuration already exists; skipping adding configuration.")
+		}
+
 	}
 
 	// Create a configuration file.
