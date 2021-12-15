@@ -27,7 +27,9 @@ func (e *execCmd) Run(l *ui.UI, sta *state.State, env *hermit.Env, globalState G
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	if env == nil {
+	// If we're running a binary from a different environment, activate it first.
+	activeEnv := os.Getenv("ACTIVE_HERMIT")
+	if env == nil || (activeEnv != "" && envDir != "" && activeEnv != envDir) {
 		env, err = hermit.OpenEnv(envDir, sta, globalState.Env, defaultHTTPClient)
 		if err != nil {
 			return errors.WithStack(err)
@@ -56,12 +58,6 @@ func (e *execCmd) Run(l *ui.UI, sta *state.State, env *hermit.Env, globalState G
 		env := os.Environ()
 		env = append(env, "HERMIT_ENV="+envDir)
 		return syscall.Exec(self, args, env)
-	}
-
-	// Check that if we are running from an activated environment, it is the correct one
-	activeEnv := os.Getenv("ACTIVE_HERMIT")
-	if activeEnv != "" && envDir != "" && activeEnv != envDir {
-		return errors.New("can not execute a Hermit managed binary from a non active environment")
 	}
 
 	pkg, binary, err := env.ResolveLink(l, e.Binary)

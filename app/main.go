@@ -236,6 +236,7 @@ func Main(config Config) {
 		kongplete.WithPredictor("package", packagePredictor),
 		kongplete.WithPredictor("installed-package", installedPredictor),
 		kongplete.WithPredictor("dir", complete.PredictDirs("*")),
+		kongplete.WithPredictor("hclfile", complete.PredictFiles("*.hcl")),
 	)
 
 	ctx, err := parser.Parse(os.Args[1:])
