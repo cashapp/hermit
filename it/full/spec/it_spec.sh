@@ -118,12 +118,13 @@ Describe "Hermit"
       The variable HERMIT_ENV should equal "$(pwd)"
     End
 
-    It "returns an error if trying to run a binary from the original environments"
+    It "can run stubs from other environments"
       cd ../anotherenv
       . bin/activate-hermit
-      When call ../testenv/bin/protoc
-      The status should not be success
-      The stderr should equal "fatal:hermit: can not execute a Hermit managed binary from a non active environment"
+      When call ../testenv/bin/protoc --version
+      The status should be success
+      The stderr should be blank
+      The stdout should not be blank
     End
   End
 

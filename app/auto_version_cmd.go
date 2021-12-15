@@ -9,7 +9,7 @@ import (
 )
 
 type autoVersionCmd struct {
-	Manifest []string `arg:"" type:"existingfile" required:"" help:"Manifests to upgrade."`
+	Manifest []string `arg:"" type:"existingfile" required:"" help:"Manifests to upgrade." predictor:"hclfile"`
 }
 
 func (s *autoVersionCmd) Run(l *ui.UI, client *github.Client) error {
