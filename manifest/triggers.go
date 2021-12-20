@@ -51,7 +51,7 @@ type Trigger struct {
 
 // Ordered list of actions.
 func (a *Trigger) Ordered() []Action {
-	var out []Action // nolint
+	var out []Action
 	for _, action := range a.Run {
 		out = append(out, action)
 	}

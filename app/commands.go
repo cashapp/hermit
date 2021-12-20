@@ -33,12 +33,8 @@ type unactivated struct {
 	Level       ui.Level         `help:"Set minimum log level." env:"HERMIT_LOG" default:"info" enum:"trace,debug,info,warn,error,fatal"`
 	GlobalState
 
-	Init     initCmd    `cmd:"" help:"Initialise an environment (idempotent)." group:"env"`
-	Version  versionCmd `cmd:"" help:"Show version." group:"global"`
-	Validate struct {
-		Source validateSourceCmd `default:"withargs" cmd:"" help:"Check a package manifest source for errors." group:"global"`
-		Env    validateEnvCmd    `cmd:"" help:"Validate an environment." group:"global"`
-	} `cmd:"" help:"Hermit validation." group:"global"`
+	Init       initCmd       `cmd:"" help:"Initialise an environment (idempotent)." group:"env"`
+	Version    versionCmd    `cmd:"" help:"Show version." group:"global"`
 	Manifest   manifestCmd   `cmd:"" help:"Commands for manipulating manifests."`
 	Info       infoCmd       `cmd:"" help:"Show information on packages." group:"global"`
 	ShellHooks shellHooksCmd `cmd:"" help:"Manage Hermit auto-activation hooks of a shell." group:"global" aliases:"install-hooks"`
@@ -50,6 +46,7 @@ type unactivated struct {
 	Search               searchCmd            `cmd:"" help:"Search for packages to install." group:"global"`
 	DumpDB               dumpDBCmd            `cmd:"" help:"Dump state database." hidden:""`
 	DumpUserConfigSchema dumpUserConfigSchema `cmd:"" help:"Dump user configuration schema." hidden:""`
+	Validate             validateCmd          `cmd:"" help:"Hermit validation." group:"global"`
 
 	kong.Plugins
 }
