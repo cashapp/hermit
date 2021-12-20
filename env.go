@@ -434,13 +434,17 @@ func (e *Env) Test(l *ui.UI, pkg *manifest.Package) error {
 	if !found {
 		return errors.Errorf("couldn't find test executable %q in package %s", args[0], pkg)
 	}
-	cmd, _ := util.Command(task, args...)
+	cmd, out := util.Command(task, args...)
 	deps, err := e.ensureRuntimeDepsPresent(l, pkg)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	cmd.Env = e.allEnvarsForPackages(true, deps, pkg)
-	return cmd.Run()
+	err = cmd.Run()
+	if err != nil {
+		return errors.Wrap(err, out.String())
+	}
+	return nil
 }
 
 // Unpack but do not install package.
