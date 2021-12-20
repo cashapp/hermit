@@ -202,6 +202,10 @@ func (r *Resolver) Errors() ManifestErrors {
 }
 
 // Sync the sources of this resolver.
+//
+// Will be synced at most every SyncFrequency unless "force" is true.
+//
+// A Sources set can only be synchronised once. Following calls will not have any effect.
 func (r *Resolver) Sync(l *ui.UI, force bool) error {
 	if err := r.sources.Sync(l, force); err != nil {
 		return errors.WithStack(err)

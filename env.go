@@ -1163,6 +1163,10 @@ func (e *Env) linkApp(app string) error {
 }
 
 // Sync sources.
+//
+// Will be synced at most every SyncFrequency unless "force" is true.
+//
+// A Sources set can only be synchronised once. Following calls will not have any effect.
 func (e *Env) Sync(l *ui.UI, force bool) error {
 	resolver, err := e.resolver(l)
 	if err != nil {
