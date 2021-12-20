@@ -2,15 +2,16 @@ package cache
 
 import (
 	"context"
-	"github.com/cashapp/hermit/ui"
-	"github.com/cashapp/hermit/util"
-	"github.com/pkg/errors"
 	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/cashapp/hermit/ui"
+	"github.com/cashapp/hermit/util"
+	"github.com/pkg/errors"
 )
 
 // PackageSource for a specific version / system of a package
@@ -23,7 +24,7 @@ type PackageSource interface {
 
 // GetSource for the given uri, or an error if the uri can not be parsed as a source
 func GetSource(uri string) (PackageSource, error) {
-	if strings.HasSuffix(uri, ".git") {
+	if strings.HasSuffix(uri, ".git") || strings.Contains(uri, ".git#") {
 		return &gitSource{URL: uri}, nil
 	}
 
@@ -129,14 +130,20 @@ func (s *gitSource) OpenLocal(c *Cache, checksum string) (*os.File, error) {
 
 func (s *gitSource) Download(b *ui.Task, cache *Cache, checksum string) (string, string, error) {
 	base := BasePath(checksum, s.URL)
-	err := util.RunInDir(b, cache.root, "git", "clone", "--depth=1", s.URL, base)
+	checkoutDir := filepath.Join(cache.root, base)
+	repo, tag := parseGitURL(s.URL)
+	args := []string{"git", "clone", "--depth=1", repo, checkoutDir}
+	if tag != "" {
+		args = append(args, "--branch="+tag)
+	}
+	err := util.RunInDir(b, cache.root, args...)
 	if err != nil {
-		return "", "", errors.Wrap(err, s.URL)
+		return "", "", errors.WithStack(err)
 	}
 
-	bts, err := util.CaptureInDir(b, filepath.Join(cache.root, base), "git", "rev-parse", "HEAD")
+	bts, err := util.CaptureInDir(b, checkoutDir, "git", "rev-parse", "HEAD")
 	if err != nil {
-		return "", "", errors.Wrap(err, s.URL)
+		return "", "", errors.WithStack(err)
 	}
 	etag := strings.Trim(string(bts), "\n")
 
@@ -144,7 +151,11 @@ func (s *gitSource) Download(b *ui.Task, cache *Cache, checksum string) (string,
 }
 
 func (s *gitSource) ETag(b *ui.Task, c *Cache) (etag string, err error) {
-	bts, err := util.Capture(b, "git", "ls-remote", s.URL, "HEAD")
+	repo, tag := parseGitURL(s.URL)
+	if tag == "" {
+		tag = "HEAD"
+	}
+	bts, err := util.Capture(b, "git", "ls-remote", repo, tag)
 	if err != nil {
 		return "", errors.Wrap(err, s.URL)
 	}
@@ -158,10 +169,23 @@ func (s *gitSource) ETag(b *ui.Task, c *Cache) (etag string, err error) {
 }
 
 func (s *gitSource) Validate(_ *http.Client) error {
-	cmd := exec.Command("git", "ls-remote", s.URL, "HEAD")
+	repo, tag := parseGitURL(s.URL)
+	if tag == "" {
+		tag = "HEAD"
+	}
+	cmd := exec.Command("git", "ls-remote", repo, tag)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return errors.Wrapf(err, "error getting remote HEAD: %s", string(out))
 	}
 	return nil
+}
+
+func parseGitURL(source string) (repo, tag string) {
+	parts := strings.SplitN(source, "#", 2)
+	repo = parts[0]
+	if len(parts) > 1 {
+		tag = parts[1]
+	}
+	return
 }

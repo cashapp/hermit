@@ -43,6 +43,7 @@ setupEnv() {
     tar cvzf ../faketestbin2.tar.gz testbin2
   )
   mv ../testbins/*.tar.gz "${to}/bin/"
+  tar -xf ../gitsource.tgz -C "${to}"
 }
 
 beforeEach() {
