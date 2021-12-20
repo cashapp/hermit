@@ -161,6 +161,59 @@ Describe "Hermit"
     End
   End
 
+  Describe "installing a git package from the default branch"
+    . bin/activate-hermit
+    It "installs from the default branch"
+      When call hermit install gitsource@head
+      The status should be success
+      The stdout should be blank
+      The stderr should be blank
+      The file ./bin/gitbin should be exist
+    End
+
+    It "installs the default version"
+      When call ./bin/gitbin
+      The status should be success
+      The stderr should be blank
+      The stdout should include "2.0.0"
+    End
+  End
+
+  Describe "installing a git package from a tag"
+    . bin/activate-hermit
+    It "installs from a tag"
+      When call hermit install gitsource-1.0.0
+      The status should be success
+      The stderr should be blank
+      The file ./bin/gitbin should be exist
+    End
+
+    It "installs the tagged version"
+      When call ./bin/gitbin
+      The status should be success
+      The stderr should be blank
+      The stdout should include "1.0.0"
+    End
+  End
+
+  Describe "installing a git package from a tagged channel"
+    . bin/activate-hermit
+    It "installs from a tag"
+      When call hermit install gitsource@1
+      The status should be success
+      The stderr should be blank
+      The file ./bin/gitbin should be exist
+    End
+
+    It "installs the tagged version"
+      When call ./bin/gitbin
+      The status should be success
+      The stderr should be blank
+      The stdout should include "1.0.0"
+    End
+  End
+
+
   Describe "removing the hermit binaries during active session"
     . bin/activate-hermit
 

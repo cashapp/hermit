@@ -35,6 +35,6 @@ Used by: [&lt;manifest>](../manifest#blocks)
 | `root` | `string?` | Override root for package. |
 | `runtime-dependencies` | `[string]?` | Packages used internally by this package, but not installed to the target environment |
 | `sha256` | `string?` | SHA256 of source package for verification. |
-| `source` | `string?` | URL for source package. Valid URLs are Git repositories (using .git suffix), Local Files (using file:// prefix), and Remote Files (using http:// or https:// prefix) |
+| `source` | `string?` | URL for source package. Valid URLs are Git repositories (using .git[#&lt;tag&gt;] suffix), Local Files (using file:// prefix), and Remote Files (using http:// or https:// prefix) |
 | `strip` | `number?` | Number of path prefix elements to strip. |
 | `test` | `string?` | Command that will test the package is operational. |
