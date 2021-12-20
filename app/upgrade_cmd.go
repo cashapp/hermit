@@ -17,6 +17,10 @@ type upgradeCmd struct {
 }
 
 func (g *upgradeCmd) Run(l *ui.UI, env *hermit.Env) error {
+	err := env.Sync(l, true)
+	if err != nil {
+		return errors.WithStack(err)
+	}
 	packages := []*manifest.Package{}
 	installed, err := env.ListInstalled(l)
 	if err != nil {
