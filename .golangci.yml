@@ -43,6 +43,7 @@ linters:
     - cyclop
     - paralleltest
     - ifshort # so annoying
+    - prealloc
 
 linters-settings:
   govet:

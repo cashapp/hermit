@@ -39,4 +39,5 @@ require (
 	golang.org/x/text v0.3.2 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	howett.net/plist v0.0.0-20200419221736-3b63eb3a43b5
+	mvdan.cc/sh v2.6.4+incompatible // indirect
 )
