@@ -1,6 +1,6 @@
 +++
 title = "Editor / IDE Integration"
-weight = 104
+weight = 105
 +++
 
 ## JetBrains - IntelliJ, GoLand
