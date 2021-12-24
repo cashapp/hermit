@@ -3,8 +3,6 @@ package app
 import (
 	"net/http"
 
-	"github.com/pkg/errors"
-
 	"github.com/cashapp/hermit/github"
 	"github.com/cashapp/hermit/manifest/autoversion"
 	"github.com/cashapp/hermit/ui"
@@ -19,7 +17,8 @@ func (s *autoVersionCmd) Run(l *ui.UI, hclient *http.Client, client *github.Clie
 		l.Debugf("Auto-versioning %s", path)
 		version, err := autoversion.AutoVersion(hclient, client, path)
 		if err != nil {
-			return errors.WithStack(err)
+			l.Warnf("could not auto-version %q: %s", path, err)
+			continue
 		}
 		if version != "" {
 			l.Infof("Auto-versioned %s to %s", path, version)
