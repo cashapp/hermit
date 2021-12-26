@@ -38,6 +38,7 @@ type Layer struct {
 	Root        string            `hcl:"root,optional" help:"Override root for package."`
 	Test        *string           `hcl:"test,optional" help:"Command that will test the package is operational."`
 	Env         envars.Envars     `hcl:"env,optional" help:"Environment variables to export."`
+	Vars        map[string]string `hcl:"vars,optional" help:"Set local variables used during manifest evaluation."`
 	Source      string            `hcl:"source,optional" help:"URL for source package. Valid URLs are Git repositories (using .git[#<tag>] suffix), Local Files (using file:// prefix), and Remote Files (using http:// or https:// prefix)"`
 	Mirrors     []string          `hcl:"mirrors,optional" help:"Mirrors to use if the primary source is unavailable."`
 	SHA256      string            `hcl:"sha256,optional" help:"SHA256 of source package for verification."`

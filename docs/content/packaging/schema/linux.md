@@ -1,6 +1,6 @@
 +++
 title = "linux"
-weight = 403
+weight = 404
 +++
 
 Linux-specific configuration.
@@ -37,3 +37,4 @@ Used by: [channel](../channel#blocks) [darwin](../darwin#blocks) [&lt;manifest>]
 | `source` | `string?` | URL for source package. Valid URLs are Git repositories (using .git[#&lt;tag&gt;] suffix), Local Files (using file:// prefix), and Remote Files (using http:// or https:// prefix) |
 | `strip` | `number?` | Number of path prefix elements to strip. |
 | `test` | `string?` | Command that will test the package is operational. |
+| `vars` | `{string: string}?` | Set local variables used during manifest evaluation. |

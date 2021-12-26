@@ -268,6 +268,29 @@ func TestResolver_Resolve(t *testing.T) {
 		manifestErrors: map[string][]string{
 			"memory:///test.hcl": {`5:4: invalid label "event": invalid event "invalid"`},
 		},
+	}, {
+		name: "Local var interpolation",
+		files: map[string]string{
+			`test.hcl`: `
+			description = ""
+			binaries = ["bin"]
+
+			source = "www.example.com/${path}"
+
+			version "1.0.0" {
+				vars = {
+					path: "foo/bar",
+				}
+			}
+			`,
+		},
+		reference: "test-1.0.0",
+		wantPkg: manifesttest.NewPkgBuilder(config.State + "/pkg/test-1.0.0").
+			WithName("test").
+			WithBinaries("bin").
+			WithVersion("1.0.0").
+			WithSource("www.example.com/foo/bar").
+			Result(),
 	},
 	}
 	for _, tt := range tests {

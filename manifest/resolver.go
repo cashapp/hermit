@@ -403,10 +403,14 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 		}
 	}
 
+	vars := map[string]string{}
 	layerEnvars := make([]envars.Envars, 0, len(layers))
 	for _, layer := range layers {
 		if len(layer.Env) > 0 {
 			layerEnvars = append(layerEnvars, layer.Env)
+		}
+		for k, v := range layer.Vars {
+			vars[k] = v
 		}
 		if layer.Arch != "" {
 			p.Arch = layer.Arch
@@ -516,6 +520,10 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 				return fmt.Sprintf("%02d", time.Now().Day())
 
 			default:
+				value, ok := vars[key]
+				if ok {
+					return value
+				}
 				if ignoreMissing {
 					return "${" + key + "}"
 				}
