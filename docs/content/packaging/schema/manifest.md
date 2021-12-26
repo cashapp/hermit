@@ -29,6 +29,7 @@ Each Hermit package manifest is a nested structure containing OS/architecture-sp
 | `dest` | `string?` | Override archive extraction destination for package. |
 | `env` | `{string: string}?` | Environment variables to export. |
 | `files` | `{string: string}?` | Files to load strings from to be used in the manifest. |
+| `homepage` | `string?` | Home page. |
 | `mirrors` | `[string]?` | Mirrors to use if the primary source is unavailable. |
 | `provides` | `[string]?` | This package provides the given virtual packages. |
 | `rename` | `{string: string}?` | Rename files after unpacking to ${root}. |
