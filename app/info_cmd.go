@@ -78,6 +78,7 @@ func (i *infoCmd) Run(l *ui.UI, env *hermit.Env, sta *state.State) error {
 			colour.Printf("^B^2Channel:^R %s\n", pkg.Reference.Channel)
 		}
 		colour.Printf("^B^2Description:^R %s\n", pkg.Description)
+		colour.Printf("^B^2Homepage:^R %s\n", pkg.Homepage)
 		colour.Printf("^B^2State:^R %s\n", pkg.State)
 		if !pkg.LastUsed.IsZero() {
 			colour.Printf("^B^2Last used:^R %s ago\n", time.Since(pkg.LastUsed))

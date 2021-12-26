@@ -72,6 +72,7 @@ type ResolvedFileRef struct {
 // Package resolved from a manifest.
 type Package struct {
 	Description          string
+	Homepage             string
 	Reference            Reference
 	Arch                 string
 	Binaries             []string
@@ -368,6 +369,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	root := filepath.Join(config.State, "pkg", found.String())
 	p := &Package{
 		Description:          manifest.Description,
+		Homepage:             manifest.Homepage,
 		Reference:            found,
 		Root:                 "${dest}",
 		Dest:                 root,
