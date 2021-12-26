@@ -1,6 +1,6 @@
 +++
 title = "channel <name>"
-weight = 404
+weight = 405
 +++
 
 Definition of and configuration for an auto-update channel.
@@ -38,4 +38,5 @@ Used by: [&lt;manifest>](../manifest#blocks)
 | `strip` | `number?` | Number of path prefix elements to strip. |
 | `test` | `string?` | Command that will test the package is operational. |
 | `update` | `string` | Update frequency for this channel. |
+| `vars` | `{string: string}?` | Set local variables used during manifest evaluation. |
 | `version` | `string?` | Use the latest version matching this version glob as the source of this channel. Empty string matches all versions |

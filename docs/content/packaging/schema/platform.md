@@ -1,6 +1,6 @@
 +++
 title = "platform <attr>"
-weight = 413
+weight = 414
 +++
 
 Platform-specific configuration. &lt;attr&gt; is a set regexes that must all match against one of CPU, OS, etc..
@@ -37,3 +37,4 @@ Used by: [channel](../channel#blocks) [darwin](../darwin#blocks) [linux](../linu
 | `source` | `string?` | URL for source package. Valid URLs are Git repositories (using .git[#&lt;tag&gt;] suffix), Local Files (using file:// prefix), and Remote Files (using http:// or https:// prefix) |
 | `strip` | `number?` | Number of path prefix elements to strip. |
 | `test` | `string?` | Command that will test the package is operational. |
+| `vars` | `{string: string}?` | Set local variables used during manifest evaluation. |

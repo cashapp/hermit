@@ -1,6 +1,6 @@
 +++
 title = "on > chmod"
-weight = 407
+weight = 408
 +++
 
 Change a files mode.

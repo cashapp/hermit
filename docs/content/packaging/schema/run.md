@@ -1,6 +1,6 @@
 +++
 title = "on > run"
-weight = 412
+weight = 413
 +++
 
 A command to run when the event is triggered.
