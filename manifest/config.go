@@ -85,8 +85,16 @@ func (c *Layer) match(arch string) bool {
 
 // AutoVersionBlock represents auto-version configuration.
 type AutoVersionBlock struct {
-	GitHubRelease  string `hcl:"github-release" help:"GitHub <user>/<repo> to retrieve and update versions from the releases API."`
+	GitHubRelease string                `hcl:"github-release,optional" help:"GitHub <user>/<repo> to retrieve and update versions from the releases API."`
+	HTML          *HTMLAutoVersionBlock `hcl:"html,block" help:"Extract version information from a HTML URL using XPath."`
+
 	VersionPattern string `hcl:"version-pattern,optional" help:"Regex with one capture group to extract the version number from the origin." default:"v?(.*)"`
+}
+
+// HTMLAutoVersionBlock defines how version numbers can be extracted from HTML.
+type HTMLAutoVersionBlock struct {
+	URL   string `hcl:"url" help:"URL to retrieve HTML from."`
+	XPath string `hcl:"xpath" help:"XPath for extracting versions from HTML (see https://github.com/antchfx/htmlquery)"`
 }
 
 // PlatformBlock matches a set of attributes describing a platform (eg. CPU, OS, etc.)
