@@ -59,6 +59,9 @@ linters-settings:
   gocritic:
     disabled-checks:
       - ifElseChain
+  exhaustive:
+    default-signifies-exhaustive: true
+
 
 issues:
   max-per-linter: 0

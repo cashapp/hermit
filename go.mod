@@ -10,6 +10,7 @@ require (
 	github.com/alecthomas/kong v0.2.20
 	github.com/alecthomas/participle v0.6.1-0.20200911005820-318127ca69ac
 	github.com/alecthomas/repr v0.0.0-20200325044227-4184120f674c
+	github.com/antchfx/htmlquery v1.2.4
 	github.com/avvmoto/buf-readerat v0.0.0-20171115124131-a17c8cb89270
 	github.com/blakesmith/ar v0.0.0-20190502131153-809d4375e1fb
 	github.com/gabriel-vasile/mimetype v1.1.1
@@ -35,9 +36,9 @@ require (
 	go.etcd.io/bbolt v1.3.5
 	go.uber.org/multierr v1.7.0
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
-	golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c
-	golang.org/x/text v0.3.2 // indirect
+	golang.org/x/net v0.0.0-20210916014120-12bc252f5db8
+	golang.org/x/sys v0.0.0-20210423082822-04245dca01da
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	howett.net/plist v0.0.0-20200419221736-3b63eb3a43b5
-	mvdan.cc/sh v2.6.4+incompatible // indirect
+	mvdan.cc/sh v2.6.4+incompatible
 )
