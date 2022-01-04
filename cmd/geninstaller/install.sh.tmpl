@@ -56,6 +56,8 @@ function user_install() {
   ARCH="$(uname -m | tr A-Z a-z)"
   if [ "$ARCH" = "x86_64" ]; then
     ARCH="amd64"
+  elif [ "$ARCH" = "aarch64"]; then
+    ARCH="arm64"
   fi
   URL="${HERMIT_DIST_URL}/hermit-${OS}-${ARCH}.gz"
   TMP_FILE="${HERMIT_EXE}.download.${RANDOM}"
