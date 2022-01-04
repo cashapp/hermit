@@ -18,6 +18,7 @@ jobs:
       - name: Build Hermit
         run: |
           make GOOS=linux GOARCH=amd64 CHANNEL=stable build
+          make GOOS=linux GOARCH=arm64 CHANNEL=stable build
           make GOOS=darwin GOARCH=amd64 CHANNEL=stable build
           make GOOS=darwin GOARCH=arm64 CHANNEL=stable build
           go run ./cmd/geninstaller --dest=build/install.sh --dist-url=https://github.com/cashapp/hermit/releases/download/stable
