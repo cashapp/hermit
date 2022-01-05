@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	versionRe      = regexp.MustCompile(`^([^-+a-zA-Z]+)(?:[-]?([a-zA-Z][^+]*))?(?:\+(.+))?$`)
+	versionRe      = regexp.MustCompile(`^([^-+a-zA-Z]+)(?:([-]?)([a-zA-Z][^+]*))?(?:(\+)(.+))?$`)
 	versionPartsRe = regexp.MustCompile(`[._]`)
 )
 
@@ -19,7 +19,7 @@ var (
 // specifying versions, though it does attempt to support semver
 // prerelease and metadata.
 type Version struct {
-	orig       string
+	orig       []string
 	version    []string // The main .-separated parts of the version.
 	prerelease []string // .-separated parts of the pre-release component.
 	metadata   string   // Optional metadata after +
@@ -46,12 +46,12 @@ func ParseVersion(version string) Version {
 	if parts[1] != "" {
 		components = versionPartsRe.Split(parts[1], -1)
 	}
-	if parts[2] != "" {
-		prerelease = versionPartsRe.Split(parts[2], -1)
+	if parts[3] != "" {
+		prerelease = versionPartsRe.Split(parts[3], -1)
 	}
-	metadata = parts[3]
+	metadata = parts[5]
 	return Version{
-		orig:       version,
+		orig:       parts[1:],
 		version:    components,
 		prerelease: prerelease,
 		metadata:   metadata,
@@ -83,7 +83,7 @@ func (v Version) Metadata() string {
 }
 
 func (v Version) String() string {
-	return v.orig
+	return strings.Join(v.orig, "")
 }
 
 func (v Version) MarshalJSON() ([]byte, error) {
@@ -94,7 +94,9 @@ func (v Version) MarshalJSON() ([]byte, error) {
 func (v Version) Clean() Version {
 	v.metadata = ""
 	v.prerelease = nil
-	v.orig = v.String()
+	orig := v.orig
+	v.orig = make([]string, len(orig))
+	v.orig[0] = orig[0]
 	return v
 }
 
@@ -142,7 +144,7 @@ func (v Version) Compare(rhs Version) int {
 }
 
 // IsSet returns true if the Version is set.
-func (v Version) IsSet() bool { return v.orig != "" }
+func (v Version) IsSet() bool { return v.orig != nil }
 
 // Match returns true if this version is equal to or a more general version of "other".
 //
