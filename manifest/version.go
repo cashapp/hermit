@@ -49,6 +49,9 @@ func ParseVersion(version string) Version {
 	if parts[3] != "" {
 		prerelease = versionPartsRe.Split(parts[3], -1)
 	}
+	for len(parts) < 6 {
+		parts = append(parts, "")
+	}
 	metadata = parts[5]
 	return Version{
 		orig:       parts[1:],
