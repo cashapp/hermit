@@ -31,6 +31,8 @@ func AutoVersion(httpClient *http.Client, ghClient GitHubClient, path string) (l
 		return "", errors.Wrapf(err, "failed to parse auto-version block")
 	}
 	switch {
+	case autoVersionBlock == nil:
+		return "", nil
 	case autoVersionBlock.GitHubRelease != "":
 		latestVersion, err = gitHub(ghClient, autoVersionBlock)
 	case autoVersionBlock.HTML != nil:
