@@ -526,13 +526,14 @@ func extractDebianPackage(b *ui.Task, r io.Reader, dest string, pkg *manifest.Pa
 			return errors.WithStack(err)
 		}
 		if strings.HasPrefix(header.Name, "data.tar") {
-			bytes := make([]byte, header.Size)
-			_, err := reader.Read(bytes)
+			r := io.LimitReader(reader, header.Size)
+			filename := filepath.Join(dest, header.Name)
+			w, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 			if err != nil {
 				return errors.WithStack(err)
 			}
-			filename := filepath.Join(dest, header.Name)
-			err = ioutil.WriteFile(filename, bytes, 0600)
+			_, err = io.Copy(w, r)
+			_ = w.Close()
 			if err != nil {
 				return errors.WithStack(err)
 			}
