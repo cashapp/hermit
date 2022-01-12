@@ -38,6 +38,7 @@ func InferFromArtefact(p *ui.UI, httpClient *http.Client, ghClient *github.Clien
 	}
 	// Pull description from GH API if possible.
 	description := ""
+	homepage := ""
 	repoName := ghClient.ProjectForURL(url)
 	if repoName != "" {
 		repo, err := ghClient.Repo(repoName)
@@ -45,6 +46,7 @@ func InferFromArtefact(p *ui.UI, httpClient *http.Client, ghClient *github.Clien
 			return nil, errors.WithStack(err)
 		}
 		description = repo.Description
+		homepage = repo.Homepage
 	}
 
 	// Check if sources for all valid platforms are available.
@@ -82,6 +84,7 @@ func InferFromArtefact(p *ui.UI, httpClient *http.Client, ghClient *github.Clien
 
 	return &Manifest{
 		Description: description,
+		Homepage:    homepage,
 		Layer: Layer{
 			Binaries: []string{},
 			Platform: platforms,

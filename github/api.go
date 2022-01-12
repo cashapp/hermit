@@ -15,6 +15,7 @@ import (
 // Repo information.
 type Repo struct {
 	Description string `json:"description"`
+	Homepage    string `json:"homepage"`
 }
 
 // Release is a minimal type for GitHub releases meta information retrieved via the GitHub API.
