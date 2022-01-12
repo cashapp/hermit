@@ -114,6 +114,7 @@ The available variables are:
 
 | Variable     | Description |
 |--------------|-------------|
+| `name`       | The name of the current package. |
 | `version`    | The version selected by the user. Does not apply when installing a channel. |
 | `dest`       | The directory where the archive will be extracted.<br/> Defaults to `<hermit-state>/pkg/<pkg-selector>`. |
 | `root`       | Directory considered the package root. Defaults to `${dest}`.

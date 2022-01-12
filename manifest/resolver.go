@@ -480,6 +480,9 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	mapping := func(ignoreMissing bool) func(s string) string {
 		return func(key string) string {
 			switch key {
+			case "name":
+				return found.Name
+
 			case "version":
 				return found.Version.String()
 
