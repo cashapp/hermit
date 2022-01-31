@@ -58,40 +58,53 @@ type Config struct {
 	BaseDistURL string
 	// SHA256 checksums for all known versions of per-environment scripts.
 	// If empty shell.ScriptSHAs will be used.
-	SHA256Sums         []string
-	HTTP               func(HTTPTransportConfig) *http.Client
-	State              state.Config
-	KongOptions        []kong.Option
-	KongPlugins        kong.Plugins
-	DownloadStrategies []cache.DownloadStrategy
+	SHA256Sums  []string
+	HTTP        func(HTTPTransportConfig) *http.Client
+	State       state.Config
+	KongOptions []kong.Option
+	KongPlugins kong.Plugins
+	// Defaults to cache.GetSource if nil.
+	PackageSourceSelector cache.PackageSourceSelector
 	// True if we're running in CI - disables progress bar.
 	CI bool
 }
 
+type loggingHTTPTransport struct {
+	logger ui.Logger
+	next   http.RoundTripper
+}
+
+func (l *loggingHTTPTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	l.logger.Tracef("%s %s", r.Method, r.URL)
+	return l.next.RoundTrip(r)
+}
+
 // Make a HTTP client.
-func (c Config) makeHTTPClient(config HTTPTransportConfig) *http.Client {
+func (c Config) makeHTTPClient(logger ui.Logger, config HTTPTransportConfig) *http.Client {
 	client := c.HTTP(config)
 	if debug.Flags.FailHTTP {
 		client.Timeout = time.Millisecond
 	}
+	client.Transport = &loggingHTTPTransport{logger, client.Transport}
 	return client
 }
 
 // Make a HTTP client with very short timeouts for issuing optional requests.
-func (c Config) fastHTTPClient() *http.Client {
-	return c.makeHTTPClient(HTTPTransportConfig{
+func (c Config) fastHTTPClient(logger ui.Logger) *http.Client {
+	return c.makeHTTPClient(logger, HTTPTransportConfig{
 		ResponseHeaderTimeout: time.Second * 5,
 		DialTimeout:           time.Second,
 		KeepAlive:             30 * time.Second,
 	})
 }
 
-func (c Config) defaultHTTPClient() *http.Client {
-	return c.makeHTTPClient(HTTPTransportConfig{})
+func (c Config) defaultHTTPClient(logger ui.Logger) *http.Client {
+	return c.makeHTTPClient(logger, HTTPTransportConfig{})
 }
 
 // Main runs the Hermit command-line application with the given config.
 func Main(config Config) {
+	config.LogLevel = ui.AutoLevel(config.LogLevel)
 	if config.HTTP == nil {
 		config.HTTP = func(config HTTPTransportConfig) *http.Client {
 			transport := &http.Transport{
@@ -104,6 +117,7 @@ func Main(config Config) {
 			return &http.Client{Transport: transport}
 		}
 	}
+
 	if len(config.SHA256Sums) == 0 {
 		config.SHA256Sums = ScriptSHAs
 	}
@@ -174,6 +188,9 @@ func Main(config Config) {
 	githubToken := os.Getenv("HERMIT_GITHUB_TOKEN")
 	if githubToken == "" {
 		githubToken = os.Getenv("GITHUB_TOKEN")
+		p.Tracef("GitHub token set from GITHUB_TOKEN")
+	} else {
+		p.Tracef("GitHub token set from HERMIT_GITHUB_TOKEN")
 	}
 
 	hermitHelp := help
@@ -206,15 +223,18 @@ func Main(config Config) {
 		log.Fatalf("failed to initialise CLI: %s", err)
 	}
 
-	downloadStrategies := config.DownloadStrategies
-	defaultHTTPClient := config.defaultHTTPClient()
+	getSource := config.PackageSourceSelector
+	if config.PackageSourceSelector == nil {
+		getSource = cache.GetSource
+	}
+	defaultHTTPClient := config.defaultHTTPClient(p)
 
-	ghClient := github.New(githubToken)
+	ghClient := github.New(defaultHTTPClient, githubToken)
 	if githubToken != "" {
-		downloadStrategies = append(downloadStrategies, cache.GitHubPrivateReleaseDownloadStrategy(ghClient))
+		getSource = cache.GitHubSourceSelector(getSource, ghClient)
 	}
 
-	cache, err := cache.Open(hermit.UserStateDir, downloadStrategies, defaultHTTPClient, config.fastHTTPClient())
+	cache, err := cache.Open(hermit.UserStateDir, getSource, defaultHTTPClient, config.fastHTTPClient(p))
 	if err != nil {
 		log.Fatalf("failed to open cache: %s", err)
 	}
@@ -224,7 +244,7 @@ func Main(config Config) {
 	}
 
 	if isActivated {
-		env, err = hermit.OpenEnv(envPath, sta, cli.getGlobalState().Env, defaultHTTPClient)
+		env, err = hermit.OpenEnv(envPath, sta, cache.GetSource, cli.getGlobalState().Env, defaultHTTPClient)
 		if err != nil {
 			log.Fatalf("failed to open environment: %s", err)
 		}
@@ -260,7 +280,7 @@ func Main(config Config) {
 		err = pprof.WriteHeapProfile(f)
 		fatalIfError(p, err)
 	}
-	err = ctx.Run(env, p, sta, config, cli.getGlobalState(), ghClient, defaultHTTPClient)
+	err = ctx.Run(env, p, sta, config, cli.getGlobalState(), ghClient, defaultHTTPClient, cache)
 	if err != nil && p.WillLog(ui.LevelDebug) {
 		p.Fatalf("%+v", err)
 	} else {

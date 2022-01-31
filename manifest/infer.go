@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/cashapp/hermit/cache"
 	"github.com/cashapp/hermit/github"
 	"github.com/cashapp/hermit/platform"
 	"github.com/cashapp/hermit/ui"
@@ -31,7 +32,7 @@ var (
 //     https://github.com/protocolbuffers/protobuf-go/releases/download/v1.27.1/protoc-gen-go.v1.27.1.darwin.amd64.tar.gz
 //
 // "version" may be specified if it cannot be inferred from the URL.
-func InferFromArtefact(p *ui.UI, httpClient *http.Client, ghClient *github.Client, url, version string) (*Manifest, error) {
+func InferFromArtefact(p *ui.UI, packageSource cache.PackageSourceSelector, httpClient *http.Client, ghClient *github.Client, url, version string) (*Manifest, error) {
 	source, version, err := insertVariables(url, version, false)
 	if err != nil {
 		return nil, err
@@ -53,7 +54,7 @@ func InferFromArtefact(p *ui.UI, httpClient *http.Client, ghClient *github.Clien
 	sourcesByPlatform := buildSourcesByPlatform(version, source)
 
 	p.Debugf("Validating sources")
-	substituteM1, err := validateSourcesByPlatform(p, httpClient, sourcesByPlatform)
+	substituteM1, err := validateSourcesByPlatform(p, packageSource, httpClient, sourcesByPlatform)
 	if err != nil {
 		return nil, err
 	}
@@ -116,11 +117,11 @@ func buildSourcesByPlatform(version string, source string) map[platform.Platform
 }
 
 // Check that our initial sources exist and if not, try the same URLs with different extensions (.zip, .tgz, etc.)
-func validateSourcesByPlatform(p *ui.UI, httpClient *http.Client, sourcesByPlatform map[platform.Platform]string) (substituteM1 bool, err error) {
+func validateSourcesByPlatform(p *ui.UI, packageSource cache.PackageSourceSelector, httpClient *http.Client, sourcesByPlatform map[platform.Platform]string) (substituteM1 bool, err error) {
 nextPlatform:
 	for plat, url := range sourcesByPlatform {
 		p.Debugf("  %s - %s", plat, url)
-		if err := ValidatePackageSource(httpClient, url); err != nil {
+		if err := ValidatePackageSource(packageSource, httpClient, url); err != nil {
 			// Try different extensions as packages sometimes use .zip for Windows, .tar.gz for Linux, etc.
 			candidate := url
 			// Strip the existing suffix.
@@ -130,7 +131,7 @@ nextPlatform:
 			// Try alternative suffixAlternatives.
 			for _, suffix := range suffixAlternatives {
 				url = candidate + suffix
-				if err := ValidatePackageSource(httpClient, url); err == nil {
+				if err := ValidatePackageSource(packageSource, httpClient, url); err == nil {
 					sourcesByPlatform[plat] = url
 					continue nextPlatform
 				}

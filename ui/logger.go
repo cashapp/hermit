@@ -3,6 +3,7 @@ package ui
 import (
 	"bytes"
 	"io"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -18,7 +19,10 @@ type Level int
 
 // Log levels.
 const (
-	LevelTrace Level = iota // trace
+	// LevelAuto will detect the log level from the environment via
+	// HERMIT_LOG=<level>, DEBUG=1, then finally from flag.
+	LevelAuto  Level = iota // auto
+	LevelTrace              // trace
 	LevelDebug              // debug
 	LevelInfo               // info
 	LevelWarn               // warn
@@ -52,6 +56,8 @@ func (l *Level) UnmarshalText(text []byte) error {
 // LevelFromString maps a level to a string.
 func LevelFromString(s string) (Level, error) {
 	switch s {
+	case "auto":
+		return LevelAuto, nil
 	case "trace":
 		return LevelTrace, nil
 	case "debug":
@@ -187,4 +193,19 @@ func (l *loggingMixin) Errorf(format string, args ...interface{}) {
 // Additionally, log output will not be cleared.
 func (l *loggingMixin) Fatalf(format string, args ...interface{}) {
 	l.logf(LevelFatal, l.label(), format, args...)
+}
+
+// AutoLevel sets the log level from environment variables if set to LevelAuto.
+func AutoLevel(level Level) Level {
+	if level != LevelAuto {
+		return level
+	}
+	if envLevel := os.Getenv("HERMIT_LOG"); envLevel != "" {
+		if err := level.UnmarshalText([]byte(envLevel)); err == nil {
+			return level
+		}
+	} else if os.Getenv("DEBUG") != "" {
+		return LevelTrace
+	}
+	return LevelInfo
 }

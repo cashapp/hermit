@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/cashapp/hermit/cache"
 	"github.com/cashapp/hermit/platform"
 
 	"github.com/alecthomas/hcl"
@@ -93,8 +94,9 @@ type Env struct {
 	httpClient      *http.Client
 
 	// Lazily initialized fields
-	lazyResolver *manifest.Resolver
-	lazySources  *sources.Sources
+	lazyResolver  *manifest.Resolver
+	lazySources   *sources.Sources
+	packageSource cache.PackageSourceSelector
 }
 
 //go:embed files/externalDependencies.xml
@@ -241,7 +243,13 @@ func readConfig(configFile string) (*Config, error) {
 // OpenEnv opens a Hermit environment.
 //
 // The environment may not exist, in which case this will succeed but subsequent operations will fail.
-func OpenEnv(envDir string, state *state.State, ephemeral envars.Envars, httpClient *http.Client) (*Env, error) {
+func OpenEnv(
+	envDir string,
+	state *state.State,
+	packageSource cache.PackageSourceSelector,
+	ephemeral envars.Envars,
+	httpClient *http.Client,
+) (*Env, error) {
 	binDir := filepath.Join(envDir, "bin")
 	configFile := filepath.Join(binDir, "hermit.hcl")
 	config, err := readConfig(configFile)
@@ -253,6 +261,7 @@ func OpenEnv(envDir string, state *state.State, ephemeral envars.Envars, httpCli
 	envDir = util.RealPath(envDir)
 
 	e := &Env{
+		packageSource:   packageSource,
 		config:          config,
 		envDir:          envDir,
 		useGit:          useGit,
@@ -736,7 +745,9 @@ func (e *Env) ValidateManifest(l *ui.UI, name string, options *ValidationOptions
 
 	refs := mnf.References(name)
 	var warnings []string
+	task := l.Task("validate")
 	for _, ref := range refs {
+		task.Infof("Validating %s", ref)
 		w, err := e.validateReference(l, sources, ref, options)
 		if err != nil {
 			return nil, errors.WithStack(err)
@@ -769,7 +780,7 @@ func (e *Env) validateReference(l *ui.UI, srcs *sources.Sources, ref manifest.Re
 		}
 
 		if options.CheckSources {
-			if err := manifest.ValidatePackageSource(e.httpClient, pkg.Source); err != nil {
+			if err := manifest.ValidatePackageSource(e.packageSource, e.httpClient, pkg.Source); err != nil {
 				return nil, errors.Wrapf(err, "%s: %s", ref, p)
 			}
 		}

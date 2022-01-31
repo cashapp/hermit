@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/cashapp/hermit"
+	"github.com/cashapp/hermit/cache"
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/state"
 	"github.com/cashapp/hermit/ui"
@@ -22,7 +23,7 @@ type execCmd struct {
 	Args   []string `arg:"" help:"Arguments to pass to executable (use -- to separate)." optional:""`
 }
 
-func (e *execCmd) Run(l *ui.UI, sta *state.State, env *hermit.Env, globalState GlobalState, config Config, defaultHTTPClient *http.Client) error {
+func (e *execCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, env *hermit.Env, globalState GlobalState, config Config, defaultHTTPClient *http.Client) error {
 	envDir, err := hermit.EnvDirFromProxyLink(e.Binary)
 	if err != nil {
 		return errors.WithStack(err)
@@ -30,7 +31,7 @@ func (e *execCmd) Run(l *ui.UI, sta *state.State, env *hermit.Env, globalState G
 	// If we're running a binary from a different environment, activate it first.
 	activeEnv := os.Getenv("ACTIVE_HERMIT")
 	if env == nil || (activeEnv != "" && envDir != "" && activeEnv != envDir) {
-		env, err = hermit.OpenEnv(envDir, sta, globalState.Env, defaultHTTPClient)
+		env, err = hermit.OpenEnv(envDir, sta, cache.GetSource, globalState.Env, defaultHTTPClient)
 		if err != nil {
 			return errors.WithStack(err)
 		}
