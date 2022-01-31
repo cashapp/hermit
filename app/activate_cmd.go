@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/cashapp/hermit"
+	"github.com/cashapp/hermit/cache"
 	"github.com/cashapp/hermit/envars"
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/shell"
@@ -22,12 +23,12 @@ type activateCmd struct {
 	ShortPrompt bool   `help:"Use a minimal prompt in active environments." hidden:""`
 }
 
-func (a *activateCmd) Run(l *ui.UI, sta *state.State, globalState GlobalState, config Config, defaultClient *http.Client) error {
+func (a *activateCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, globalState GlobalState, config Config, defaultClient *http.Client) error {
 	realdir, err := resolveActivationDir(a.Dir)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	env, err := hermit.OpenEnv(realdir, sta, globalState.Env, defaultClient)
+	env, err := hermit.OpenEnv(realdir, sta, cache.GetSource, globalState.Env, defaultClient)
 	if err != nil {
 		return errors.WithStack(err)
 	}

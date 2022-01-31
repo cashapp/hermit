@@ -30,7 +30,7 @@ type unactivated struct {
 	Debug       bool             `help:"Enable debug logging." short:"d"`
 	Trace       bool             `help:"Enable trace logging." short:"t"`
 	Quiet       bool             `help:"Disable logging and progress UI, except fatal errors." env:"HERMIT_QUIET" short:"q"`
-	Level       ui.Level         `help:"Set minimum log level." env:"HERMIT_LOG" default:"info" enum:"trace,debug,info,warn,error,fatal"`
+	Level       ui.Level         `help:"Set minimum log level (${enum})." env:"HERMIT_LOG" default:"auto" enum:"auto,trace,debug,info,warn,error,fatal"`
 	GlobalState
 
 	Init       initCmd       `cmd:"" help:"Initialise an environment (idempotent)." group:"env"`
@@ -56,7 +56,7 @@ func (u *unactivated) getMemProfile() string       { return u.MemProfile }
 func (u *unactivated) getTrace() bool              { return u.Trace }
 func (u *unactivated) getDebug() bool              { return u.Debug }
 func (u *unactivated) getQuiet() bool              { return u.Quiet }
-func (u *unactivated) getLevel() ui.Level          { return u.Level }
+func (u *unactivated) getLevel() ui.Level          { return ui.AutoLevel(u.Level) }
 func (u *unactivated) getGlobalState() GlobalState { return u.GlobalState }
 
 type activated struct {

@@ -35,6 +35,7 @@ type EnvTestFixture struct {
 	Server  *httptest.Server
 	P       *ui.UI
 	t       *testing.T
+	Cache   *cache.Cache
 }
 
 // NewEnvTestFixture returns a new empty fixture with Env initialised to default values.
@@ -61,10 +62,11 @@ func NewEnvTestFixture(t *testing.T, handler http.Handler) *EnvTestFixture {
 		Builtin: sources.NewBuiltInSource(vfs.InMemoryFS(nil)),
 	}, cache)
 	require.NoError(t, err)
-	env, err := hermit.OpenEnv(envDir, sta, envars.Envars{}, server.Client())
+	env, err := hermit.OpenEnv(envDir, sta, cache.GetSource, envars.Envars{}, server.Client())
 	require.NoError(t, err)
 
 	return &EnvTestFixture{
+		Cache:   cache,
 		State:   sta,
 		EnvDirs: []string{envDir},
 		Logs:    buf,
@@ -108,7 +110,7 @@ func (f *EnvTestFixture) NewEnv() *hermit.Env {
 	log, _ := ui.NewForTesting()
 	err = hermit.Init(log, envDir, "", f.State.Root(), hermit.Config{})
 	require.NoError(f.t, err)
-	env, err := hermit.OpenEnv(envDir, f.State, envars.Envars{}, f.Server.Client())
+	env, err := hermit.OpenEnv(envDir, f.State, f.Cache.GetSource, envars.Envars{}, f.Server.Client())
 	require.NoError(f.t, err)
 	return env
 }

@@ -9,7 +9,6 @@ import (
 	"github.com/cashapp/hermit/app"
 	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/state"
-	"github.com/cashapp/hermit/ui"
 )
 
 var (
@@ -21,18 +20,12 @@ var (
 )
 
 func main() {
-	level, err := ui.LevelFromString(envOrDefault("HERMIT_LOG", "info"))
-	if err != nil {
-		level = ui.LevelInfo
-	}
-
 	builtin, err := fs.Sub(builtin, "builtin")
 	if err != nil {
 		panic("this should never happen")
 	}
 
 	app.Main(app.Config{
-		LogLevel:    level,
 		BaseDistURL: baseDistURL + channel,
 		Version:     fmt.Sprintf("%s (%s)", version, channel),
 		State: state.Config{
@@ -40,11 +33,4 @@ func main() {
 		},
 		CI: os.Getenv("CI") != "",
 	})
-}
-
-func envOrDefault(name, dflt string) string {
-	if v := os.Getenv(name); v != "" {
-		return v
-	}
-	return dflt
 }

@@ -3,11 +3,14 @@
 package github
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/pkg/errors"
 )
@@ -36,16 +39,19 @@ type Asset struct {
 
 // Client for GitHub.
 type Client struct {
+	cache  sync.Map
 	client *http.Client
 }
 
 // New creates a new GitHub API client.
-func New(token string) *Client {
-	var client *http.Client
+func New(client *http.Client, token string) *Client {
+	if client == nil {
+		client = http.DefaultClient
+	}
 	if token == "" {
 		client = http.DefaultClient
 	} else {
-		client = &http.Client{Transport: TokenAuthenticatedTransport(nil, token)}
+		client = &http.Client{Transport: TokenAuthenticatedTransport(client.Transport, token)}
 	}
 	return &Client{client: client}
 }
@@ -73,6 +79,13 @@ func (a *Client) Repo(repo string) (*Repo, error) {
 	return response, a.decode(url, response)
 }
 
+// Release attempts to fetch Release info for a tag.
+func (a *Client) Release(repo, tag string) (*Release, error) {
+	url := "https://api.github.com/repos/" + repo + "/releases/tags/" + tag
+	release := &Release{}
+	return release, a.decode(url, release)
+}
+
 // LatestRelease details for a GitHub repository.
 func (a *Client) LatestRelease(repo string) (*Release, error) {
 	url := "https://api.github.com/repos/" + repo + "/releases/latest"
@@ -83,12 +96,25 @@ func (a *Client) LatestRelease(repo string) (*Release, error) {
 // Releases for a particular repo.
 func (a *Client) Releases(repo string) (releases []Release, err error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/releases", repo)
-	return releases, a.decode(url, &releases)
+	// Paginate.
+	for n := 1; n < 100; n++ {
+		var page []Release
+		url = fmt.Sprintf("%s?per_page=100&page=%d", url, n)
+		err = a.decode(url, &page)
+		if err != nil {
+			return nil, err
+		}
+		releases = append(releases, page...)
+		if len(page) < 100 {
+			return releases, nil
+		}
+	}
+	return nil, errors.Errorf("could not fully paginate over GitHub releases in %s, too many results", repo)
 }
 
 // Download creates a download request for retrieving a release asset from GitHub.
 func (a *Client) Download(asset Asset) (resp *http.Response, err error) {
-	req, err := a.request(asset.URL, http.Header{
+	req, err := a.request("GET", asset.URL, http.Header{
 		"Accept": []string{"application/octet-stream"},
 	})
 	if err != nil {
@@ -97,29 +123,61 @@ func (a *Client) Download(asset Asset) (resp *http.Response, err error) {
 	return a.client.Do(req)
 }
 
-func (a *Client) decode(url string, dest interface{}) error {
-	req, err := a.request(url, http.Header{})
+// ETag issues a HEAD request for an Asset and returns its ETag.
+func (a *Client) ETag(asset Asset) (etag string, err error) {
+	req, err := a.request("HEAD", asset.URL, http.Header{
+		"Accept": []string{"application/octet-stream"},
+	})
 	if err != nil {
-		return errors.Wrap(err, url)
+		return "", errors.WithStack(err)
 	}
 	resp, err := a.client.Do(req)
 	if err != nil {
-		return errors.Wrap(err, url)
+		return "", errors.WithStack(err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return errors.Errorf("%s: GitHub API request failed with %s", url, resp.Status)
+		return "", errors.Wrapf(err, "failed to retrieve ETag")
 	}
-	dec := json.NewDecoder(resp.Body)
-	err = dec.Decode(dest)
+	return resp.Header.Get("ETag"), nil
+}
+
+func (a *Client) decode(url string, dest interface{}) error {
+	var body *bytes.Reader
+	ibody, ok := a.cache.Load(url)
+	if ok {
+		body = bytes.NewReader(ibody.([]byte))
+	} else {
+		req, err := a.request("GET", url, http.Header{})
+		if err != nil {
+			return errors.Wrap(err, url)
+		}
+		resp, err := a.client.Do(req)
+		if err != nil {
+			return errors.Wrap(err, url)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode < 200 || resp.StatusCode > 299 {
+			return errors.Errorf("%s: GitHub API request failed with %s", url, resp.Status)
+		}
+		w := &bytes.Buffer{}
+		_, err = io.Copy(w, resp.Body)
+		if err != nil {
+			return errors.Wrap(err, url)
+		}
+		a.cache.Store(url, w.Bytes())
+		body = bytes.NewReader(w.Bytes())
+	}
+	dec := json.NewDecoder(body)
+	err := dec.Decode(dest)
 	if err != nil {
 		return errors.Wrap(err, url)
 	}
 	return nil
 }
 
-func (a *Client) request(url string, headers http.Header) (*http.Request, error) {
-	req, err := http.NewRequest("GET", url, nil) // nolint: noctx
+func (a *Client) request(method string, url string, headers http.Header) (*http.Request, error) {
+	req, err := http.NewRequest(method, url, nil) // nolint: noctx
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

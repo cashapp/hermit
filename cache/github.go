@@ -1,37 +1,89 @@
 package cache
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
+	"strings"
 
 	"github.com/pkg/errors"
 
 	"github.com/cashapp/hermit/github"
+	"github.com/cashapp/hermit/ui"
 )
 
 // matches: https://github.com/{OWNER}/{REPO}/releases/download/{TAG}/{ASSET}
 var githubRe = regexp.MustCompile(`^https\://github.com/([^/]+)/([^/]+)/releases/download/([^/]+)/([^/]+)$`)
 
-// GitHubPrivateReleaseDownloadStrategy can download private release assets from GitHub using an authenticated GitHub client.
-func GitHubPrivateReleaseDownloadStrategy(client *github.Client) DownloadStrategy {
-	return func(ctx context.Context, url string) (*http.Response, error) {
-		info, ok := getGitHubReleaseInfo(url)
+// GitHubSourceSelector can download private release assets from GitHub using an authenticated GitHub client.
+func GitHubSourceSelector(getSource PackageSourceSelector, ghclient *github.Client) PackageSourceSelector {
+	return func(client *http.Client, uri string) (PackageSource, error) {
+		info, ok := getGitHubReleaseInfo(uri)
 		if !ok {
-			return nil, errors.Errorf("not a GitHub URL: %s", url)
+			return getSource(client, uri)
 		}
-		return downloadGHPrivate(client, info)
+		return &githubReleaseSource{url: uri, info: info, ghclient: ghclient}, nil
 	}
 }
 
+type githubReleaseSource struct {
+	info     *githubReleaseInfo
+	ghclient *github.Client
+	url      string
+}
+
+func (g *githubReleaseSource) OpenLocal(c *Cache, checksum string) (*os.File, error) {
+	f, err := os.Open(c.Path(checksum, g.url))
+	return f, errors.WithStack(err)
+}
+
+func (g *githubReleaseSource) Download(b *ui.Task, c *Cache, checksum string) (path string, etag string, err error) {
+	response, err := downloadGHPrivate(g.ghclient, g.info)
+	if err != nil {
+		return "", "", err
+	}
+	defer response.Body.Close()
+	cachePath := c.Path(checksum, g.url)
+	return downloadHTTP(b, response, checksum, g.url, cachePath)
+}
+
+func (g *githubReleaseSource) ETag(b *ui.Task) (etag string, err error) {
+	asset, err := g.getAsset()
+	if err != nil {
+		return "", err
+	}
+	return g.ghclient.ETag(asset)
+}
+
+func (g *githubReleaseSource) Validate() error {
+	asset, err := g.getAsset()
+	if err != nil {
+		return err
+	}
+	_, err = g.ghclient.ETag(asset)
+	return errors.WithStack(err)
+}
+
+func (g *githubReleaseSource) getAsset() (github.Asset, error) {
+	release, err := g.ghclient.Release(fmt.Sprintf("%s/%s", g.info.owner, g.info.repo), g.info.tag)
+	if err != nil {
+		return github.Asset{}, errors.WithStack(err)
+	}
+	asset, err := getAssetURL(release, g.info.asset)
+	if err != nil {
+		return github.Asset{}, errors.WithStack(err)
+	}
+	return asset, nil
+}
+
 func downloadGHPrivate(client *github.Client, ghi *githubReleaseInfo) (response *http.Response, err error) {
-	r, err := client.Releases(fmt.Sprintf("%s/%s", ghi.owner, ghi.repo))
+	release, err := client.Release(fmt.Sprintf("%s/%s", ghi.owner, ghi.repo), ghi.tag)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	asset, err := getAssetURL(r, ghi.tag, ghi.asset)
+	asset, err := getAssetURL(release, ghi.asset)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -68,16 +120,13 @@ func getGitHubReleaseInfo(uri string) (*githubReleaseInfo, bool) {
 	return g, true
 }
 
-func getAssetURL(releases []github.Release, tag, assetName string) (github.Asset, error) {
-	for _, r := range releases {
-		if r.TagName != tag {
-			continue
+func getAssetURL(r *github.Release, assetName string) (github.Asset, error) {
+	candidates := []string{}
+	for _, a := range r.Assets {
+		if a.Name == assetName {
+			return a, nil
 		}
-		for _, a := range r.Assets {
-			if a.Name == assetName {
-				return a, nil
-			}
-		}
+		candidates = append(candidates, a.Name)
 	}
-	return github.Asset{}, errors.Errorf("cannot find asset %s %s", tag, assetName)
+	return github.Asset{}, errors.Errorf("cannot find asset %s %s, candidates are %s", r.TagName, assetName, strings.Join(candidates, ", "))
 }
