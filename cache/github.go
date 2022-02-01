@@ -17,11 +17,14 @@ import (
 // matches: https://github.com/{OWNER}/{REPO}/releases/download/{TAG}/{ASSET}
 var githubRe = regexp.MustCompile(`^https\://github.com/([^/]+)/([^/]+)/releases/download/([^/]+)/([^/]+)$`)
 
+// RepoMatcher is used to determine which repositories will use authenticated requests.
+type RepoMatcher func(owner, repo string) bool
+
 // GitHubSourceSelector can download private release assets from GitHub using an authenticated GitHub client.
-func GitHubSourceSelector(getSource PackageSourceSelector, ghclient *github.Client) PackageSourceSelector {
+func GitHubSourceSelector(getSource PackageSourceSelector, ghclient *github.Client, match RepoMatcher) PackageSourceSelector {
 	return func(client *http.Client, uri string) (PackageSource, error) {
 		info, ok := getGitHubReleaseInfo(uri)
-		if !ok {
+		if !ok || match == nil || !match(info.owner, info.repo) {
 			return getSource(client, uri)
 		}
 		return &githubReleaseSource{url: uri, info: info, ghclient: ghclient}, nil
