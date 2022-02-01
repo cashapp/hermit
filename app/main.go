@@ -8,7 +8,6 @@ import (
 	"os"
 	"runtime"
 	"runtime/pprof"
-	"strings"
 	"time"
 
 	"github.com/alecthomas/kong"
@@ -193,11 +192,6 @@ func Main(config Config) {
 		p.Tracef("GitHub token set from HERMIT_GITHUB_TOKEN")
 	}
 
-	hermitHelp := help
-	hermitHelp += "\n\nConfiguration format for ~/.hermit.hcl:\n"
-	hermitHelp += "    " + strings.Join(strings.Split(userConfigSchema, "\n"), "\n    ")
-	hermitHelp += "\nGITHUB_TOKEN can be set to retrieve private GitHub release assets."
-
 	kongOptions := []kong.Option{
 		kong.Groups{
 			"env":    "Environment:\nCommands for creating and managing environments.",
@@ -205,7 +199,7 @@ func Main(config Config) {
 		},
 		kong.Resolvers(UserConfigResolver(userConfig)),
 		kong.UsageOnError(),
-		kong.Description(hermitHelp),
+		kong.Description(help),
 		kong.BindTo(cli, (*cliCommon)(nil)),
 		kong.Bind(userConfig, config),
 		kong.Vars{
@@ -230,10 +224,6 @@ func Main(config Config) {
 	defaultHTTPClient := config.defaultHTTPClient(p)
 
 	ghClient := github.New(defaultHTTPClient, githubToken)
-	if githubToken != "" {
-		getSource = cache.GitHubSourceSelector(getSource, ghClient)
-	}
-
 	cache, err := cache.Open(hermit.UserStateDir, getSource, defaultHTTPClient, config.fastHTTPClient(p))
 	if err != nil {
 		log.Fatalf("failed to open cache: %s", err)
