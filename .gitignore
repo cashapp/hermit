@@ -1,4 +1,5 @@
 .henv
+.hermit
 testdata/env
 build
 pkgs

@@ -44,6 +44,7 @@ linters:
     - paralleltest
     - ifshort # so annoying
     - prealloc
+    - nolintlint
 
 linters-settings:
   govet:
