@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pkg/errors"
+	"github.com/cashapp/hermit/errors"
 )
 
 // RealPath converts a path into its absolute, symlink-expanded form.

@@ -3,8 +3,8 @@ package autoversion
 import (
 	"regexp"
 
+	"github.com/cashapp/hermit/errors"
 	hmanifest "github.com/cashapp/hermit/manifest"
-	"github.com/pkg/errors"
 )
 
 func gitHub(client GitHubClient, autoVersion *hmanifest.AutoVersionBlock) (string, error) {

@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/gofrs/flock"
-	"github.com/pkg/errors"
 
+	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/ui"
 )
 

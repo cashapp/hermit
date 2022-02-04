@@ -26,9 +26,9 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/pkg/errors"
-
 	"golang.org/x/crypto/ssh/terminal"
+
+	"github.com/cashapp/hermit/errors"
 )
 
 // SyncWriter is an io.Writer that can be Sync()ed.

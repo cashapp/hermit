@@ -4,13 +4,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/cashapp/hermit/sources"
-
-	"github.com/cashapp/hermit/envars"
-	"github.com/cashapp/hermit/ui"
-
 	"github.com/alecthomas/repr"
 	"github.com/stretchr/testify/require"
+
+	"github.com/cashapp/hermit/envars"
+	"github.com/cashapp/hermit/sources"
+	"github.com/cashapp/hermit/ui"
 )
 
 func TestManifest(t *testing.T) {

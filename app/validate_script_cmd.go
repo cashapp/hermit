@@ -8,10 +8,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cashapp/hermit"
-	"github.com/cashapp/hermit/ui"
-	"github.com/pkg/errors"
 	"mvdan.cc/sh/syntax"
+
+	"github.com/cashapp/hermit"
+	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/ui"
 )
 
 var (
@@ -125,7 +126,7 @@ func (v *validateScriptCmd) Run(l *ui.UI, env *hermit.Env) error {
 		fmt.Fprintf(os.Stderr, "%s:%s: %s\n", path, issue.pos, issue.message)
 	}
 	if len(issues) != 0 {
-		return fmt.Errorf("%d errors encountered", len(issues))
+		return errors.Errorf("%d errors encountered", len(issues))
 	}
 	return nil
 }
@@ -140,12 +141,12 @@ func check(parser *syntax.Parser, validCommands map[string]bool, allow map[strin
 	var issues []issue
 	r, err := os.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("could not open %q: %w", path, err)
+		return nil, errors.Wrapf(err, "could not open %q", path)
 	}
 	defer r.Close() // nolint
 	ast, err := parser.Parse(r, path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse %q: %w", path, err)
+		return nil, errors.Wrapf(err, "failed to parse %q", path)
 	}
 	localFunctions := map[string]bool{}
 

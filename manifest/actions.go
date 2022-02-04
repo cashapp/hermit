@@ -10,8 +10,8 @@ import (
 
 	"github.com/alecthomas/hcl"
 	"github.com/kballard/go-shellquote"
-	"github.com/pkg/errors"
 
+	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/shell"
 	"github.com/cashapp/hermit/vfs"
 )

@@ -39,7 +39,6 @@ linters:
     - gofumpt
     - exhaustivestruct
     - nlreturn
-    - forbidigo
     - cyclop
     - paralleltest
     - ifshort # so annoying
@@ -61,11 +60,20 @@ linters-settings:
       - ifElseChain
   exhaustive:
     default-signifies-exhaustive: true
+  depguard:
+    list-type: blacklist
+    include-go-root: true
+    packages-with-error-message:
+      - errors: "use github.com/cashapp/hermit/errors"
+      - github.com/pkg/errors: "use github.com/cashapp/hermit/errors"
+  forbidigo:
+    forbid:
+      - '^fmt.Errorf'
 
 
 issues:
   max-per-linter: 0
-  max-same: 0
+  max-same-issues: 0
   exclude-use-default: false
   exclude:
     # Captured by errcheck.

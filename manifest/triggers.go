@@ -3,7 +3,7 @@ package manifest
 import (
 	"sort"
 
-	"github.com/pkg/errors"
+	"github.com/cashapp/hermit/errors"
 )
 
 // Event in the lifecycle of a package.

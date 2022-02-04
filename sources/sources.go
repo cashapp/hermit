@@ -8,8 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
-
+	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/ui"
 )
 

@@ -1,14 +1,15 @@
 package sources
 
 import (
-	"github.com/cashapp/hermit/ui"
-	"github.com/cashapp/hermit/util"
-	"github.com/pkg/errors"
 	"io/fs"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/ui"
+	"github.com/cashapp/hermit/util"
 )
 
 // GitSource is a new Source based on a git repo

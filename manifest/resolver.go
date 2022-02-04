@@ -12,15 +12,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cashapp/hermit/platform"
-
 	"github.com/alecthomas/participle"
 	"github.com/gobwas/glob"
-
-	"github.com/pkg/errors"
 	"github.com/qdm12/reprint"
 
 	"github.com/cashapp/hermit/envars"
+	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/platform"
 	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/ui"
 )

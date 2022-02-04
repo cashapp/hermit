@@ -7,9 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/pkg/errors"
-
 	"github.com/cashapp/hermit/cache"
+	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/github"
 	"github.com/cashapp/hermit/platform"
 	"github.com/cashapp/hermit/ui"

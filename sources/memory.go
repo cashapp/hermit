@@ -1,9 +1,10 @@
 package sources
 
 import (
+	"io/fs"
+
 	"github.com/cashapp/hermit/ui"
 	"github.com/cashapp/hermit/vfs"
-	"io/fs"
 )
 
 // MemSource is a new Source based on a name and content kept in memory

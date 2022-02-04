@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/antchfx/htmlquery"
-	"github.com/pkg/errors"
 	"golang.org/x/net/html"
 
+	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/manifest"
 )
 

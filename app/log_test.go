@@ -10,11 +10,12 @@ import (
 	"text/template"
 
 	"github.com/acarl005/stripansi"
+	"github.com/stretchr/testify/require"
+
 	"github.com/cashapp/hermit/cache"
 	"github.com/cashapp/hermit/hermittest"
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/ui"
-	"github.com/stretchr/testify/require"
 )
 
 func TestLogs(t *testing.T) {

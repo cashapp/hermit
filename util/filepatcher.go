@@ -1,10 +1,11 @@
 package util
 
 import (
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
 	"strings"
+
+	"github.com/cashapp/hermit/errors"
 )
 
 // FilePatcher is used to update or set lines in a text file,

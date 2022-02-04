@@ -6,7 +6,8 @@ import (
 
 	"github.com/alecthomas/hcl"
 	"github.com/alecthomas/kong"
-	"github.com/pkg/errors"
+
+	"github.com/cashapp/hermit/errors"
 )
 
 const userConfigPath = "~/.hermit.hcl"

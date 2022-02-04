@@ -11,8 +11,8 @@ import (
 
 	"github.com/alecthomas/hcl"
 	"github.com/gobwas/glob"
-	"github.com/pkg/errors"
 
+	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/ui"
 )
@@ -115,7 +115,7 @@ func (l *Loader) All() ([]*AnnotatedManifest, error) {
 	for _, bundle := range l.sources.Bundles() {
 		files, err := fs.Glob(bundle, "*.hcl")
 		if err != nil {
-			return nil, errors.WithMessagef(err, "%s", bundle)
+			return nil, errors.Wrapf(err, "%s", bundle)
 		}
 		for _, file := range files {
 			name := strings.TrimSuffix(file, ".hcl")

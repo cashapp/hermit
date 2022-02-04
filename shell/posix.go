@@ -7,7 +7,7 @@ import (
 	"io"
 
 	"github.com/cashapp/hermit/envars"
-	"github.com/pkg/errors"
+	"github.com/cashapp/hermit/errors"
 )
 
 var (

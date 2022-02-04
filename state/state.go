@@ -2,7 +2,6 @@ package state
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -11,10 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
-
 	"github.com/cashapp/hermit/archive"
 	"github.com/cashapp/hermit/cache"
+	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/internal/dao"
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/sources"
@@ -210,7 +208,7 @@ func (s *State) acquireLock(log ui.Logger) (*util.FileLock, error) {
 	err := s.lock.Acquire(ctx, log)
 	cancel()
 	if err != nil {
-		return nil, fmt.Errorf("failed to acquire lock: %w", err)
+		return nil, errors.Wrap(err, "failed to acquire lock")
 	}
 	return s.lock, nil
 }

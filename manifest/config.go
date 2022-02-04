@@ -5,9 +5,8 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/pkg/errors"
-
 	"github.com/cashapp/hermit/envars"
+	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/platform"
 )
 

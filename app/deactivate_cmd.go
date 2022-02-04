@@ -3,10 +3,9 @@ package app
 import (
 	"os"
 
-	"github.com/pkg/errors"
-
 	"github.com/cashapp/hermit"
 	"github.com/cashapp/hermit/envars"
+	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/shell"
 	"github.com/cashapp/hermit/ui"
 )

@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 
 	"github.com/alecthomas/hcl"
-	"github.com/pkg/errors"
 
+	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/github"
 	hmanifest "github.com/cashapp/hermit/manifest"
 )
