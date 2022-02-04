@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
-
 	bolt "go.etcd.io/bbolt"
+
+	"github.com/cashapp/hermit/errors"
 )
 
 const (

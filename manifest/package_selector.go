@@ -5,7 +5,8 @@ import (
 	"unicode"
 
 	"github.com/gobwas/glob"
-	"github.com/pkg/errors"
+
+	"github.com/cashapp/hermit/errors"
 )
 
 // Selector is a selector that matches package References and can be used to select a specific version of a package

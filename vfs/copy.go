@@ -5,7 +5,7 @@ import (
 	"io/fs"
 	"os"
 
-	"github.com/pkg/errors"
+	"github.com/cashapp/hermit/errors"
 )
 
 // CopyFile from srcFS/src to dst.

@@ -5,10 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cashapp/hermit/platform"
-
-	"github.com/cashapp/hermit/sources"
-
 	"github.com/alecthomas/hcl"
 	"github.com/alecthomas/repr"
 	"github.com/stretchr/testify/require"
@@ -16,6 +12,8 @@ import (
 	"github.com/cashapp/hermit/envars"
 	. "github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/manifest/manifesttest"
+	"github.com/cashapp/hermit/platform"
+	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/ui"
 	"github.com/cashapp/hermit/vfs"
 )

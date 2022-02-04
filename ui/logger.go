@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
+	"github.com/cashapp/hermit/errors"
 )
 
 //go:generate stringer -linecomment -type Level

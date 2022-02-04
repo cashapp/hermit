@@ -11,8 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pkg/errors"
-
+	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/ui"
 )
 

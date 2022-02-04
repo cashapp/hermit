@@ -1,7 +1,6 @@
 package hermit_test
 
 import (
-	"github.com/cashapp/hermit"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	bolt "go.etcd.io/bbolt"
 
+	"github.com/cashapp/hermit"
 	"github.com/cashapp/hermit/envars"
 	"github.com/cashapp/hermit/hermittest"
 	"github.com/cashapp/hermit/internal/dao"

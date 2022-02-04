@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/kballard/go-shellquote"
-	"github.com/pkg/errors"
 
+	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/ui"
 )
 

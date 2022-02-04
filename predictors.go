@@ -1,10 +1,11 @@
 package hermit
 
 import (
+	"github.com/posener/complete"
+
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/state"
 	"github.com/cashapp/hermit/ui"
-	"github.com/posener/complete"
 )
 
 // PackagePredictor is a shell completion predictor for all package names

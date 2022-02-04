@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pkg/errors"
+	"github.com/cashapp/hermit/errors"
 )
 
 // ResolveSymlinks returns all symlinks in a chain, including the final file, as absolute paths.

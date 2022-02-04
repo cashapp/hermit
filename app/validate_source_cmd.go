@@ -4,9 +4,8 @@ import (
 	"runtime"
 	"strconv"
 
-	"github.com/pkg/errors"
-
 	"github.com/cashapp/hermit"
+	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/state"

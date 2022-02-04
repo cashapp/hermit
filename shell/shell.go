@@ -8,11 +8,10 @@ import (
 	"path/filepath"
 
 	"github.com/mitchellh/go-ps"
-	"github.com/pkg/errors"
-
 	"github.com/willdonnelly/passwd"
 
 	"github.com/cashapp/hermit/envars"
+	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/ui"
 	"github.com/cashapp/hermit/util"
 )

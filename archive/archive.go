@@ -19,12 +19,12 @@ import (
 	bufra "github.com/avvmoto/buf-readerat"
 	"github.com/blakesmith/ar"
 	"github.com/gabriel-vasile/mimetype"
-	"github.com/pkg/errors"
 	"github.com/saracen/go7z"
 	"github.com/sassoftware/go-rpmutils"
 	"github.com/xi2/xz"
 	"howett.net/plist"
 
+	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/ui"
 	"github.com/cashapp/hermit/util"

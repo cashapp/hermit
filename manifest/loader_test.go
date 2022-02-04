@@ -1,12 +1,13 @@
 package manifest
 
 import (
-	"github.com/cashapp/hermit/ui"
 	"os"
 	"testing"
 
-	"github.com/cashapp/hermit/sources"
 	"github.com/stretchr/testify/require"
+
+	"github.com/cashapp/hermit/sources"
+	"github.com/cashapp/hermit/ui"
 )
 
 func TestLoader(t *testing.T) {

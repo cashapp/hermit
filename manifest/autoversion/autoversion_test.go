@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
+	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/github"
 )
 

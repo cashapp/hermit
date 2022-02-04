@@ -4,8 +4,7 @@ import (
 	"net/http"
 
 	"github.com/cashapp/hermit/cache"
-
-	"github.com/pkg/errors"
+	"github.com/cashapp/hermit/errors"
 )
 
 // ValidatePackageSource checks that a package source is accessible.

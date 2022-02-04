@@ -12,6 +12,7 @@ var Flags struct {
 	KeepLogs        bool `hcl:"keeplogs,optional" help:"Don't clear logs after executing.'"`
 	AlwaysCheckSelf bool `hcl:"alwayscheckself,optional" help:"Always check if Hermit itself needs updating."`
 	FailHTTP        bool `hcl:"failhttp,optional" help:"Always fail HTTP requests."`
+	ErrorTrace      bool `hcl:"errortrace,optional" help:"Add trace markers to error messages."`
 }
 
 func init() {

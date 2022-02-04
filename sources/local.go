@@ -1,8 +1,9 @@
 package sources
 
 import (
-	"github.com/cashapp/hermit/ui"
 	"io/fs"
+
+	"github.com/cashapp/hermit/ui"
 )
 
 // LocalSource is a new Source based on a local filesystem

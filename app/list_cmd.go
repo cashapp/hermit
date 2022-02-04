@@ -8,10 +8,10 @@ import (
 	"strings"
 
 	"github.com/alecthomas/colour"
-	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/cashapp/hermit"
+	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/ui"
 )

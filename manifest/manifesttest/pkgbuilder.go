@@ -1,12 +1,12 @@
 package manifesttest
 
 import (
-	"github.com/cashapp/hermit/platform"
 	"io/fs"
 	"time"
 
 	"github.com/cashapp/hermit/envars"
 	"github.com/cashapp/hermit/manifest"
+	"github.com/cashapp/hermit/platform"
 )
 
 // PkgBuilder is a builder pattern implementation for manifest.Package objects

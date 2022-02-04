@@ -8,10 +8,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/pkg/errors"
-
 	"github.com/cashapp/hermit"
 	"github.com/cashapp/hermit/cache"
+	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/state"
 	"github.com/cashapp/hermit/ui"

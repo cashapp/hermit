@@ -9,21 +9,17 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/cashapp/hermit/cache"
-	"github.com/cashapp/hermit/envars"
-	"github.com/cashapp/hermit/sources"
-	"github.com/cashapp/hermit/vfs"
-
+	"github.com/stretchr/testify/require"
 	bolt "go.etcd.io/bbolt"
 
 	"github.com/cashapp/hermit"
-
-	"github.com/cashapp/hermit/state"
-
-	"github.com/stretchr/testify/require"
-
+	"github.com/cashapp/hermit/cache"
+	"github.com/cashapp/hermit/envars"
 	"github.com/cashapp/hermit/internal/dao"
+	"github.com/cashapp/hermit/sources"
+	"github.com/cashapp/hermit/state"
 	"github.com/cashapp/hermit/ui"
+	"github.com/cashapp/hermit/vfs"
 )
 
 // EnvTestFixture encapsulates the directories used by Env and the Env itself

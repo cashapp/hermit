@@ -1,13 +1,14 @@
 package util
 
 import (
-	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"strconv"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestFilePatcher_patches_existing_files_more(t *testing.T) {

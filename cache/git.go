@@ -6,8 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pkg/errors"
-
+	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/ui"
 	"github.com/cashapp/hermit/util"
 )
