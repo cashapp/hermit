@@ -30,7 +30,7 @@ func (e *execCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, env *hermi
 	// If we're running a binary from a different environment, activate it first.
 	activeEnv := os.Getenv("ACTIVE_HERMIT")
 	if env == nil || (activeEnv != "" && envDir != "" && activeEnv != envDir) {
-		env, err = hermit.OpenEnv(envDir, sta, cache.GetSource, globalState.Env, defaultHTTPClient)
+		env, err = hermit.OpenEnv(envDir, sta, cache.GetSource, globalState.Env, defaultHTTPClient, nil)
 		if err != nil {
 			return errors.WithStack(err)
 		}

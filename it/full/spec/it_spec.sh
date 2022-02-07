@@ -176,6 +176,7 @@ Describe "Hermit"
       The status should be success
       The stderr should be blank
       The stdout should include "2.0.0"
+      The stdout should include "GNU Make 4.3"
     End
   End
 

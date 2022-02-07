@@ -11,3 +11,4 @@ docs/resources/_gen
 docs/public
 .gobin/
 .hermit/
+it*/state

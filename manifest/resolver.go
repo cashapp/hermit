@@ -458,7 +458,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 			files[k] = v
 		}
 	}
-	// Validate.
+	// Verify.
 	if len(p.Binaries) == 0 && len(p.Apps) == 0 {
 		return p, errors.Wrapf(ErrNoBinaries, "%s: %s", manifest.Path, found)
 	}
@@ -674,7 +674,7 @@ func (m *Manifest) ChannelByName(name string) *ChannelBlock {
 	return nil
 }
 
-// Validate that there are no semantic errors in the manifest
+// Verify that there are no semantic errors in the manifest
 func (m *Manifest) validate() []error {
 	var (
 		result   []error
