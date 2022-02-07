@@ -564,7 +564,7 @@ func (e *Env) Install(l *ui.UI, pkg *manifest.Package) (*shell.Changes, error) {
 // resolveRuntimeDependencies checks all runtime dependencies for a package are available.
 //
 // Aggregate and collect the package names and binaries of all runtime dependencies to avoid collisions.
-func (e *Env) resolveRuntimeDependencies(l *ui.UI, p *manifest.Package, aggregate map[string]*manifest.Package, bins map[string]bool) error {
+func (e *Env) resolveRuntimeDependencies(l *ui.UI, p *manifest.Package, aggregate map[string]*manifest.Package, bins map[string]*manifest.Package) error {
 	var depPkgs []*manifest.Package
 	// If the package contains a Hermit env, collect its dependencies.
 	pkgEnv, err := OpenEnv(p.Root, e.state, e.packageSource, nil, e.httpClient, e.scriptSums)
@@ -599,10 +599,10 @@ func (e *Env) resolveRuntimeDependencies(l *ui.UI, p *manifest.Package, aggregat
 	for _, depPkg := range depPkgs {
 		for _, bin := range depPkg.Binaries {
 			base := filepath.Base(bin)
-			if bins[base] {
-				return errors.Errorf("conflicting binary in multiple runtime dependencies: %s", base)
+			if previous, ok := bins[base]; ok && !previous.Reference.Match(depPkg.Reference) {
+				return errors.Errorf("conflicting binary %q in multiple runtime dependencies: %s and %s", bin, previous.Reference, depPkg.Reference)
 			}
-			bins[base] = true
+			bins[base] = depPkg
 		}
 
 		aggregate[depPkg.Reference.Name] = depPkg
@@ -616,7 +616,7 @@ func (e *Env) resolveRuntimeDependencies(l *ui.UI, p *manifest.Package, aggregat
 
 func (e *Env) ensureRuntimeDepsPresent(l *ui.UI, p *manifest.Package) ([]*manifest.Package, error) {
 	deps := map[string]*manifest.Package{}
-	err := e.resolveRuntimeDependencies(l, p, deps, map[string]bool{})
+	err := e.resolveRuntimeDependencies(l, p, deps, map[string]*manifest.Package{})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
