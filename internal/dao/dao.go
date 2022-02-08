@@ -39,7 +39,7 @@ func Open(stateDir string) *DAO {
 
 // Dump content of database to w.
 func (d *DAO) Dump(w io.Writer) error {
-	db, err := d.db()
+	db, err := d.db(true)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -132,7 +132,7 @@ func (d *DAO) PackageRemovedAt(name string, binDir string) error {
 
 // GetKnownUsages returns a list of bin directories where this package has been seen previously
 func (d *DAO) GetKnownUsages(name string) ([]string, error) {
-	db, err := d.db()
+	db, err := d.db(true)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -160,7 +160,7 @@ func (d *DAO) GetKnownUsages(name string) ([]string, error) {
 
 // DeletePackage removes a package from the DB
 func (d *DAO) DeletePackage(name string) error {
-	db, err := d.db()
+	db, err := d.db(false)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -171,12 +171,20 @@ func (d *DAO) DeletePackage(name string) error {
 	}))
 }
 
-func (d *DAO) db() (*bolt.DB, error) {
-	return bolt.Open(filepath.Join(d.stateDir, "hermit.bolt.db"), 0600, &bolt.Options{Timeout: 5 * time.Second})
+func (d *DAO) db(readonly bool) (*bolt.DB, error) {
+	path := filepath.Join(d.stateDir, "hermit.bolt.db")
+	db, err := bolt.Open(path, 0600, &bolt.Options{
+		Timeout:  5 * time.Second,
+		ReadOnly: readonly,
+	})
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to open Hermit state database: %s", path)
+	}
+	return db, nil
 }
 
 func (d *DAO) view(fn func(tx *bolt.Tx) error) error {
-	db, err := d.db()
+	db, err := d.db(true)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -186,7 +194,7 @@ func (d *DAO) view(fn func(tx *bolt.Tx) error) error {
 }
 
 func (d *DAO) update(fn func(tx *bolt.Tx) error) error {
-	db, err := d.db()
+	db, err := d.db(false)
 	if err != nil {
 		return errors.WithStack(err)
 	}
