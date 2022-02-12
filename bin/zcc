@@ -1,2 +1,0 @@
-#!/bin/sh
-ZIG_LOCAL_CACHE_DIR="$HOME/tmp" zig cc -target x86_64-linux-musl $@

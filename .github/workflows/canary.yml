@@ -4,11 +4,15 @@ on:
       - 'docs/**'
     branches:
       - master
+      - aat/cross-compile-cgo-darwin
 name: Canary
 jobs:
   canary:
     name: Release
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -17,10 +21,8 @@ jobs:
           go-version: '^1.16.3'
       - name: Build Hermit
         run: |
-          make GOOS=linux GOARCH=amd64 CHANNEL=canary build
-          make GOOS=linux GOARCH=arm64 CHANNEL=canary build
-          make GOOS=darwin GOARCH=amd64 CHANNEL=canary build
-          make GOOS=darwin GOARCH=arm64 CHANNEL=canary build
+          make GOARCH=amd64 CHANNEL=canary build
+          make GOARCH=arm64 CHANNEL=canary build
           go run ./cmd/geninstaller --dest=build/install.sh --dist-url=https://github.com/cashapp/hermit/releases/download/canary
       - name: Release canary
         uses: ncipollo/release-action@v1
