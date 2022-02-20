@@ -274,6 +274,9 @@ func (w *UI) writeProgress(width int) {
 	nofm := fmt.Sprintf("%d/%d", complete, len(liveOperations))
 	percentstr := fmt.Sprintf("%.1f%%", percent*100)
 	spaces := width - columns/barsn - 15
+	if spaces < 0 {
+		spaces = 0
+	}
 	fmt.Fprintf(w.stdout, "%s%s%s %-7s%6s\n", strings.Repeat(theme.fill, columns/barsn), theme.bars[columns%barsn], strings.Repeat(theme.blank, spaces), nofm, percentstr)
 	// Write operations bar.
 	for _, op := range liveOperations {

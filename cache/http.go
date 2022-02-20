@@ -83,6 +83,9 @@ func (s *httpSource) Validate() error {
 }
 
 func downloadHTTP(b *ui.Task, response *http.Response, checksum string, uri string, cachePath string) (path string, etag string, err error) {
+	if response.StatusCode < 200 || response.StatusCode > 299 {
+		return "", "", errors.Errorf("download failed: %s (%d)", response.Status, response.StatusCode)
+	}
 	task := b.SubTask("download")
 	cacheDir := filepath.Dir(cachePath)
 	_ = os.MkdirAll(cacheDir, os.ModePerm)
