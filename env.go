@@ -835,7 +835,7 @@ func (e *Env) ValidateManifest(l *ui.UI, name string, options *ValidationOptions
 }
 
 func (e *Env) validateReference(l *ui.UI, srcs *sources.Sources, ref manifest.Reference, options *ValidationOptions) ([]string, error) {
-	fails := 0
+	var fails []string
 	var warnings []string
 	for _, p := range platform.Core {
 		resolver, err := manifest.New(srcs, manifest.Config{
@@ -850,8 +850,9 @@ func (e *Env) validateReference(l *ui.UI, srcs *sources.Sources, ref manifest.Re
 
 		pkg, err := resolver.Resolve(l, manifest.ExactSelector(ref))
 		if err != nil {
-			fails++
-			warnings = append(warnings, fmt.Sprintf("%s: %s", p, err.Error()))
+			msg := fmt.Sprintf("%s: %s", p, err.Error())
+			fails = append(fails, msg)
+			warnings = append(warnings, msg)
 			continue
 		}
 
@@ -863,8 +864,8 @@ func (e *Env) validateReference(l *ui.UI, srcs *sources.Sources, ref manifest.Re
 
 		warnings = append(warnings, pkg.Warnings...)
 	}
-	if fails >= len(platform.Core) {
-		return nil, errors.Errorf("%s failed to resolve on all platforms", ref)
+	if len(fails) >= len(platform.Core) {
+		return nil, errors.Errorf("%s failed to resolve on all platforms: %s", ref, strings.Join(fails, "; "))
 	}
 	return warnings, nil
 }
