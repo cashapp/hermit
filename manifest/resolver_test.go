@@ -113,6 +113,32 @@ func TestResolver_Resolve(t *testing.T) {
 			).
 			Result(),
 	}, {
+		name: "Suggest version for missing channel",
+		files: map[string]string{
+			"testchan.hcl": `
+                description = ""
+				binaries = ["bin"]
+				version "1.0.0" {
+				  source = "www.example.com"
+				}
+			`,
+		},
+		reference: "testchan@1.0.0",
+		wantErr:   "memory:///testchan.hcl: no channel testchan@1.0.0 found, did you mean version testchan-1.0.0?: unknown package",
+	}, {
+		name: "Suggest version syntax for missing channel",
+		files: map[string]string{
+			"testchan.hcl": `
+                description = ""
+				binaries = ["bin"]
+				version "1.0.0" {
+				  source = "www.example.com"
+				}
+			`,
+		},
+		reference: "testchan@1.0.1",
+		wantErr:   "memory:///testchan.hcl: no channel testchan@1.0.1 found in channels (testchan@1, testchan@1.0, testchan@latest) or versions (testchan-1.0.0): unknown package",
+	}, {
 		name: "Infer",
 		files: map[string]string{
 			"test.hcl": `

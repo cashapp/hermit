@@ -356,12 +356,30 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 		found = allRefs[len(allRefs)-1]
 	}
 	if !found.IsSet() {
-		knownVersions := make([]string, 0, len(allRefs))
+		var knownVersions []string
+		var knownChannels []string
 		for _, ref := range allRefs {
-			knownVersions = append(knownVersions, ref.StringNoName())
+			if ref.IsChannel() {
+				knownChannels = append(knownChannels, ref.String())
+			} else {
+				knownVersions = append(knownVersions, ref.String())
+			}
 		}
 		sort.Strings(knownVersions)
-		return nil, errors.Wrapf(ErrUnknownPackage, "%s: no version %s in known versions %s", manifest.Path, selector, strings.Join(knownVersions, ", "))
+		sort.Strings(knownChannels)
+		if strings.Contains(selector.String(), "@") {
+			tryVersion := strings.ReplaceAll(selector.String(), "@", "-")
+			for _, ver := range knownVersions {
+				if ver == tryVersion {
+					return nil, errors.Wrapf(ErrUnknownPackage, "%s: no channel %s found, did you mean version %s?",
+						manifest.Path, selector, tryVersion)
+				}
+			}
+			return nil, errors.Wrapf(ErrUnknownPackage, "%s: no channel %s found in channels (%s) or versions (%s)",
+				manifest.Path, selector, strings.Join(knownChannels, ", "), strings.Join(knownVersions, ", "))
+		}
+		return nil, errors.Wrapf(ErrUnknownPackage, "%s: no version %s found in versions (%s) or channels (%s)",
+			manifest.Path, selector, strings.Join(knownVersions, ", "), strings.Join(knownChannels, ", "))
 	}
 
 	root := filepath.Join(config.State, "pkg", found.String())
