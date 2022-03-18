@@ -16,10 +16,10 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/DataDog/zstd"
 	bufra "github.com/avvmoto/buf-readerat"
 	"github.com/blakesmith/ar"
 	"github.com/gabriel-vasile/mimetype"
+	"github.com/klauspost/compress/zstd"
 	"github.com/saracen/go7z"
 	"github.com/sassoftware/go-rpmutils"
 	"github.com/xi2/xz"
@@ -108,8 +108,6 @@ func Extract(b *ui.Task, source string, pkg *manifest.Package) (finalise func() 
 		return finalise, err
 	}
 	defer f.Close() // nolint: gosec
-	// Some decompressors need Close() to be called to free resources.
-	defer func(r io.ReadCloser) { _ = r.Close() }(r)
 
 	info, err := f.Stat()
 	if err != nil {
@@ -298,7 +296,7 @@ func extractExecutable(r io.Reader, dest, executableName string) error {
 // Open a potentially compressed archive.
 //
 // It will return the MIME type of the underlying file, and a buffered io.Reader for that file.
-func openArchive(source string) (f *os.File, r io.ReadCloser, mime *mimetype.MIME, err error) {
+func openArchive(source string) (f *os.File, r io.Reader, mime *mimetype.MIME, err error) {
 	mime, err = mimetype.DetectFile(source)
 	if err != nil {
 		return nil, nil, mime, errors.WithStack(err)
@@ -322,17 +320,21 @@ func openArchive(source string) (f *os.File, r io.ReadCloser, mime *mimetype.MIM
 		r = zr
 
 	case "application/x-bzip2":
-		r = io.NopCloser(bzip2.NewReader(r))
+		r = bzip2.NewReader(r)
 
 	case "application/x-xz":
 		xr, err := xz.NewReader(r, 0)
 		if err != nil {
 			return nil, nil, mime, errors.WithStack(err)
 		}
-		r = io.NopCloser(xr)
+		r = xr
 
 	case "application/zstd":
-		r = zstd.NewReader(r)
+		zr, err := zstd.NewReader(r)
+		if err != nil {
+			return nil, nil, nil, errors.WithStack(err)
+		}
+		r = zr
 
 	default:
 		// Assume it's uncompressed?
@@ -347,7 +349,7 @@ func openArchive(source string) (f *os.File, r io.ReadCloser, mime *mimetype.MIM
 	}
 	buf = buf[:n]
 	mime = mimetype.Detect(buf)
-	return f, io.NopCloser(io.MultiReader(bytes.NewReader(buf), r)), mime, nil
+	return f, io.MultiReader(bytes.NewReader(buf), r), mime, nil
 }
 
 const extractMacPkgChangesXML = `
