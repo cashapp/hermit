@@ -16,6 +16,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/DataDog/zstd"
 	bufra "github.com/avvmoto/buf-readerat"
 	"github.com/blakesmith/ar"
 	"github.com/gabriel-vasile/mimetype"
@@ -107,6 +108,8 @@ func Extract(b *ui.Task, source string, pkg *manifest.Package) (finalise func() 
 		return finalise, err
 	}
 	defer f.Close() // nolint: gosec
+	// Some decompressors need Close() to be called to free resources.
+	defer func(r io.ReadCloser) { _ = r.Close() }(r)
 
 	info, err := f.Stat()
 	if err != nil {
@@ -115,7 +118,7 @@ func Extract(b *ui.Task, source string, pkg *manifest.Package) (finalise func() 
 
 	task.Size(int(info.Size()))
 	defer task.Done()
-	r = io.TeeReader(r, task.ProgressWriter())
+	r = io.NopCloser(io.TeeReader(r, task.ProgressWriter()))
 
 	// Archive is a single executable.
 	switch mime.String() {
@@ -279,7 +282,7 @@ func extractExecutable(r io.Reader, dest, executableName string) error {
 	destExe := filepath.Join(dest, executableName)
 	ext := filepath.Ext(destExe)
 	switch ext {
-	case ".gz", ".bz2", ".xz":
+	case ".gz", ".bz2", ".xz", ".zst":
 		destExe = strings.TrimSuffix(destExe, ext)
 	}
 
@@ -295,7 +298,7 @@ func extractExecutable(r io.Reader, dest, executableName string) error {
 // Open a potentially compressed archive.
 //
 // It will return the MIME type of the underlying file, and a buffered io.Reader for that file.
-func openArchive(source string) (f *os.File, r io.Reader, mime *mimetype.MIME, err error) {
+func openArchive(source string) (f *os.File, r io.ReadCloser, mime *mimetype.MIME, err error) {
 	mime, err = mimetype.DetectFile(source)
 	if err != nil {
 		return nil, nil, mime, errors.WithStack(err)
@@ -319,14 +322,17 @@ func openArchive(source string) (f *os.File, r io.Reader, mime *mimetype.MIME, e
 		r = zr
 
 	case "application/x-bzip2":
-		r = bzip2.NewReader(r)
+		r = io.NopCloser(bzip2.NewReader(r))
 
 	case "application/x-xz":
 		xr, err := xz.NewReader(r, 0)
 		if err != nil {
 			return nil, nil, mime, errors.WithStack(err)
 		}
-		r = xr
+		r = io.NopCloser(xr)
+
+	case "application/zstd":
+		r = zstd.NewReader(r)
 
 	default:
 		// Assume it's uncompressed?
@@ -341,7 +347,7 @@ func openArchive(source string) (f *os.File, r io.Reader, mime *mimetype.MIME, e
 	}
 	buf = buf[:n]
 	mime = mimetype.Detect(buf)
-	return f, io.MultiReader(bytes.NewReader(buf), r), mime, nil
+	return f, io.NopCloser(io.MultiReader(bytes.NewReader(buf), r)), mime, nil
 }
 
 const extractMacPkgChangesXML = `
