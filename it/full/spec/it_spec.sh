@@ -103,6 +103,15 @@ Describe "Hermit"
         The stderr should be blank
         The variable PKG_TEST_VAR should equal "before"
       End
+
+      It "does not overwrite user-overridden variables"
+        export PKG_TEST_VAR="modified"
+        When call deactivate-hermit
+        The status should be success
+        The stdout should not be blank
+        The stderr should be blank
+        The variable PKG_TEST_VAR should equal "modified"
+      End
     End
   End
 

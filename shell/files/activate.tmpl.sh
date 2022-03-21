@@ -17,10 +17,11 @@ fi
 
 _hermit_deactivate() {
   echo "Hermit environment $(${HERMIT_ENV}/bin/hermit env HERMIT_ENV) deactivated"
-  eval "$HERMIT_DEACTIVATION"
+  eval "$(${ACTIVE_HERMIT}/bin/hermit env --deactivate-from-ops="${HERMIT_ENV_OPS}")"
   unset -f deactivate-hermit >/dev/null 2>&1
   unset -f update_hermit_env >/dev/null 2>&1
   unset ACTIVE_HERMIT
+  unset HERMIT_ENV_OPS
 
   hash -r 2>/dev/null
 
@@ -47,7 +48,7 @@ deactivate-hermit() {
 
 unset DEACTIVATED_HERMIT
 export ACTIVE_HERMIT=$HERMIT_ENV
-export HERMIT_DEACTIVATION="$(${HERMIT_ENV}/bin/hermit env --deactivate)"
+export HERMIT_ENV_OPS="$(${HERMIT_ENV}/bin/hermit env --ops)"
 export HERMIT_BIN_CHANGE=$(date -r ${HERMIT_ENV}/bin +"%s")
 
 {{- if ne .Prompt "none" }}
@@ -58,9 +59,9 @@ update_hermit_env() {
   local CURRENT=$(date -r ${HERMIT_ENV}/bin +"%s")
   test "$CURRENT" = "$HERMIT_BIN_CHANGE" && return 0
   local CUR_HERMIT=${HERMIT_ENV}/bin/hermit
-  eval "$HERMIT_DEACTIVATION"
+  eval "$(${ACTIVE_HERMIT}/bin/hermit env --deactivate-from-ops="${HERMIT_ENV_OPS}")"
   eval "$(${CUR_HERMIT} env --activate)"
-  export HERMIT_DEACTIVATION=$(${HERMIT_ENV}/bin/hermit env --deactivate)
+  export HERMIT_ENV_OPS=$(${HERMIT_ENV}/bin/hermit env --ops)
   export HERMIT_BIN_CHANGE=$CURRENT
 }
 
