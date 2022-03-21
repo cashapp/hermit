@@ -3,6 +3,7 @@ package envars
 import (
 	"testing"
 
+	"github.com/alecthomas/repr"
 	"github.com/stretchr/testify/require"
 )
 
@@ -115,4 +116,21 @@ func TestIssue47(t *testing.T) {
 	require.Equal(t, expected, actual)
 	reverted := expected.Revert("/home/user/project", ops).Combined()
 	require.Equal(t, original, reverted)
+}
+
+func TestEncodeDecodeOps(t *testing.T) {
+	actual := Ops{
+		&Append{"APPEND", "${APPEND}:text"},
+		&Prepend{"PREPEND", "text:${PREPEND}"},
+		&Set{"SET", "text"},
+		&Unset{"UNSET"},
+		&Force{"FORCE", "text"},
+		&Prefix{"PREFIX", "prefix_"},
+	}
+	data, err := MarshalOps(actual)
+	require.NoError(t, err)
+	t.Log(string(data))
+	expected, err := UnmarshalOps(data)
+	require.NoError(t, err)
+	require.Equal(t, repr.String(expected, repr.Indent("  ")), repr.String(actual, repr.Indent("  ")))
 }

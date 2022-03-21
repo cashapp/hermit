@@ -13,14 +13,16 @@ import (
 )
 
 type envCmd struct {
-	Raw        bool   `short:"r" help:"Output raw values without shell quoting."`
-	Activate   bool   `xor:"envars" help:"Prints the commands needed to set the environment to the activated state"`
-	Deactivate bool   `xor:"envars" help:"Prints the commands needed to reset the environment to the deactivated state"`
-	Inherit    bool   `short:"i" help:"Inherit variables from parent environment."`
-	Names      bool   `short:"n" help:"Show only names."`
-	Unset      bool   `short:"u" help:"Unset the specified environment variable."`
-	Name       string `arg:"" optional:"" help:"Name of the environment variable."`
-	Value      string `arg:"" optional:"" help:"Value to set the variable to."`
+	Raw               bool   `short:"r" help:"Output raw values without shell quoting."`
+	Ops               bool   `xor:"action" help:"Print the operations needed to manipulate the environment."`
+	Activate          bool   `xor:"action" help:"Print the commands needed to set the environment to the activated state."`
+	Deactivate        bool   `xor:"action" help:"Print the commands needed to reset the environment to the deactivated state."`
+	DeactivateFromOps string `xor:"action" placeholder:"OPS" help:"Decodes the operations, and prints the shell commands to to reset the environment to the deactivated state."`
+	Inherit           bool   `short:"i" help:"Inherit variables from parent environment."`
+	Names             bool   `short:"n" help:"Show only names."`
+	Unset             bool   `xor:"action" short:"u" help:"Unset the specified environment variable."`
+	Name              string `arg:"" optional:"" help:"Name of the environment variable."`
+	Value             string `arg:"" optional:"" help:"Value to set the variable to."`
 }
 
 func (e *envCmd) Help() string {
@@ -50,7 +52,7 @@ func (e *envCmd) Run(l *ui.UI, env *hermit.Env) error {
 		return env.DelEnv(e.Name)
 	}
 
-	if e.Activate {
+	if e.Activate || e.Deactivate || e.Ops || e.DeactivateFromOps != "" {
 		sh, err := shell.Detect()
 		if err != nil {
 			return errors.WithStack(err)
@@ -59,21 +61,31 @@ func (e *envCmd) Run(l *ui.UI, env *hermit.Env) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		environ := envars.Parse(os.Environ()).Apply(env.Root(), ops).Changed(true)
-		return errors.WithStack(sh.ApplyEnvars(os.Stdout, environ))
-	}
 
-	if e.Deactivate {
-		sh, err := shell.Detect()
-		if err != nil {
-			return errors.WithStack(err)
+		switch {
+		case e.Activate:
+			environ := envars.Parse(os.Environ()).Apply(env.Root(), ops).Changed(true)
+			return errors.WithStack(sh.ApplyEnvars(os.Stdout, environ))
+
+		case e.Ops:
+			data, err := envars.MarshalOps(ops)
+			if err != nil {
+				return errors.Wrap(err, "failed to encode envar operations")
+			}
+			fmt.Println(string(data))
+
+		case e.DeactivateFromOps != "":
+			ops, err = envars.UnmarshalOps([]byte(e.DeactivateFromOps))
+			if err != nil {
+				return errors.Wrap(err, "failed to decode envar operations")
+			}
+			fallthrough
+
+		case e.Deactivate:
+			environ := envars.Parse(os.Environ()).Revert(env.Root(), ops).Changed(true)
+			return errors.WithStack(sh.ApplyEnvars(os.Stdout, environ))
 		}
-		ops, err := env.EnvOps(l)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		environ := envars.Parse(os.Environ()).Revert(env.Root(), ops).Changed(true)
-		return errors.WithStack(sh.ApplyEnvars(os.Stdout, environ))
+		return nil
 	}
 
 	// Display envars.

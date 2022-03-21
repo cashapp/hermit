@@ -1,6 +1,7 @@
 package envars
 
 import (
+	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"reflect"
@@ -8,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/kballard/go-shellquote"
+
+	"github.com/cashapp/hermit/errors"
 )
 
 // Envars is a convenience alias
@@ -73,6 +76,52 @@ type Op interface {
 // Ops to apply to a set of environment variables.
 type Ops []Op
 
+// {<type>: <object>} - see marshalKeys for the key types
+type encodedOp map[string]json.RawMessage
+
+// MarshalOps to JSON.
+func MarshalOps(ops Ops) ([]byte, error) {
+	encoded := make([]encodedOp, 0, len(ops))
+	for _, op := range ops {
+		key, ok := marshalKeys[reflect.TypeOf(op)]
+		if !ok {
+			panic(fmt.Sprintf("unsupported op type %T", op))
+		}
+		jop, err := json.Marshal(op)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		encoded = append(encoded, encodedOp{key: jop})
+	}
+	return json.Marshal(encoded)
+}
+
+// UnmarshalOps from JSON.
+func UnmarshalOps(data []byte) (Ops, error) {
+	var encoded []encodedOp
+	err := json.Unmarshal(data, &encoded)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	ops := make(Ops, 0, len(encoded))
+	for _, enc := range encoded {
+		var key string
+		var encodedOp json.RawMessage
+		for key, encodedOp = range enc {
+		}
+		typ, ok := unmarshalKeys[key]
+		if !ok {
+			return nil, errors.Errorf("unsupported envar op key %q", key)
+		}
+		op := reflect.New(typ).Interface().(Op)
+		if err = json.Unmarshal(encodedOp, op); err != nil {
+			return nil, errors.WithStack(err)
+		}
+		ops = append(ops, op)
+	}
+	return ops, nil
+}
+
 // Infer uses simple heuristics to build a sequence of transformations for environment variables.
 //
 // Currently this consists of detecting prepend/append to :-separated lists, set and unset.
@@ -108,7 +157,24 @@ func Infer(env []string) Ops {
 	return ops
 }
 
+// These tables need to be kept in sync.
 var (
+	marshalKeys = map[reflect.Type]string{
+		reflect.TypeOf(&Append{}):  "a",
+		reflect.TypeOf(&Prepend{}): "p",
+		reflect.TypeOf(&Set{}):     "s",
+		reflect.TypeOf(&Unset{}):   "u",
+		reflect.TypeOf(&Force{}):   "f",
+		reflect.TypeOf(&Prefix{}):  "P",
+	}
+	unmarshalKeys = func() map[string]reflect.Type {
+		out := make(map[string]reflect.Type, len(marshalKeys))
+		for t, k := range marshalKeys {
+			out[k] = t.Elem() // deref all the pointers so reflect.New gives the correct type
+		}
+		return out
+	}()
+
 	_ Op = &Append{}
 	_ Op = &Prepend{}
 	_ Op = &Set{}
@@ -119,8 +185,8 @@ var (
 
 // Append ensures an element exists at the end of a colon separated list.
 type Append struct {
-	Name  string
-	Value string
+	Name  string ` json:"n"`
+	Value string ` json:"v"`
 }
 
 func (e *Append) sealed() {}
@@ -145,8 +211,8 @@ func (e *Append) Revert(transform *Transform) { // nolint: golint
 
 // Prepend ensures an element exists at the beginning of a colon separated list.
 type Prepend struct {
-	Name  string
-	Value string
+	Name  string ` json:"n"`
+	Value string ` json:"v"`
 }
 
 func (e *Prepend) sealed() {}
@@ -172,8 +238,8 @@ func (e *Prepend) Revert(transform *Transform) { // nolint: golint
 
 // Prefix ensures the environment variable has the given prefix.
 type Prefix struct {
-	Name   string
-	Prefix string
+	Name   string ` json:"n"`
+	Prefix string ` json:"p"`
 }
 
 func (p *Prefix) sealed() {}
@@ -198,8 +264,8 @@ func (p *Prefix) Revert(transform *Transform) { // nolint: golint
 
 // Set an environment variable.
 type Set struct {
-	Name  string
-	Value string
+	Name  string ` json:"n"`
+	Value string ` json:"v"`
 }
 
 func (e *Set) sealed()        {}
@@ -216,8 +282,13 @@ func (e *Set) Apply(transform *Transform) { // nolint: golint
 	return
 }
 func (e *Set) Revert(transform *Transform) { // nolint: golint
+	old := makeRevertKey(transform, e)
+	// Check if the user has changed the value and if so, do nothing.
+	if currentValue, ok := transform.get(e.Name); ok && currentValue != transform.expand(e.Value) {
+		transform.unset(old)
+		return
+	}
 	transform.unset(e.Name)
-	old := makeRevertKey(transform, e) // nolint: ifshort
 	if value, ok := transform.get(old); ok {
 		transform.set(e.Name, value)
 		transform.unset(old)
@@ -227,7 +298,7 @@ func (e *Set) Revert(transform *Transform) { // nolint: golint
 
 // Unset an environment variable.
 type Unset struct {
-	Name string
+	Name string ` json:"n"`
 }
 
 func (e *Unset) sealed()        {}
@@ -242,8 +313,13 @@ func (e *Unset) Apply(transform *Transform) { // nolint: golint
 	return
 }
 func (e *Unset) Revert(transform *Transform) { // nolint: golint
-	transform.unset(e.Name)
 	old := makeRevertKey(transform, e) // nolint: ifshort
+	// If user has subsequently set the environment variable, do nothing.
+	if value, ok := transform.get(e.Name); ok && value != "" {
+		transform.unset(old)
+		return
+	}
+	transform.unset(e.Name)
 	if value, ok := transform.get(old); ok {
 		transform.set(e.Name, value)
 		transform.unset(old)
@@ -253,8 +329,8 @@ func (e *Unset) Revert(transform *Transform) { // nolint: golint
 
 // Force set/unset an environment variable without preserving or restoring its previous value.
 type Force struct {
-	Name  string
-	Value string
+	Name  string ` json:"n"`
+	Value string ` json:"v"`
 }
 
 func (f *Force) sealed() {}
