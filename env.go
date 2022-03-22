@@ -600,7 +600,7 @@ func (e *Env) resolveRuntimeDependencies(l *ui.UI, p *manifest.Package, aggregat
 		for _, bin := range depPkg.Binaries {
 			base := filepath.Base(bin)
 			if previous, ok := bins[base]; ok && !previous.Reference.Match(depPkg.Reference) {
-				return errors.Errorf("conflicting binary %q in multiple runtime dependencies: %s and %s", bin, previous.Reference, depPkg.Reference)
+				continue
 			}
 			bins[base] = depPkg
 		}
