@@ -49,7 +49,7 @@ func (s *GitSource) Sync(p *ui.UI, force bool) error { // nolint: golint
 			}
 		}
 	} else {
-		task.Debugf("Sync skipped, updated within the last %s", SyncFrequency)
+		task.Debugf("Update skipped, updated within the last %s", SyncFrequency)
 	}
 	return nil
 }
