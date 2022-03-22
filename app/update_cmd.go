@@ -12,9 +12,9 @@ import (
 	"github.com/cashapp/hermit/ui"
 )
 
-type syncCmd struct{}
+type updateCmd struct{}
 
-func (s *syncCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
+func (s *updateCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
 	self, err := os.Executable()
 	if err != nil {
 		return errors.WithStack(err)
