@@ -42,7 +42,7 @@ type unactivated struct {
 	Noop                 noopCmd              `cmd:"" help:"No-op, just exit." hidden:""`
 	Activate             activateCmd          `cmd:"" help:"Activate an environment." hidden:""`
 	Exec                 execCmd              `cmd:"" help:"Directly execute a binary in a package." hidden:""`
-	Sync                 syncCmd              `cmd:"" help:"Sync manifest sources." group:"global"`
+	Update               updateCmd            `cmd:"" aliases:"sync" help:"Update manifest sources." group:"global"`
 	Search               searchCmd            `cmd:"" help:"Search for packages to install." group:"global"`
 	DumpDB               dumpDBCmd            `cmd:"" help:"Dump state database." hidden:""`
 	DumpUserConfigSchema dumpUserConfigSchema `cmd:"" help:"Dump user configuration schema." hidden:""`
