@@ -8,8 +8,8 @@ github.com/alecthomas/colour v0.1.0/go.mod h1:QO9JBoKquHd+jz9nshCh40fOfO+JzsoXy8
 github.com/alecthomas/hcl v0.2.1 h1:2Pn/xtIyEnYBW0yJguwebpDWk2TbYab6LUlfyDqhgwg=
 github.com/alecthomas/hcl v0.2.1/go.mod h1:VEYcgruQ39ELu6c0Bb+VRm3trQPt7dQUdAwF7QrG7AQ=
 github.com/alecthomas/kong v0.2.22/go.mod h1:uzxf/HUh0tj43x1AyJROl3JT7SgsZ5m+icOv1csRhc0=
-github.com/alecthomas/kong v0.4.1 h1:0sFnMts+ijOiFuSHsMB9MlDi3NGINBkx9KIw1/gcuDw=
-github.com/alecthomas/kong v0.4.1/go.mod h1:uzxf/HUh0tj43x1AyJROl3JT7SgsZ5m+icOv1csRhc0=
+github.com/alecthomas/kong v0.5.0 h1:u8Kdw+eeml93qtMZ04iei0CFYve/WPcA5IFh+9wSskE=
+github.com/alecthomas/kong v0.5.0/go.mod h1:uzxf/HUh0tj43x1AyJROl3JT7SgsZ5m+icOv1csRhc0=
 github.com/alecthomas/participle v0.6.1-0.20200911005820-318127ca69ac/go.mod h1:HfdmEuwvr12HXQN44HPWXR0lHmVolVYe4dyL6lQ3duY=
 github.com/alecthomas/participle v0.7.1 h1:2bN7reTw//5f0cugJcTOnY/NYZcWQOaajW+BwZB5xWs=
 github.com/alecthomas/participle v0.7.1/go.mod h1:HfdmEuwvr12HXQN44HPWXR0lHmVolVYe4dyL6lQ3duY=
