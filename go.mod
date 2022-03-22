@@ -6,7 +6,7 @@ require (
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 	github.com/alecthomas/colour v0.1.0
 	github.com/alecthomas/hcl v0.2.1
-	github.com/alecthomas/kong v0.4.1
+	github.com/alecthomas/kong v0.5.0
 	github.com/alecthomas/participle v0.7.1
 	github.com/alecthomas/repr v0.0.0-20220113201626-b1b626ac65ae
 	github.com/antchfx/htmlquery v1.2.4

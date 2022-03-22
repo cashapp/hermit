@@ -184,6 +184,16 @@ func Main(config Config) {
 		kong.Description(help),
 		kong.BindTo(cli, (*cliCommon)(nil)),
 		kong.Bind(userConfig, config),
+		kong.AutoGroup(func(parent kong.Visitable, flag *kong.Flag) *kong.Group {
+			node, ok := parent.(*kong.Command)
+			if !ok {
+				return nil
+			}
+			return &kong.Group{
+				Key:   node.Name,
+				Title: "Command flags:",
+			}
+		}),
 		kong.Vars{
 			"version": config.Version,
 			"env":     envPath,
