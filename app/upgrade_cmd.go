@@ -16,7 +16,7 @@ type upgradeCmd struct {
 }
 
 func (g *upgradeCmd) Run(l *ui.UI, env *hermit.Env) error {
-	err := env.Sync(l, true)
+	err := env.Update(l, true)
 	if err != nil {
 		return errors.WithStack(err)
 	}

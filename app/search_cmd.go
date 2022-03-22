@@ -21,7 +21,7 @@ func (s *searchCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
 		err  error
 	)
 	if env != nil {
-		err = env.Sync(l, false)
+		err = env.Update(l, false)
 		if err != nil {
 			return errors.WithStack(err)
 		}

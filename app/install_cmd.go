@@ -32,7 +32,7 @@ func (i *installCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
 	pkgs := map[string]*manifest.Package{}
 	selectors := i.Packages
 
-	err = env.Sync(l, false)
+	err = env.Update(l, false)
 	if err != nil {
 		return errors.WithStack(err)
 	}

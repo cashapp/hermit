@@ -1060,7 +1060,7 @@ func (e *Env) AddSource(l *ui.UI, s sources.Source) error {
 		return errors.WithStack(err)
 	}
 	sources.Add(s)
-	return e.Sync(l, true)
+	return e.Update(l, true)
 }
 
 // EnvDir returns the directory where this environment is rooted
@@ -1252,17 +1252,31 @@ func (e *Env) linkApp(app string) error {
 	return nil
 }
 
-// Sync sources.
+// Update sources and auto-update channels.
 //
-// Will be synced at most every SyncFrequency unless "force" is true.
+// Will be updated at most every SyncFrequency unless "force" is true.
 //
 // A Sources set can only be synchronised once. Following calls will not have any effect.
-func (e *Env) Sync(l *ui.UI, force bool) error {
+func (e *Env) Update(l *ui.UI, force bool) error {
 	resolver, err := e.resolver(l)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	return errors.WithStack(resolver.Sync(l, force))
+	if err := resolver.Sync(l, force); err != nil {
+		return errors.WithStack(err)
+	}
+	pkgs, err := e.ListInstalled(l)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	for _, pkg := range pkgs {
+		if pkg.Reference.IsChannel() {
+			if err := e.state.UpgradeChannel(l.Task(pkg.String()), pkg); err != nil {
+				return errors.Wrap(err, pkg.String())
+			}
+		}
+	}
+	return nil
 }
 
 // Sources enabled in this environment.
