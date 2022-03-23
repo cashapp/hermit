@@ -1,0 +1,6 @@
+#!/bin/bash
+
+echo "Hello from runtimedep1. Version $RUNTIME_DEP_1_VERSION"
+
+echo "runtimedep1 calling runtimedep2:"
+"./bin/runtimedep2"

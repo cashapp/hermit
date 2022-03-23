@@ -1,0 +1,3 @@
+#!/bin/bash
+
+echo "Hello from runtimedep2. Version $RUNTIME_DEP_2_VERSION"

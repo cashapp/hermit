@@ -1,0 +1,9 @@
+#!/bin/bash
+
+echo "Hello from runtimedeproot."
+
+echo "runtimedeproot calling runtimedep1:"
+"./bin/runtimedep1"
+
+echo "runtimedeproot calling runtimedep2:"
+"./bin/runtimedep2"

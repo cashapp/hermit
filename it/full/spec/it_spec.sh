@@ -281,6 +281,39 @@ Describe "Hermit"
     End
   End
 
+  Describe "Runtime dependencies - Conflicting versions"
+    . bin/activate-hermit
+    It "Can install a package with conflicting runtime dependencies"
+
+      When call hermit install runtimedeproot-1.0.0
+      The status should be failure
+      The stderr should eq "fatal:hermit: conflicting binary \"runtimedep2\" in multiple runtime dependencies: runtimedep2-2.0.0 and runtimedep2-1.0.0"
+
+      # TODO: this is a bug, and we should be fixing it in a following PR
+      # The following tests should succeed instead:
+
+      # The status should be success
+      # The stderr should be blank
+
+      # The file ./bin/runtimedeproot should be exist
+      # The file ./bin/runtimedep1 should not be exist
+      # The file ./bin/runtimedep2 should not be exist
+
+      # When call ./bin/runtimedeproot
+      # The status should be success
+      # The stderr should be blank
+      # The stdout should eq "
+      #   Hello from runtimedeproot.
+      #   runtimedeproot calling runtimedep1:
+      #   Hello from runtimedep1. Version 1.0.0
+      #   runtimedep1 calling runtimedep2:
+      #   Hello from runtimedep2. Version 1.0.0
+      #   runtimedeproot calling runtimedep2:
+      #   Hello from runtimedep2. Version 2.0.0
+      # "
+    End
+  End
+
   Describe "Environments with symbolic links in the path"
     ln -s . ./symlinked
     cd ./symlinked

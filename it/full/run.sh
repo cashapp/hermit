@@ -39,6 +39,9 @@ setupEnv() {
     cd ../testbins
     tar cvzf testbin1.tar.gz testbin1
     tar cvzf testbin2.tar.gz testbin2
+    tar cvzf runtimedeproot.tar.gz runtimedeproot
+    tar cvzf runtimedep1.tar.gz runtimedep1
+    tar cvzf runtimedep2.tar.gz runtimedep2
     cd fake
     tar cvzf ../faketestbin2.tar.gz testbin2
   )
