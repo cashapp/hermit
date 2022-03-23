@@ -29,6 +29,7 @@ import (
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/ui"
 	"github.com/cashapp/hermit/util"
+	"github.com/otiai10/copy"
 )
 
 // Extract from "source" to package destination.
@@ -164,61 +165,11 @@ func isDirectory(path string) (bool, error) {
 }
 
 func installFromDirectory(source string, pkg *manifest.Package) error {
-	dest := pkg.Dest
-	return errors.WithStack(filepath.Walk(source, func(path string, info os.FileInfo, err error) error {
-		relative, err := filepath.Rel(source, path)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		isDir, err := isDirectory(path)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		target, err := makeDestPath(dest, relative, pkg.Strip)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		if target == "" {
-			return nil
-		}
-		if !isDir {
-			if err := copyFile(path, target); err != nil {
-				return errors.WithStack(err)
-			}
-		}
-		return nil
-	}))
-}
-
-func copyFile(from, to string) error {
-	err := ensureDirExists(to)
+	err := copy.Copy(source, pkg.Dest)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-
-	info, err := os.Stat(from)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	srcFile, err := os.Open(from)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	defer srcFile.Close() // nolint: gosec
-
-	destFile, err := os.OpenFile(to, os.O_WRONLY|os.O_CREATE, info.Mode())
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	defer destFile.Close() // nolint: gosec
-
-	_, err = io.Copy(destFile, srcFile)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	return errors.WithStack(destFile.Sync())
+	return nil
 }
 
 func installMacDMG(b *ui.Task, source string, pkg *manifest.Package) error {

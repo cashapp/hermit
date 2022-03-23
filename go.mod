@@ -19,6 +19,7 @@ require (
 	github.com/klauspost/compress v1.15.1
 	github.com/mattn/go-isatty v0.0.14
 	github.com/mitchellh/go-ps v1.0.0
+	github.com/otiai10/copy v1.7.0
 	github.com/posener/complete v1.2.3
 	github.com/qdm12/reprint v0.0.0-20200326205758-722754a53494
 	github.com/saracen/go7z v0.0.0-20191010121135-9c09b6bd7fda
