@@ -1271,8 +1271,13 @@ func (e *Env) Update(l *ui.UI, force bool) error {
 	}
 	for _, pkg := range pkgs {
 		if pkg.Reference.IsChannel() {
-			if err := e.state.UpgradeChannel(l.Task(pkg.String()), pkg); err != nil {
-				return errors.Wrap(err, pkg.String())
+			log := l.Task(pkg.String())
+			if force || time.Since(pkg.UpdatedAt) > pkg.UpdateInterval {
+				if err := e.state.UpgradeChannel(log, pkg); err != nil {
+					return errors.Wrap(err, pkg.String())
+				}
+			} else {
+				log.Debugf("Update skipped, updated within the last %s", pkg.UpdateInterval)
 			}
 		}
 	}
