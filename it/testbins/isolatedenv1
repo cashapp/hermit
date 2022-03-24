@@ -1,0 +1,6 @@
+#!/bin/bash
+
+THIS_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+
+echo "Calling gitsource from isolatedenv1"
+"$THIS_DIR/bin/gitbin"
