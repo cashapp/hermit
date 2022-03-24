@@ -12,7 +12,7 @@ type GlobalState struct {
 	Env envars.Envars `help:"Extra environment variables to apply to environments."`
 }
 
-type cliCommon interface {
+type cliInterface interface {
 	getCPUProfile() string
 	getMemProfile() string
 	getDebug() bool
@@ -22,8 +22,7 @@ type cliCommon interface {
 	getGlobalState() GlobalState
 }
 
-// CLI structure.
-type unactivated struct {
+type cliBase struct {
 	VersionFlag kong.VersionFlag `help:"Show version." name:"version"`
 	CPUProfile  string           `placeholder:"PATH" name:"cpu-profile" help:"Enable CPU profiling to PATH." hidden:""`
 	MemProfile  string           `placeholder:"PATH" name:"mem-profile" help:"Enable memory profiling to PATH." hidden:""`
@@ -46,29 +45,36 @@ type unactivated struct {
 	Search               searchCmd            `cmd:"" help:"Search for packages to install." group:"global"`
 	DumpDB               dumpDBCmd            `cmd:"" help:"Dump state database." hidden:""`
 	DumpUserConfigSchema dumpUserConfigSchema `cmd:"" help:"Dump user configuration schema." hidden:""`
-	Validate             validateCmd          `cmd:"" help:"Hermit validation." group:"global"`
-
 	kong.Plugins
 }
 
-func (u *unactivated) getCPUProfile() string       { return u.CPUProfile }
-func (u *unactivated) getMemProfile() string       { return u.MemProfile }
-func (u *unactivated) getTrace() bool              { return u.Trace }
-func (u *unactivated) getDebug() bool              { return u.Debug }
-func (u *unactivated) getQuiet() bool              { return u.Quiet }
-func (u *unactivated) getLevel() ui.Level          { return ui.AutoLevel(u.Level) }
-func (u *unactivated) getGlobalState() GlobalState { return u.GlobalState }
+var _ cliInterface = &cliBase{}
+
+func (u *cliBase) getCPUProfile() string       { return u.CPUProfile }
+func (u *cliBase) getMemProfile() string       { return u.MemProfile }
+func (u *cliBase) getTrace() bool              { return u.Trace }
+func (u *cliBase) getDebug() bool              { return u.Debug }
+func (u *cliBase) getQuiet() bool              { return u.Quiet }
+func (u *cliBase) getLevel() ui.Level          { return ui.AutoLevel(u.Level) }
+func (u *cliBase) getGlobalState() GlobalState { return u.GlobalState }
+
+// CLI structure.
+type unactivated struct {
+	cliBase
+	Validate unactivatedValidateCmd `cmd:"" help:"Hermit validation." group:"global"`
+}
 
 type activated struct {
-	unactivated
+	cliBase
 
-	Status    statusCmd    `cmd:"" help:"Show status of Hermit environment." group:"env"`
-	Install   installCmd   `cmd:"" help:"Install packages." group:"env"`
-	Uninstall uninstallCmd `cmd:"" help:"Uninstall packages." group:"env"`
-	Upgrade   upgradeCmd   `cmd:"" help:"Upgrade packages" group:"env"`
-	List      listCmd      `cmd:"" help:"List local packages." group:"env"`
-	Exec      execCmd      `cmd:"" help:"Directly execute a binary in a package." group:"env"`
-	Env       envCmd       `cmd:"" help:"Manage environment variables." group:"env"`
+	Status    statusCmd            `cmd:"" help:"Show status of Hermit environment." group:"env"`
+	Install   installCmd           `cmd:"" help:"Install packages." group:"env"`
+	Uninstall uninstallCmd         `cmd:"" help:"Uninstall packages." group:"env"`
+	Upgrade   upgradeCmd           `cmd:"" help:"Upgrade packages" group:"env"`
+	List      listCmd              `cmd:"" help:"List local packages." group:"env"`
+	Exec      execCmd              `cmd:"" help:"Directly execute a binary in a package." group:"env"`
+	Env       envCmd               `cmd:"" help:"Manage environment variables." group:"env"`
+	Validate  activatedValidateCmd `cmd:"" help:"Hermit validation." group:"global"`
 
 	Clean cleanCmd `cmd:"" help:"Clean hermit cache." group:"global"`
 	GC    gcCmd    `cmd:"" help:"Garbage collect unused Hermit packages and clean the download cache." group:"global"`

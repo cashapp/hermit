@@ -60,7 +60,7 @@ var (
 type validateScriptCmd struct {
 	Allow  []string `short:"a" enum:"none,relative,var-relative" help:"Enable optional features (${enum})." default:"none"`
 	Cmds   []string `short:"c" placeholder:"CMD" help:"Extra commands to allow."`
-	Script []string `arg:"" placeholder:"SCRIPT" type:"existingfile" help:"Bourne-compatible shell scripts to validate."`
+	Script []string `arg:"" placeholder:"SCRIPT" type:"existingfile" help:"Bourne-compatible shell scripts to validate." predictor:"file"`
 }
 
 func (v *validateScriptCmd) Help() string {
