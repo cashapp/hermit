@@ -141,7 +141,7 @@ func Main(config Config) {
 	}()
 
 	var (
-		cli cliCommon
+		cli cliInterface
 		env *hermit.Env
 		sta *state.State
 	)
@@ -150,15 +150,16 @@ func Main(config Config) {
 	if err != nil {
 		log.Fatalf("failed to open state: %s", err) // nolint: gocritic
 	}
+	common := cliBase{Plugins: config.KongPlugins}
 	if envPath != "" {
 		isActivated = true
-		cli = &activated{unactivated: unactivated{Plugins: config.KongPlugins}}
+		cli = &activated{cliBase: common}
 	} else {
 		envPath, err = os.Getwd()
 		if err != nil {
 			log.Fatalf("couldn't get working directory: %s", err)
 		}
-		cli = &unactivated{Plugins: config.KongPlugins}
+		cli = &unactivated{cliBase: common}
 	}
 
 	userConfig, err := LoadUserConfig()
@@ -182,7 +183,7 @@ func Main(config Config) {
 		kong.Resolvers(UserConfigResolver(userConfig)),
 		kong.UsageOnError(),
 		kong.Description(help),
-		kong.BindTo(cli, (*cliCommon)(nil)),
+		kong.BindTo(cli, (*cliInterface)(nil)),
 		kong.Bind(userConfig, config),
 		kong.AutoGroup(func(parent kong.Visitable, flag *kong.Flag) *kong.Group {
 			node, ok := parent.(*kong.Command)
@@ -239,6 +240,7 @@ func Main(config Config) {
 		kongplete.WithPredictor("installed-package", installedPredictor),
 		kongplete.WithPredictor("dir", complete.PredictDirs("*")),
 		kongplete.WithPredictor("hclfile", complete.PredictFiles("*.hcl")),
+		kongplete.WithPredictor("file", complete.PredictFiles("*")),
 	)
 
 	ctx, err := parser.Parse(os.Args[1:])
@@ -270,7 +272,7 @@ func Main(config Config) {
 	}
 }
 
-func configureLogging(cli cliCommon, cmd string, p *ui.UI) {
+func configureLogging(cli cliInterface, cmd string, p *ui.UI) {
 	// This is set to avoid logging in environments where quiet flag is not used
 	// in the "hermit" script. This is fragile, and should be removed when we know that all the
 	// environments are using a script with executions done with --quiet
