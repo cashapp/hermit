@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/alecthomas/colour"
 
@@ -77,9 +76,6 @@ func (i *infoCmd) Run(l *ui.UI, env *hermit.Env, sta *state.State) error {
 		colour.Printf("^B^2Description:^R %s\n", pkg.Description)
 		colour.Printf("^B^2Homepage:^R %s\n", pkg.Homepage)
 		colour.Printf("^B^2State:^R %s\n", pkg.State)
-		if !pkg.LastUsed.IsZero() {
-			colour.Printf("^B^2Last used:^R %s ago\n", time.Since(pkg.LastUsed))
-		}
 		colour.Printf("^B^2Source:^R %s\n", pkg.Source)
 		colour.Printf("^B^2Root:^R %s\n", pkg.Root)
 		if len(pkg.Requires) != 0 {

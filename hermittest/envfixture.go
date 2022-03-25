@@ -80,7 +80,9 @@ func (f *EnvTestFixture) RootDir() string {
 
 // DAO returns the DAO using the underlying hermit database
 func (f *EnvTestFixture) DAO() *dao.DAO {
-	return dao.Open(f.State.Root())
+	d, err := dao.Open(f.State.Root())
+	require.NoError(f.t, err)
+	return d
 }
 
 // BoltDB returns the underlying DB

@@ -370,11 +370,6 @@ func (e *Env) ValidateManifests(l *ui.UI) (manifest.ManifestErrors, error) {
 	return resolver.Errors(), nil
 }
 
-// GC can be used to clean up unused packages, and clear the download cache.
-func (e *Env) GC(l *ui.UI, age time.Duration) error {
-	return e.state.GC(l, age, e.Resolve)
-}
-
 // LinkedBinaries lists just the binaries installed in the environment.
 func (e *Env) LinkedBinaries(pkg *manifest.Package) (binaries []string, err error) {
 	files, err := ioutil.ReadDir(e.binDir)
@@ -419,11 +414,6 @@ func (e *Env) uninstall(l *ui.Task, pkg *manifest.Package) (*shell.Changes, erro
 
 	changes := shell.NewChanges(envars.Parse(os.Environ()))
 	changes.Remove = ops
-
-	err = e.state.RecordUninstall(pkg, e.binDir)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
 
 	return changes, nil
 }
@@ -625,20 +615,27 @@ func (e *Env) ensureRuntimeDepsPresent(l *ui.UI, p *manifest.Package) ([]*manife
 		if err := e.state.CacheAndUnpack(l.Task(p.Reference.String()), pkg); err != nil {
 			return nil, errors.WithStack(err)
 		}
-		// Update usage for runtime dependencies so they wont get GC'd
-		if err := e.state.WritePackageState(pkg, e.binDir); err != nil {
-			return nil, errors.WithStack(err)
-		}
 		result = append(result, pkg)
 	}
 	return result, nil
+}
+
+// Update timestamps for runtime dependencies.
+func (e *Env) writePackageState(pkgs ...*manifest.Package) error {
+	for _, pkg := range pkgs {
+		if err := e.state.WritePackageState(pkg); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+	return nil
 }
 
 // install a package
 func (e *Env) install(l *ui.UI, p *manifest.Package) (*shell.Changes, error) {
 	task := l.Task(p.Reference.String())
 
-	if _, err := e.ensureRuntimeDepsPresent(l, p); err != nil {
+	pkgs, err := e.ensureRuntimeDepsPresent(l, p)
+	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	p.UpdatedAt = time.Now()
@@ -646,7 +643,7 @@ func (e *Env) install(l *ui.UI, p *manifest.Package) (*shell.Changes, error) {
 	log.Infof("Installing %s", p)
 	log.Debugf("From %s", p.Source)
 	log.Debugf("To %s", p.Dest)
-	err := e.state.CacheAndUnpack(task, p)
+	err = e.state.CacheAndUnpack(task, p)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -654,15 +651,13 @@ func (e *Env) install(l *ui.UI, p *manifest.Package) (*shell.Changes, error) {
 		if err = e.linkPackage(task, p); err != nil {
 			return nil, errors.WithStack(err)
 		}
-		if err = e.state.WritePackageState(p, e.binDir); err != nil {
-			return nil, errors.WithStack(err)
-		}
+		pkgs = append(pkgs, p)
 	}
 	ops := e.envarsForPackages(p)
 	changes := shell.NewChanges(envars.Parse(os.Environ()))
 	changes.Add = ops
 
-	return changes, nil
+	return changes, errors.WithStack(e.writePackageState(pkgs...))
 }
 
 // Upgrade package.
@@ -758,10 +753,6 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 	for _, bin := range binaries {
 		if filepath.Base(bin) != filepath.Base(binary) {
 			continue
-		}
-		err = e.state.WritePackageState(pkg, e.binDir)
-		if err != nil {
-			return errors.WithStack(err)
 		}
 		b.Tracef("exec %s", shellquote.Join(append([]string{bin}, args...)...))
 		l.Clear()
@@ -889,7 +880,7 @@ func (e *Env) ResolveVirtual(l *ui.UI, name string) ([]*manifest.Package, error)
 // UpdateUsage updates the package usage time stamps in the underlying database.
 // if the package was not previously present, it is inserted to the DB.
 func (e *Env) UpdateUsage(pkg *manifest.Package) error {
-	err := e.state.WritePackageState(pkg, e.binDir)
+	err := e.state.WritePackageState(pkg)
 	if err != nil {
 		return errors.WithStack(err)
 	}
