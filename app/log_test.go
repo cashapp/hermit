@@ -60,20 +60,6 @@ func TestLogs(t *testing.T) {
 			debug:tpkg-0.10.0:link: ln -s "hermit" "{{.Bin}}/.tpkg-0.10.0.pkg"
 			debug:tpkg-0.10.0:link: ln -s ".tpkg-0.10.0.pkg" "{{.Bin}}/darwin_exe"`,
 	}, {
-		name: "gc",
-		fn: func(l *ui.UI, f *hermittest.EnvTestFixture) {
-			cmd := gcCmd{}
-			err := cmd.Run(l, f.Env)
-			require.NoError(t, err)
-		},
-		tmpl: `
-			debug: rm -rf "{{.State}}/cache"
-			info:tpkg-0.9.0: Clearing tpkg-0.9.0
-			debug:tpkg-0.9.0:remove: chmod -R +w {{.State}}/binaries/tpkg-0.9.0
-			debug:tpkg-0.9.0:remove: rm -rf {{.State}}/binaries/tpkg-0.9.0
-			debug:tpkg-0.9.0:remove: chmod -R +w {{.State}}/pkg/tpkg-0.9.0
-			debug:tpkg-0.9.0:remove: rm -rf {{.State}}/pkg/tpkg-0.9.0`,
-	}, {
 		name: "uninstall",
 		fn: func(l *ui.UI, f *hermittest.EnvTestFixture) {
 			cmd := uninstallCmd{Packages: []manifest.GlobSelector{manifest.MustParseGlobSelector("tpkg")}}

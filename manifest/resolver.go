@@ -96,7 +96,6 @@ type Package struct {
 	// Filled in by Env.
 	Linked    bool `json:"-"` // Linked into environment.
 	State     PackageState
-	LastUsed  time.Time
 	ETag      string
 	UpdatedAt time.Time
 }

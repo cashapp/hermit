@@ -2,7 +2,6 @@ package state
 
 import (
 	"context"
-	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -74,7 +73,10 @@ func Open(stateDir string, config Config, cache *cache.Cache) (*State, error) {
 	cacheDir := filepath.Join(stateDir, "cache")
 	sourcesDir := filepath.Join(stateDir, "sources")
 	binaryDir := filepath.Join(stateDir, "binaries")
-	dao := dao.Open(stateDir)
+	dao, err := dao.Open(stateDir)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
 	if config.Sources == nil {
 		config.Sources = DefaultSources
 	}
@@ -151,11 +153,6 @@ func (s *State) Search(l *ui.UI, glob string) (manifest.Packages, error) {
 	return pkgs, nil
 }
 
-// DumpDB of State to w.
-func (s *State) DumpDB(w io.Writer) error {
-	return s.dao.Dump(w)
-}
-
 // Config returns the configuration stored in the global state.
 func (s *State) Config() Config {
 	return s.config
@@ -226,23 +223,21 @@ func (s *State) ReadPackageState(pkg *manifest.Package) {
 		dbInfo = &dao.Package{}
 	}
 
-	pkg.LastUsed = dbInfo.UsedAt
 	pkg.ETag = dbInfo.Etag
 	pkg.UpdatedAt = dbInfo.UpdateCheckedAt
 }
 
 // WritePackageState updates the fields and usage time stamp of the given package
-func (s *State) WritePackageState(p *manifest.Package, binDir string) error {
+func (s *State) WritePackageState(p *manifest.Package) error {
 	var updatedAt = time.Time{}
 	if p.UpdateInterval > 0 {
 		updatedAt = p.UpdatedAt
 	}
 	pkg := &dao.Package{
-		UsedAt:          time.Now(),
 		Etag:            p.ETag,
 		UpdateCheckedAt: updatedAt,
 	}
-	return s.dao.UpdatePackageWithUsage(binDir, p.Reference.String(), pkg)
+	return s.dao.UpdatePackage(p.Reference.String(), pkg)
 }
 
 func (s *State) removeRecursive(b *ui.Task, dest string) error {
@@ -377,15 +372,6 @@ func (s *State) areBinariesLinked(p *manifest.Package) bool {
 	return err == nil
 }
 
-// RecordUninstall updates the package usage records of a package being uninstalled
-func (s *State) RecordUninstall(pkg *manifest.Package, binDir string) error {
-	err := s.dao.PackageRemovedAt(pkg.Reference.String(), binDir)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	return nil
-}
-
 // CleanPackages removes all extracted packages
 func (s *State) CleanPackages(b *ui.UI) error {
 	// TODO: Uninstall packages from their configured root so that eg. external packages can be uninstalled.
@@ -470,76 +456,10 @@ func (s *State) UpgradeChannel(b *ui.Task, pkg *manifest.Package) error {
 
 	pkg.UpdatedAt = time.Now()
 	dpkg := &dao.Package{
-		UsedAt:          time.Now(),
 		Etag:            etag,
 		UpdateCheckedAt: time.Now(),
 	}
 	return errors.WithStack(s.dao.UpdatePackage(name, dpkg))
-}
-
-// GC clears packages that have not been used for the given duration and are not referred to in any environment
-func (s *State) GC(p *ui.UI, age time.Duration, pkgResolver func(b *ui.UI, selector manifest.Selector, syncOnMissing bool) (*manifest.Package, error)) error {
-	lock, err := s.acquireLock(p)
-	if err != nil {
-		return err
-	}
-	defer lock.Release(p)
-
-	err = s.CleanCache(p)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	unused, err := s.dao.GetUnusedSince(time.Now().UTC().Add(-age))
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	for _, name := range unused {
-		task := p.Task(name)
-		binDirs, err := s.dao.GetKnownUsages(name)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		inUse := false
-		for _, binDir := range binDirs {
-			exists, err := doesPackageExistAt(name, binDir)
-			if err != nil {
-				return errors.WithStack(err)
-			}
-			if exists {
-				inUse = true
-				continue
-			}
-			err = s.dao.PackageRemovedAt(name, binDir)
-			if err != nil {
-				return errors.WithStack(err)
-			}
-		}
-		if inUse {
-			continue
-		}
-
-		task.Infof("Clearing %s", name)
-		err = s.dao.DeletePackage(name)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		pkg, err := pkgResolver(p, manifest.ExactSelector(manifest.ParseReference(name)), false)
-		// This can occur if a package was at some point installed and tracked
-		// by the DB but now no longer exists in the manifests.
-		if errors.Is(err, manifest.ErrUnknownPackage) {
-			// TODO: Save paths to on-disk resources to the DB and remove them here as well
-			continue
-		}
-		if err != nil {
-			return errors.WithStack(err)
-		}
-
-		if err = s.removePackage(task, pkg); err != nil {
-			return errors.WithStack(err)
-		}
-	}
-	return nil
 }
 
 func (s *State) removePackage(task *ui.Task, pkg *manifest.Package) error {
@@ -584,15 +504,4 @@ func (s *State) generateMirrors(url string) (mirrors []string) {
 		mirrors = append(mirrors, mirror)
 	}
 	return
-}
-
-func doesPackageExistAt(name string, binDir string) (bool, error) {
-	file := filepath.Join(binDir, "."+name+".pkg")
-	_, err := os.Stat(file)
-	if err != nil && !os.IsNotExist(err) {
-		return false, errors.WithStack(err)
-	} else if err == nil {
-		return true, nil
-	}
-	return false, nil
 }

@@ -10,12 +10,10 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	bolt "go.etcd.io/bbolt"
 
 	"github.com/cashapp/hermit"
 	"github.com/cashapp/hermit/envars"
 	"github.com/cashapp/hermit/hermittest"
-	"github.com/cashapp/hermit/internal/dao"
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/manifest/manifesttest"
 )
@@ -153,90 +151,6 @@ func TestEnsureUpToDate(t *testing.T) {
 	dbPkg, err = dao.GetPackage(pkg.Reference.String())
 	require.NoError(t, err)
 	require.Equal(t, etag, dbPkg.Etag)
-}
-
-// Tests that Garbage collection removes expired packages only if they are no longer referred from
-// any environment
-func TestGC(t *testing.T) {
-	// we need manifests as GC gets the package details from them
-	fixture := hermittest.NewEnvTestFixture(t, nil).WithManifests(map[string]string{
-		"test.hcl": `
-			description = ""
-			binaries = ["bin"]
-			version "1" {
-			  source = "www.example.com"
-			}
-		`,
-		"test2.hcl": `
-			description = ""
-			binaries = ["bin"]
-			version "1" {
-			  source = "www.example.com"
-			}
-		`,
-	})
-	defer fixture.Clean()
-
-	pkg1 := manifesttest.NewPkgBuilder(filepath.Join(fixture.RootDir(), "test")).
-		WithSource("archive/testdata/archive.tar.gz").
-		Result()
-	_, err := fixture.Env.Install(fixture.P, pkg1)
-	require.NoError(t, err)
-
-	anotherEnv := fixture.NewEnv()
-	pkg2 := manifesttest.NewPkgBuilder(filepath.Join(fixture.RootDir(), "test")).
-		WithSource("archive/testdata/archive.tar.gz").
-		WithName("test2").
-		WithVersion("1").
-		Result()
-	_, err = anotherEnv.Install(fixture.P, pkg2)
-	require.NoError(t, err)
-
-	d := fixture.DAO()
-	// insert a package for which manifest does not exist
-	err = d.UpdatePackageWithUsage("/foo/bin", "invalid-pkg-1", &dao.Package{})
-	require.NoError(t, err)
-
-	db := fixture.BoltDB()
-	err = db.Update(func(tx *bolt.Tx) error {
-		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
-			return b.Put([]byte("usedAt"), []byte("2000-01-01 01:01:01"))
-		})
-	})
-	db.Close()
-
-	require.NoError(t, err)
-	err = os.RemoveAll(anotherEnv.EnvDir())
-	require.NoError(t, err)
-
-	err = fixture.Env.GC(fixture.P, time.Hour)
-	require.NoError(t, err)
-
-	usages1, err := d.GetKnownUsages(pkg1.Reference.String())
-	require.NoError(t, err)
-	usages2, err := d.GetKnownUsages(pkg2.Reference.String())
-	require.NoError(t, err)
-
-	require.Equal(t, 1, len(usages1))
-	require.Equal(t, 0, len(usages2))
-
-	// Test that cleared packages are also removed from the DB
-	p, err := d.GetPackage(pkg1.Reference.String())
-	require.NoError(t, err)
-	require.NotNil(t, p)
-	p, _ = d.GetPackage(pkg2.Reference.String())
-	require.Nil(t, p)
-
-	// Test that packages for which no manifest was found are also removed from the DB
-	p, _ = d.GetPackage("invalid-pkg-1")
-	require.Nil(t, p)
-
-	// Test that the package in use was not removed
-	_, err = os.Stat(filepath.Join(fixture.State.PkgDir(), pkg1.Reference.String()))
-	require.NoError(t, err)
-	// Test that the package not in use was removed
-	_, err = os.Stat(filepath.Join(fixture.State.PkgDir(), pkg2.Reference.String()))
-	require.Equal(t, true, os.IsNotExist(err))
 }
 
 // Test that files referred in the Files map are copied correctly

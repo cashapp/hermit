@@ -43,7 +43,6 @@ type cliBase struct {
 	Exec                 execCmd              `cmd:"" help:"Directly execute a binary in a package." hidden:""`
 	Update               updateCmd            `cmd:"" aliases:"sync" help:"Update manifest sources." group:"global"`
 	Search               searchCmd            `cmd:"" help:"Search for packages to install." group:"global"`
-	DumpDB               dumpDBCmd            `cmd:"" help:"Dump state database." hidden:""`
 	DumpUserConfigSchema dumpUserConfigSchema `cmd:"" help:"Dump user configuration schema." hidden:""`
 	kong.Plugins
 }
@@ -77,7 +76,7 @@ type activated struct {
 	Validate  activatedValidateCmd `cmd:"" help:"Hermit validation." group:"global"`
 
 	Clean cleanCmd `cmd:"" help:"Clean hermit cache." group:"global"`
-	GC    gcCmd    `cmd:"" help:"Garbage collect unused Hermit packages and clean the download cache." group:"global"`
+	GC    gcCmd    `cmd:"" hidden:"" group:"global"`
 	Test  testCmd  `cmd:"" help:"Run package sanity tests." group:"global"`
 
 	// TODO: Remove this after we can assume that all active hermit sessions have been recreated with the latest scripts

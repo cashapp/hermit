@@ -12,5 +12,6 @@ type gcCmd struct {
 }
 
 func (g *gcCmd) Run(l *ui.UI, env *hermit.Env) error {
-	return env.GC(l, g.Age)
+	l.Warnf("gc command is DEPRECATED")
+	return nil
 }
