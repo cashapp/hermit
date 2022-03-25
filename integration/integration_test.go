@@ -265,6 +265,16 @@ func TestIntegration(t *testing.T) {
 			assert test "$(testbin1.sh)" = "FOO=runtimefoo"
 			assert test "$(testbin2.sh)" = "BAR=hermitbar"
 			`},
+		{name: "SystemEnvOverridesAlreadyAcitvatedHermitEnv",
+			preparations: prep{fixture("testenv4"), activate(".")},
+			script: `
+			hermit install testbin1
+			hermit install testbin2
+			export FOO=systemfoo
+			assert test "$(testbin1.sh)" = "FOO=systemfoo"
+			export BAR=systembar
+			assert test "$(testbin2.sh)" = "BAR=systembar"
+			`},
 	}
 
 	checkForShells(t)
