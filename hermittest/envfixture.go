@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	bolt "go.etcd.io/bbolt"
 
 	"github.com/cashapp/hermit"
 	"github.com/cashapp/hermit/cache"
@@ -83,13 +82,6 @@ func (f *EnvTestFixture) DAO() *dao.DAO {
 	d, err := dao.Open(f.State.Root())
 	require.NoError(f.t, err)
 	return d
-}
-
-// BoltDB returns the underlying DB
-func (f *EnvTestFixture) BoltDB() *bolt.DB {
-	db, err := bolt.Open(filepath.Join(f.State.Root(), "hermit.bolt.db"), 0600, nil)
-	require.NoError(f.t, err)
-	return db
 }
 
 // Clean removes all files and directories from this environment
