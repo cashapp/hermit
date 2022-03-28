@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"time"
 
+	bolt "go.etcd.io/bbolt"
+
 	"github.com/cashapp/hermit/errors"
 )
 
@@ -38,7 +40,7 @@ func (d *DAO) Dump(w io.Writer) error {
 func (d *DAO) GetPackage(pkgRef string) (*Package, error) {
 	r, err := os.Open(d.metadataPath(pkgRef))
 	if os.IsNotExist(err) {
-		return &Package{}, nil
+		return d.getPackageFromBBolt(pkgRef)
 	}
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -73,4 +75,83 @@ func (d *DAO) DeletePackage(pkgRef string) error {
 
 func (d *DAO) metadataPath(pkgRef string) string {
 	return filepath.Join(d.stateDir, pkgRef+".etag")
+}
+
+// TODO: Remove this BBolt code.
+
+func (d *DAO) db(readonly bool) (*bolt.DB, error) {
+	path := filepath.Join(d.stateDir, "hermit.bolt.db")
+	db, err := bolt.Open(path, 0600, &bolt.Options{
+		Timeout:  5 * time.Second,
+		ReadOnly: readonly,
+	})
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to open Hermit state database: %s", path)
+	}
+	return db, nil
+}
+
+func (d *DAO) view(fn func(tx *bolt.Tx) error) error {
+	db, err := d.db(true)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer db.Close()
+
+	return errors.WithStack(db.View(fn))
+}
+
+func (d *DAO) getPackageFromBBolt(name string) (*Package, error) {
+	var pkg *Package
+	err := d.view(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(name))
+		pkg = packageAt(b)
+		return nil
+	})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return pkg, nil
+}
+
+const (
+	updateCheckedAtKey = "updateCheckedAt"
+	eTagKey            = "etag"
+	timeformat         = time.RFC3339
+)
+
+func stringAt(bucket *bolt.Bucket, name string) string {
+	if bucket == nil {
+		return ""
+	}
+	bytes := bucket.Get([]byte(name))
+	if bytes == nil {
+		return ""
+	}
+	return string(bytes)
+}
+
+func timeAt(bucket *bolt.Bucket, name string) time.Time {
+	if bucket == nil {
+		return time.Time{}
+	}
+	bytes := bucket.Get([]byte(name))
+	if bytes == nil {
+		return time.Time{}
+	}
+	t, err := time.Parse(timeformat, string(bytes))
+	if err != nil {
+		return time.Time{}
+	}
+	return t
+}
+
+func packageAt(b *bolt.Bucket) *Package {
+	if b == nil {
+		return nil
+	}
+	return &Package{
+		Etag:            stringAt(b, eTagKey),
+		UpdateCheckedAt: timeAt(b, updateCheckedAtKey),
+	}
 }
