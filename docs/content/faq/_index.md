@@ -10,6 +10,32 @@ weight = 200
 Hermit currently works with ZSH and BASH, but we would welcome 
 [contributions](https://github.com/cashapp/hermit/pulls) to support other shells.
 
+### powerlevel10k support
+If you would like powerlevel10k to support hermit, all that is needed is to add the following to your `~/.p10k.zsh`
+
+```zsh
+function prompt_hermit() {
+  if [[ -n $HERMIT_ENV ]]; then
+    p10k segment -t "${${HERMIT_ENV:t}//\%/%%} 🐚"  -f blue
+  fi
+}
+```
+Then you can add the hermit segment to any location. For example:
+
+```zsh
+  typeset -g POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(
+    # =========================[ Line #1 ]=========================
+    os_icon                 # os identifier
+    dir                     # current directory
+    vcs                     # git status
+    # =========================[ Line #2 ]=========================
+    newline                 # \n
+    hermit
+    prompt_char             # prompt symbol
+  )
+```
+
+
 ## Does Hermit Manage Libaries?
 
 No, Hermit is deliberately not in the business of installing libraries. Hermit
