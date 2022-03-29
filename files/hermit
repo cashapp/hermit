@@ -2,13 +2,15 @@
 
 set -eo pipefail
 
+export HERMIT_USER_HOME=~
+
 if [ -z "${HERMIT_STATE_DIR}" ]; then
   case "$(uname -s)" in
   Darwin)
-    export HERMIT_STATE_DIR="${HOME}/Library/Caches/hermit"
+    export HERMIT_STATE_DIR="${HERMIT_USER_HOME}/Library/Caches/hermit"
     ;;
   Linux)
-    export HERMIT_STATE_DIR="${XDG_CACHE_HOME:-${HOME}/.cache}/hermit"
+    export HERMIT_STATE_DIR="${XDG_CACHE_HOME:-${HERMIT_USER_HOME}/.cache}/hermit"
     ;;
   esac
 fi
