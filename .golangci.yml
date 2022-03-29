@@ -69,6 +69,7 @@ linters-settings:
   forbidigo:
     forbid:
       - '^fmt.Errorf'
+      - '^os.User.*Dir'
 
 
 issues:

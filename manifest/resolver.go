@@ -18,6 +18,7 @@ import (
 
 	"github.com/cashapp/hermit/envars"
 	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/internal/system"
 	"github.com/cashapp/hermit/platform"
 	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/ui"
@@ -488,7 +489,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	// If "ignoreMissing" is false, any referenced variables that are unknown will result in an error.
 	//
 	// TODO: Factor this out (there's a lot of captured state though).
-	home, err := os.UserHomeDir()
+	home, err := system.UserHomeDir()
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

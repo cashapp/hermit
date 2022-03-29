@@ -24,6 +24,7 @@ import (
 	"github.com/cashapp/hermit/cache"
 	"github.com/cashapp/hermit/envars"
 	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/internal/system"
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/platform"
 	"github.com/cashapp/hermit/shell"
@@ -65,10 +66,9 @@ var (
 		if explicit != "" {
 			return explicit
 		}
-
-		cache, err := os.UserCacheDir()
+		cache, err := system.UserCacheDir()
 		if err != nil {
-			panic(err)
+			panic(fmt.Sprintf("could not find user cache dir: %s", err))
 		}
 		return filepath.Join(cache, "hermit")
 	}()
