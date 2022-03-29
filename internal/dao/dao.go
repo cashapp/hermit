@@ -13,7 +13,8 @@ import (
 
 // DAO abstracts away the database access
 type DAO struct {
-	stateDir string
+	stateDir    string
+	metadataDir string
 }
 
 // Package is the package information stored in the DB
@@ -24,11 +25,11 @@ type Package struct {
 
 // Open returns a new DAO at the given state directory
 func Open(stateDir string) (*DAO, error) {
-	stateDir = filepath.Join(stateDir, "metadata")
-	if err := os.Mkdir(stateDir, 0700); err != nil && !os.IsExist(err) {
+	metadataDir := filepath.Join(stateDir, "metadata")
+	if err := os.MkdirAll(metadataDir, 0700); err != nil && !os.IsExist(err) {
 		return nil, errors.WithStack(err)
 	}
-	return &DAO{stateDir: stateDir}, nil
+	return &DAO{stateDir: stateDir, metadataDir: metadataDir}, nil
 }
 
 // Dump content of database to w.
@@ -74,7 +75,7 @@ func (d *DAO) DeletePackage(pkgRef string) error {
 }
 
 func (d *DAO) metadataPath(pkgRef string) string {
-	return filepath.Join(d.stateDir, pkgRef+".etag")
+	return filepath.Join(d.metadataDir, pkgRef+".etag")
 }
 
 // TODO: Remove this BBolt code.
