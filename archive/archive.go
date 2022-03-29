@@ -25,11 +25,13 @@ import (
 	"github.com/xi2/xz"
 	"howett.net/plist"
 
+	"github.com/otiai10/copy"
+
 	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/internal/system"
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/ui"
 	"github.com/cashapp/hermit/util"
-	"github.com/otiai10/copy"
 )
 
 // Extract from "source" to package destination.
@@ -179,7 +181,7 @@ func installMacDMG(b *ui.Task, source string, pkg *manifest.Package) error {
 		return errors.WithStack(err)
 	}
 	defer os.RemoveAll(dest)
-	home, err := os.UserHomeDir()
+	home, err := system.UserHomeDir()
 	if err != nil {
 		return errors.WithStack(err)
 	}

@@ -2,10 +2,10 @@ package shell
 
 import (
 	"io"
-	"os"
 	"path/filepath"
 
 	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/internal/system"
 )
 
 var bashShellHooks = `
@@ -35,7 +35,7 @@ func (sh *Bash) ActivationScript(w io.Writer, config ActivationConfig) error { /
 }
 
 func (sh *Bash) ActivationHooksInstallation() (path, script string, err error) { // nolint: golint
-	home, err := os.UserHomeDir()
+	home, err := system.UserHomeDir()
 	if err != nil {
 		return "", "", errors.WithStack(err)
 	}
