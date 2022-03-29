@@ -12,11 +12,13 @@ always) Git repositories.
 ## Keeping up to Date
 
 Hermit retrieves package manifests from various locations, including Git
-repositories. It will periodically sync these repositories to your system to
-ensure you have the most up to date manifests, but you may also force this by running:
+repositories. It will periodically sync these repositories to your
+system to ensure you have the most up to date manifests. Similarly,
+Hermit will periodically update itself and packages installed by channel.
+You can force this by running:
 
 ```text
-project🐚~/project$ hermit sync
+project🐚~/project$ hermit update
 ```
 
 ## Searching for Packages
