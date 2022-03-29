@@ -51,6 +51,7 @@ var (
 		"c419082d4cf1e2e9ac33382089c64b532c88d2399bae8b07c414b1d205bea74e",
 		"d575eda7d5d988f6f3c233ceaa42fae61f819d863145aec7a58f4f1519db31ad",
 		"ec14f88a38560d4524a8679f36fdfb2fb46ccd13bc399c3cddf3ca9f441952ec",
+		"4a4353c2147bb92bc2407a4b94817a90048c39d5f3cb08de807e7860517444c0",
 	}
 
 	//go:embed files
@@ -492,7 +493,7 @@ func (e *Env) Test(l *ui.UI, pkg *manifest.Package) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	cmd.Env = e.allEnvarsForPackages(true, deps, pkg)
+	cmd.Env = e.envarsFromOps(true, e.allEnvarOpsForPackages(deps, pkg))
 	err = cmd.Run()
 	if err != nil {
 		return errors.Wrap(err, out.String())
@@ -556,21 +557,6 @@ func (e *Env) Install(l *ui.UI, pkg *manifest.Package) (*shell.Changes, error) {
 // Aggregate and collect the package names and binaries of all runtime dependencies to avoid collisions.
 func (e *Env) resolveRuntimeDependencies(l *ui.UI, p *manifest.Package, aggregate map[string]*manifest.Package, bins map[string]*manifest.Package) error {
 	var depPkgs []*manifest.Package
-	// If the package contains a Hermit env, collect its dependencies.
-	pkgEnv, err := OpenEnv(p.Root, e.state, e.packageSource, nil, e.httpClient, e.scriptSums)
-	if err == nil {
-		if err = pkgEnv.Verify(); err != nil {
-			if !errors.Is(err, os.ErrNotExist) {
-				return errors.WithStack(err)
-			}
-		} else {
-			envPkgs, err := pkgEnv.ListInstalled(l)
-			if err != nil {
-				return errors.Wrap(err, "could not list installed packages ")
-			}
-			depPkgs = append(depPkgs, envPkgs...)
-		}
-	}
 	// Explicitly specified runtime-dependencies in the package.
 	for _, ref := range p.RuntimeDeps {
 		previous := aggregate[ref.Name]
@@ -745,7 +731,15 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	env := e.allEnvarsForPackages(true, runtimeDeps, installed...)
+	ops := e.allEnvarOpsForPackages(runtimeDeps, installed...)
+	packageHermitBin, err := e.getPackageRuntimeEnvops(pkg)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	if packageHermitBin != nil {
+		ops = append(ops, packageHermitBin)
+	}
+	env := e.envarsFromOps(true, ops)
 
 	if err != nil {
 		return errors.WithStack(err)
@@ -762,6 +756,21 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 		return errors.Wrapf(err, "%s: failed to execute %q", pkg, bin)
 	}
 	return errors.Errorf("%s: could not find binary %q", pkg, binary)
+}
+
+func (e *Env) getPackageRuntimeEnvops(pkg *manifest.Package) (envars.Op, error) {
+	// If the package contains a Hermit env, add that to the PATH for runtime dependencies
+	pkgEnv, err := OpenEnv(pkg.Root, e.state, e.packageSource, nil, e.httpClient, e.scriptSums)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if err = pkgEnv.Verify(); err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return nil, errors.WithStack(err)
+		}
+		return nil, nil
+	}
+	return &envars.Prepend{Name: "PATH", Value: pkgEnv.binDir}, nil
 }
 
 // Resolve package reference.
@@ -935,7 +944,8 @@ func (e *Env) Envars(l *ui.UI, inherit bool) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return e.allEnvarsForPackages(inherit, nil, pkgs...), nil
+	ops := e.allEnvarOpsForPackages(nil, pkgs...)
+	return e.envarsFromOps(inherit, ops), nil
 }
 
 // EnvOps returns the envar mutation operations for this environment.
@@ -1181,15 +1191,21 @@ func (e *Env) pkgLink(pkg *manifest.Package) string {
 // Returns combined system + Hermit + package environment variables, fully expanded.
 //
 // If "inherit" is true, system envars will be included.
-func (e *Env) allEnvarsForPackages(inherit bool, runtimeDeps []*manifest.Package, pkgs ...*manifest.Package) []string {
+func (e *Env) allEnvarOpsForPackages(runtimeDeps []*manifest.Package, pkgs ...*manifest.Package) envars.Ops {
 	var ops envars.Ops
-	system := envars.Parse(os.Environ())
 	ops = append(ops, e.envarsForPackages(pkgs...)...)
 	ops = append(ops, e.localEnvarOps()...)
 	ops = append(ops, e.hermitPathEnvar())
 	ops = append(ops, e.hermitRuntimeDepOps(runtimeDeps)...)
 	ops = append(ops, e.hermitEnvarOps()...)
 	ops = append(ops, e.ephemeralEnvars...)
+	return ops
+}
+
+// Converts given envars.Ops into actual environment variables
+// If "inherit" is true, system envars will be included.
+func (e *Env) envarsFromOps(inherit bool, ops envars.Ops) []string {
+	system := envars.Parse(os.Environ())
 	transform := system.Apply(e.Root(), ops)
 	if inherit {
 		return transform.Combined().System()

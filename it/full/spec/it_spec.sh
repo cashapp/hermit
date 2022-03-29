@@ -292,4 +292,53 @@ Describe "Hermit"
       The stderr should be blank
     End
   End
+
+  Describe "Isolated Runtime dependencies"
+    cd ../isolatedenv1
+    hermit init .
+    source ./bin/activate-hermit
+    hermit install gitsource@1
+    cp ../../testbins/isolatedenv1 .
+
+    It "can use gitsource@1 from isolatedenv1"
+      When call ./bin/gitbin
+      The status should be success
+      The stdout should include "1.0.0"
+      The stderr should be blank
+    End
+
+    cd ../isolatedenv2
+    hermit init .
+    source ./bin/activate-hermit
+    hermit install gitsource@head
+    cp ../../testbins/isolatedenv2 .
+
+    It "can use gitsource@head from isolatedenv2"
+      When call ./bin/gitbin
+      The status should be success
+      The stdout should include "2.0.0"
+      The stderr should be blank
+    End
+
+    cd ../testenv
+    source ./bin/activate-hermit
+    hermit install isolatedenv1
+    hermit install isolatedenv2
+
+    It "can call isolatedenv1 binary from testenv"
+      When call ./bin/isolatedenv1
+      The status should be success
+      The stdout should include "Calling gitsource from isolatedenv1"
+      The stdout should include "1.0.0"
+      The stderr should be blank
+    End
+
+    It "can call isolatedenv2 binary from testenv"
+      When call ./bin/isolatedenv2
+      The status should be success
+      The stdout should include "Calling gitsource from isolatedenv2"
+      The stdout should include "2.0.0"
+      The stderr should be blank
+    End
+  End
 End

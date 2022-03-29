@@ -50,6 +50,8 @@ beforeEach() {
   setupEnv env testenv
   setupEnv oldenv testoldenv
   setupEnv env anotherenv
+  setupEnv env isolatedenv1
+  setupEnv env isolatedenv2
   mkdir -p ./userbin
 }
 
@@ -57,6 +59,8 @@ afterEach() {
   rm -rf ./testenv
   rm -rf ./testoldenv
   rm -rf ./anotherenv
+  rm -rf ./isolatedenv1
+  rm -rf ./isolatedenv2
   rm -rf ./userbin
 
   # some downloaded packages might not have write permission
