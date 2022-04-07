@@ -750,11 +750,14 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 		if filepath.Base(bin) != filepath.Base(binary) {
 			continue
 		}
-		b.Tracef("exec %s", shellquote.Join(append([]string{bin}, args...)...))
+		argsCopy := make([]string, len(args))
+		copy(argsCopy, args)
+		argsCopy[0] = bin
+		b.Tracef("exec %s", shellquote.Join(argsCopy...))
 		l.Clear()
 		timer()
 
-		err = syscall.Exec(bin, args, env)
+		err = syscall.Exec(bin, argsCopy, env)
 		return errors.Wrapf(err, "%s: failed to execute %q", pkg, bin)
 	}
 	return errors.Errorf("%s: could not find binary %q", pkg, binary)
