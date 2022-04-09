@@ -2,7 +2,8 @@
 <img align="right" width="100" height="100" src="./docs/static/images/logo.svg" alt="Hermit">
 </a>
 
-# Hermit - uniform tooling for Linux and Mac [![CI](https://github.com/cashapp/hermit/actions/workflows/ci.yml/badge.svg)](https://github.com/cashapp/hermit/actions/workflows/ci.yml) [![Slack chat](https://img.shields.io/badge/slack-gophers-795679?logo=slack)](https://gophers.slack.com/messages/cashapp)
+# Hermit - uniform tooling for Linux and Mac
+[![CI](https://github.com/cashapp/hermit/actions/workflows/ci.yml/badge.svg)](https://github.com/cashapp/hermit/actions/workflows/ci.yml) [![Slack chat](https://img.shields.io/badge/slack-gophers-795679?logo=slack)](https://gophers.slack.com/messages/cashapp) [![Go Report Card](https://goreportcard.com/badge/github.com/cashapp/hermit)](https://goreportcard.com/report/github.com/cashapp/hermit)
 
 Hermit installs tools for software projects in self-contained, isolated sets, so your team, your contributors, and your CI have the same consistent tooling.
 
