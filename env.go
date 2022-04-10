@@ -55,7 +55,13 @@ var (
 		"4a4353c2147bb92bc2407a4b94817a90048c39d5f3cb08de807e7860517444c0",
 		"4b9ed62ae1a7101db99ab7997a67f47a8bac39eeac75b99a515d2545645b1c21",
 		"9413f2347c5f70e6a004e62b7faac99d3bb1666f86451ed1f6e05a679e3bc27c",
+		"0a4d479ffa1a08c6034b9ae2c5901630133b8422f044b3f0b17236b8a1ee3a03",
 	}
+
+	// InstallScriptSHA is the SHA256 value of the install script, which
+	// can be obtained by running `cmd/geninstaller` with the
+	// `--print-sha-256` option
+	InstallScriptSHA = "180e997dd837f839a3072a5e2f558619b6d12555cd5452d3ab19d87720704e38"
 
 	//go:embed files
 	files embed.FS
@@ -130,7 +136,8 @@ func Init(l *ui.UI, env string, distURL string, stateDir string, config Config) 
 	env = util.RealPath(env)
 	l.Infof("Creating new Hermit environment in %s", env)
 	vars := map[string]string{
-		"HERMIT_DEFAULT_DIST_URL": distURL,
+		"HERMIT_DEFAULT_DIST_URL":      distURL,
+		"HERMIT_INSTALL_SCRIPT_SHA256": InstallScriptSHA,
 	}
 	bin := filepath.Join(env, "bin")
 	if err := os.Mkdir(bin, os.ModePerm); err != nil && !os.IsExist(err) {

@@ -22,7 +22,17 @@ export HERMIT_EXE=${HERMIT_EXE:-${HERMIT_STATE_DIR}/pkg/hermit@${HERMIT_CHANNEL}
 
 if [ ! -x "${HERMIT_EXE}" ]; then
   echo "Bootstrapping ${HERMIT_EXE} from ${HERMIT_DIST_URL}" 1>&2
-  curl -fsSL "${HERMIT_DIST_URL}/install.sh" | /bin/bash 1>&2
+  INSTALL_SCRIPT="$(mktemp)"
+  # This value must match that of the install script
+  INSTALL_SCRIPT_SHA256="HERMIT_INSTALL_SCRIPT_SHA256"
+  # Install script is versioned by the first 10 characters of its sha256sum
+  INSTALL_SCRIPT_VERSION=$(echo "${INSTALL_SCRIPT_SHA256}" | head -c 10)
+  curl -fsSL "${HERMIT_DIST_URL}/install-${INSTALL_SCRIPT_VERSION}.sh" -o "${INSTALL_SCRIPT}"
+  # Verify install script's sha256sum
+  sha256sum "${INSTALL_SCRIPT}" | \
+    awk -v EXPECTED="$INSTALL_SCRIPT_SHA256" \
+    '$1!=EXPECTED {print "Install script sha256sum " $1 " does not match " EXPECTED; exit 1}'
+  /bin/bash "${INSTALL_SCRIPT}" 1>&2
 fi
 
 exec "${HERMIT_EXE}" --level=fatal exec "$0" -- "$@"
