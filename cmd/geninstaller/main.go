@@ -29,7 +29,6 @@ var cli struct {
 	Dest         string   `required:"" placeholder:"FILE" help:"Where to write the installer script."`
 	DistURL      string   `required:"" placeholder:"URL" help:"Base distribution URL."`
 	InstallPaths []string `placeholder:"PATH" help:"Possible system-wide installation paths." default:"$${HOME}/bin,/opt/homebrew/bin,/usr/local/bin"`
-	PrintSHA256  bool     `help:"Print the SHA-256 digest of the install script"`
 }
 
 func main() {
@@ -47,12 +46,11 @@ func main() {
 	defer w.Close() // nolint
 	err = installerTemplate.Execute(w, cli)
 	kctx.FatalIfErrorf(err)
-	if cli.PrintSHA256 {
-		err = w.Sync()
-		kctx.FatalIfErrorf(err)
-		script, err := os.ReadFile(cli.Dest)
-		kctx.FatalIfErrorf(err)
-		sha256sum := sha256.Sum256(script)
-		fmt.Println(hex.EncodeToString(sha256sum[:]))
-	}
+	// print out sha256sum of installer script to stdout
+	err = w.Sync()
+	kctx.FatalIfErrorf(err)
+	script, err := os.ReadFile(cli.Dest)
+	kctx.FatalIfErrorf(err)
+	sha256sum := sha256.Sum256(script)
+	fmt.Println(hex.EncodeToString(sha256sum[:]))
 }

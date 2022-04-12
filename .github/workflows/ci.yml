@@ -46,10 +46,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Install dependencies on macos
-        if: startsWith(matrix.os, 'macos')
-        run: |
-          brew install coreutils
       - name: Test packages
         run: |
           cd it/sanity
@@ -82,6 +78,5 @@ jobs:
             grep -Eo "[0-9a-f]{64}")
           SHA256SUM_INSTALLER=$(./bin/go run ./cmd/geninstaller \
             --dest=$(mktemp) \
-            --dist-url=https://github.com/cashapp/hermit/releases/download/stable \
-            --print-sha-256)
+            --dist-url=https://github.com/cashapp/hermit/releases/download/stable)
           [ "$SHA256SUM_IN_SRC" = "$SHA256SUM_INSTALLER" ] || exit 1

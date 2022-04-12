@@ -1,5 +1,4 @@
 #!/bin/bash
-set -exo pipefail
 # This is a helper file for integration tests, and should not be used directly.
 # Instead, this should be sourced from the IT specific sub-folders
 
@@ -34,8 +33,7 @@ fakeRelease() {
   gzip -c hermit > "$DIR/hermit-${OS}-${ARCH}.gz"
   INSTALLER_VERSION=$(../../.hermit/go/bin/geninstaller \
     --dest="${DIR}/install.sh" \
-    --dist-url=https://github.com/cashapp/hermit/releases/download/stable \
-    --print-sha-256 | head -c 10)
+    --dist-url=https://github.com/cashapp/hermit/releases/download/stable)
   cp "${DIR}/install.sh" "${DIR}/install-${INSTALLER_VERSION}.sh"
 
   export HERMIT_DIST_URL=file://$PWD/$DIR
