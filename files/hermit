@@ -29,9 +29,8 @@ if [ ! -x "${HERMIT_EXE}" ]; then
   curl -fsSL "${HERMIT_DIST_URL}/install-${INSTALL_SCRIPT_SHA256}.sh" -o "${INSTALL_SCRIPT}"
   # Verify install script's sha256sum
   openssl dgst -sha256 "${INSTALL_SCRIPT}" | \
-    awk '{print $2}' | \
     awk -v EXPECTED="$INSTALL_SCRIPT_SHA256" \
-    '$1!=EXPECTED {print "Install script sha256sum " $1 " does not match " EXPECTED; exit 1}'
+    '$2!=EXPECTED {print "Install script sha256 " $2 " does not match " EXPECTED; exit 1}'
   /bin/bash "${INSTALL_SCRIPT}" 1>&2
 fi
 
