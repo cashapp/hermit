@@ -53,6 +53,6 @@ func main() {
 		script, err := os.ReadFile(cli.Dest)
 		kctx.FatalIfErrorf(err)
 		sha256sum := sha256.Sum256(script)
-		fmt.Printf("%v\n", hex.EncodeToString(sha256sum[:]))
+		fmt.Println(hex.EncodeToString(sha256sum[:]))
 	}
 }
