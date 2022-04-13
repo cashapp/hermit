@@ -8,7 +8,7 @@ GOOS ?= $(shell ./bin/go version | awk '{print $$NF}' | cut -d/ -f1)
 GOARCH ?= $(shell ./bin/go version | awk '{print $$NF}' | cut -d/ -f2)
 BIN = $(BUILD_DIR)/hermit-$(GOOS)-$(GOARCH)
 
-.PHONY: all build lint test
+.PHONY: all build r10e-build lint test
 
 all: lint test build
 
@@ -20,8 +20,11 @@ test: ## run tests
 
 build: ## builds binary and gzips it
 	mkdir -p build
-	CGO_ENABLED=0 go build -ldflags "-X main.version=$(VERSION) -X main.channel=$(CHANNEL)" -o $(BIN) ./cmd/hermit
+	CGO_ENABLED=0 go build -trimpath -ldflags "-X main.version=$(VERSION) -X main.channel=$(CHANNEL)" -o $(BIN) ./cmd/hermit
 	gzip -9 $(BIN)
+
+r10e-build: ## builds reproducible binaries
+	VERSION="$(VERSION)" CHANNEL="$(CHANNEL)" $(ROOT)/r10e-build.sh 2>/dev/null
 
 help: ## Display this help message
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_\/-]+:.*?## / {printf "\033[34m%-30s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST) | \
