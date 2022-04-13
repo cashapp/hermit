@@ -32,7 +32,10 @@ fakeRelease() {
   ARCH=$(../../bin/go version | awk '{print $NF}' | cut -d/ -f2)
   mkdir -p "$DIR"
   gzip -c hermit > "$DIR/hermit-${OS}-${ARCH}.gz"
-  ../../.hermit/go/bin/geninstaller --dest="${DIR}/install.sh" --dist-url=-https://github.com/cashapp/hermit/releases/download/stable
+  INSTALLER_VERSION=$(../../.hermit/go/bin/geninstaller \
+    --dest="${DIR}/install.sh" \
+    --dist-url=https://github.com/cashapp/hermit/releases/download/stable)
+  cp "${DIR}/install.sh" "${DIR}/install-${INSTALLER_VERSION}.sh"
 
   export HERMIT_DIST_URL=file://$PWD/$DIR
   echo $HERMIT_DIST_URL

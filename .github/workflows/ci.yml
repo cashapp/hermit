@@ -72,3 +72,11 @@ jobs:
 #          export PATH=$PWD/build:$PATH
 #          cd it/compatibility
 #          ./run.sh
+      - name: Check install script SHA-256 sum
+        run: |
+          SHA256SUM_IN_SRC=$(grep "InstallScriptSHA = " env.go | \
+            grep -Eo "[0-9a-f]{64}")
+          SHA256SUM_INSTALLER=$(./bin/go run ./cmd/geninstaller \
+            --dest=$(mktemp) \
+            --dist-url=https://github.com/cashapp/hermit/releases/download/stable)
+          [ "$SHA256SUM_IN_SRC" = "$SHA256SUM_INSTALLER" ] || exit 1

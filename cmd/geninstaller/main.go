@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/sha256"
 	_ "embed" // Embedding.
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
@@ -44,4 +46,11 @@ func main() {
 	defer w.Close() // nolint
 	err = installerTemplate.Execute(w, cli)
 	kctx.FatalIfErrorf(err)
+	// print out sha256sum of installer script to stdout
+	err = w.Sync()
+	kctx.FatalIfErrorf(err)
+	script, err := os.ReadFile(cli.Dest)
+	kctx.FatalIfErrorf(err)
+	sha256sum := sha256.Sum256(script)
+	fmt.Println(hex.EncodeToString(sha256sum[:]))
 }
