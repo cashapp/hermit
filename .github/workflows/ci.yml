@@ -60,9 +60,6 @@ jobs:
         run: |
           mkdir build testenv
           ./bin/go build -o ./build/hermit ./cmd/hermit
-      - name: (R10e) Build Hermit
-        run: |
-          make r10e-build VERSION=testversion CHANNEL=testchannel
       - name: Install shells
         run: sudo apt-get install zsh
       - name: Run Full Integration tests

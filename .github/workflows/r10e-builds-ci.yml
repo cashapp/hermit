@@ -1,0 +1,27 @@
+on:
+  push:
+    paths:
+      - 'Dockerfile'
+      - 'r10e-build.sh'
+      - 'Makefile'
+    branches:
+      - master
+  pull_request:
+    paths:
+      - 'Dockerfile'
+      - 'r10e-build.sh'
+      - 'Makefile'
+  schedule:
+    # Daily at 2am
+    - cron: '0 2 * * *'
+name: R10E-BUILDS-CI
+jobs:
+  it:
+    name: Integration Tests
+    runs-on: [ ubuntu-latest ]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: (R10e) Build Hermit
+        run: |
+          make r10e-build VERSION=testversion CHANNEL=testchannel
