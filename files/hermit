@@ -25,12 +25,16 @@ if [ ! -x "${HERMIT_EXE}" ]; then
   INSTALL_SCRIPT="$(mktemp)"
   # This value must match that of the install script
   INSTALL_SCRIPT_SHA256="HERMIT_INSTALL_SCRIPT_SHA256"
-  # Install script is versioned by its sha256sum value
-  curl -fsSL "${HERMIT_DIST_URL}/install-${INSTALL_SCRIPT_SHA256}.sh" -o "${INSTALL_SCRIPT}"
-  # Verify install script's sha256sum
-  openssl dgst -sha256 "${INSTALL_SCRIPT}" | \
-    awk -v EXPECTED="$INSTALL_SCRIPT_SHA256" \
-    '$2!=EXPECTED {print "Install script sha256 " $2 " does not match " EXPECTED; exit 1}'
+  if [ "${INSTALL_SCRIPT_SHA256}" = "BYPASS" ]; then
+    curl -fsSL "${HERMIT_DIST_URL}/install.sh" -o "${INSTALL_SCRIPT}"
+  else
+    # Install script is versioned by its sha256sum value
+    curl -fsSL "${HERMIT_DIST_URL}/install-${INSTALL_SCRIPT_SHA256}.sh" -o "${INSTALL_SCRIPT}"
+    # Verify install script's sha256sum
+    openssl dgst -sha256 "${INSTALL_SCRIPT}" | \
+      awk -v EXPECTED="$INSTALL_SCRIPT_SHA256" \
+      '$2!=EXPECTED {print "Install script sha256 " $2 " does not match " EXPECTED; exit 1}'
+  fi
   /bin/bash "${INSTALL_SCRIPT}" 1>&2
 fi
 
