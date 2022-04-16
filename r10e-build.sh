@@ -27,7 +27,7 @@ readonly BUILDER_TAG_NAME
 # Self test
 #########################################
 err() {
-  echo -e "$*" >&2
+  echo -e "$*"
   exit 1
 }
 
