@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path"
 	"runtime"
 	"runtime/pprof"
 	"time"
@@ -85,6 +86,17 @@ func (c Config) fastHTTPClient(logger ui.Logger) *http.Client {
 
 func (c Config) defaultHTTPClient(logger ui.Logger) *http.Client {
 	return c.makeHTTPClient(logger, HTTPTransportConfig{})
+}
+
+// Helper function to get installer SHA-256 sum for a channel from a map of
+// channel: sha256sum pairs
+func getChannelInstallerSHA(channel string, m map[string]string) string {
+	InstallScriptSHA, ok := m[channel]
+	if !ok {
+		// Magic string for an unknown channel
+		InstallScriptSHA = "BYPASS"
+	}
+	return InstallScriptSHA
 }
 
 // Main runs the Hermit command-line application with the given config.
@@ -205,8 +217,9 @@ func Main(config Config) {
 			}
 		}),
 		kong.Vars{
-			"version": config.Version,
-			"env":     envPath,
+			"version":         config.Version,
+			"installersha256": getChannelInstallerSHA(path.Base(config.BaseDistURL), config.InstallerSHA256Sums),
+			"env":             envPath,
 		},
 		kong.HelpOptions{
 			Compact: true,
