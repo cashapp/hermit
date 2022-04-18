@@ -43,7 +43,7 @@ type Config struct {
 	SHA256Sums []string
 	// SHA256 checksums for install scripts of known channels - currently
 	// "stable" and "canary".
-	// If empty shell.InstallScriptSHAs will be used
+	// If empty hermit.InstallScriptSHAs will be used
 	InstallerSHA256Sums map[string]string
 	HTTP                func(HTTPTransportConfig) *http.Client
 	State               state.Config
