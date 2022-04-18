@@ -137,11 +137,11 @@ type Env struct {
 var extDepData []byte
 
 // Init a new Env.
-func Init(l *ui.UI, env string, distURL string, stateDir string, config Config) error {
+func Init(l *ui.UI, env string, distURL string, installScriptSHAs map[string]string, stateDir string, config Config) error {
 	env = util.RealPath(env)
 	l.Infof("Creating new Hermit environment in %s", env)
 	channel := path.Base(distURL)
-	InstallScriptSHA, ok := InstallScriptSHAs[channel]
+	InstallScriptSHA, ok := installScriptSHAs[channel]
 	if !ok {
 		// Magic string to signal bypass of verification for an unknown channel
 		InstallScriptSHA = "BYPASS"
