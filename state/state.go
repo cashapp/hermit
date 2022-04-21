@@ -447,7 +447,7 @@ func (s *State) UpgradeChannel(b *ui.Task, pkg *manifest.Package) error {
 		}
 		etag = pkg.ETag
 	} else {
-		b.Infof("No updated required")
+		b.Infof("No update required")
 	}
 
 	if etag == "" {
