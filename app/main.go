@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path"
 	"runtime"
 	"runtime/pprof"
 	"time"
@@ -39,11 +40,15 @@ type Config struct {
 	BaseDistURL string
 	// SHA256 checksums for all known versions of per-environment scripts.
 	// If empty shell.ScriptSHAs will be used.
-	SHA256Sums  []string
-	HTTP        func(HTTPTransportConfig) *http.Client
-	State       state.Config
-	KongOptions []kong.Option
-	KongPlugins kong.Plugins
+	SHA256Sums []string
+	// SHA256 checksums for install scripts of known channels - currently
+	// "stable" and "canary".
+	// If empty hermit.InstallScriptSHAs will be used
+	InstallerSHA256Sums map[string]string
+	HTTP                func(HTTPTransportConfig) *http.Client
+	State               state.Config
+	KongOptions         []kong.Option
+	KongPlugins         kong.Plugins
 	// Defaults to cache.GetSource if nil.
 	PackageSourceSelector cache.PackageSourceSelector
 	// True if we're running in CI - disables progress bar.
@@ -83,6 +88,17 @@ func (c Config) defaultHTTPClient(logger ui.Logger) *http.Client {
 	return c.makeHTTPClient(logger, HTTPTransportConfig{})
 }
 
+// Helper function to get installer SHA-256 sum for a channel from a map of
+// channel: sha256sum pairs
+func getChannelInstallerSHA(channel string, m map[string]string) string {
+	InstallScriptSHA, ok := m[channel]
+	if !ok {
+		// Magic string for an unknown channel
+		InstallScriptSHA = "BYPASS"
+	}
+	return InstallScriptSHA
+}
+
 // Main runs the Hermit command-line application with the given config.
 func Main(config Config) {
 	config.LogLevel = ui.AutoLevel(config.LogLevel)
@@ -102,6 +118,11 @@ func Main(config Config) {
 	if len(config.SHA256Sums) == 0 {
 		config.SHA256Sums = hermit.ScriptSHAs
 	}
+
+	if len(config.InstallerSHA256Sums) == 0 {
+		config.InstallerSHA256Sums = hermit.InstallScriptSHAs
+	}
+
 	var (
 		err         error
 		p           *ui.UI
@@ -196,8 +217,9 @@ func Main(config Config) {
 			}
 		}),
 		kong.Vars{
-			"version": config.Version,
-			"env":     envPath,
+			"version":         config.Version,
+			"installersha256": getChannelInstallerSHA(path.Base(config.BaseDistURL), config.InstallerSHA256Sums),
+			"env":             envPath,
 		},
 		kong.HelpOptions{
 			Compact: true,
