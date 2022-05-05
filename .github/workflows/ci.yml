@@ -72,13 +72,3 @@ jobs:
 #          export PATH=$PWD/build:$PATH
 #          cd it/compatibility
 #          ./run.sh
-      - name: Check install script SHA-256 sum
-        run: |
-          for channel in "stable" "canary"; do
-            ./bin/go build -ldflags "-X main.version=checksum -X main.channel=${channel}" -o ./build/hermit ./cmd/hermit
-            SHA256SUM_IN_HERMIT=$(./build/hermit installer-sha-256)
-            SHA256SUM_INSTALLER=$(./bin/go run ./cmd/geninstaller \
-              --dest=$(mktemp) \
-              --dist-url=https://github.com/cashapp/hermit/releases/download/${channel})
-            [ "$SHA256SUM_IN_HERMIT" = "$SHA256SUM_INSTALLER" ] || exit 1
-          done

@@ -44,7 +44,6 @@ type cliBase struct {
 	Update               updateCmd            `cmd:"" aliases:"sync" help:"Update manifest sources." group:"global"`
 	Search               searchCmd            `cmd:"" help:"Search for packages to install." group:"global"`
 	DumpUserConfigSchema dumpUserConfigSchema `cmd:"" help:"Dump user configuration schema." hidden:""`
-	InstallerSHA256      installersha256Cmd   `cmd:"" help:"Show installer script hash info." group:"global"`
 	kong.Plugins
 }
 

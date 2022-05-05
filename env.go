@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -57,16 +56,6 @@ var (
 		"4a4353c2147bb92bc2407a4b94817a90048c39d5f3cb08de807e7860517444c0",
 		"4b9ed62ae1a7101db99ab7997a67f47a8bac39eeac75b99a515d2545645b1c21",
 		"9413f2347c5f70e6a004e62b7faac99d3bb1666f86451ed1f6e05a679e3bc27c",
-		"49f331b75e8886b5f55d331ad36c0b8304e4402b2ffe7b5e2aa711463babb299",
-		"52946535460cff969184ffa495886d1cfd6e1b9169027e161325cdba95a017e7",
-	}
-
-	// InstallScriptSHAs are the SHA256 values of the install script for
-	// known channels, which can be obtained by running `cmd/geninstaller`
-	// with `--dist-url=https://github.com/cashapp/hermit/releases/download/<channel>`
-	InstallScriptSHAs = map[string]string{
-		"stable": "180e997dd837f839a3072a5e2f558619b6d12555cd5452d3ab19d87720704e38",
-		"canary": "7637176267f01d11dc5725e4b976e4de26d7b9233589438e40f77d18b225d573",
 	}
 
 	//go:embed files
@@ -138,19 +127,11 @@ type Env struct {
 var extDepData []byte
 
 // Init a new Env.
-func Init(l *ui.UI, env string, distURL string, installScriptSHAs map[string]string, stateDir string, config Config) error {
+func Init(l *ui.UI, env string, distURL string, stateDir string, config Config) error {
 	env = util.RealPath(env)
 	l.Infof("Creating new Hermit environment in %s", env)
-	channel := path.Base(distURL)
-	InstallScriptSHA, ok := installScriptSHAs[channel]
-	if !ok {
-		// Magic string to signal bypass of verification for an unknown channel
-		InstallScriptSHA = "BYPASS"
-	}
-
 	vars := map[string]string{
-		"HERMIT_DEFAULT_DIST_URL":      distURL,
-		"HERMIT_INSTALL_SCRIPT_SHA256": InstallScriptSHA,
+		"HERMIT_DEFAULT_DIST_URL": distURL,
 	}
 	bin := filepath.Join(env, "bin")
 	if err := os.Mkdir(bin, os.ModePerm); err != nil && !os.IsExist(err) {
