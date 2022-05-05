@@ -11,11 +11,11 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/alecthomas/hcl"
@@ -765,7 +765,20 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 		l.Clear()
 		timer()
 
-		err = syscall.Exec(bin, argsCopy, env)
+		cmd := &exec.Cmd{
+			Path:   bin,
+			Args:   argsCopy,
+			Env:    env,
+			Stdout: os.Stdout,
+			Stderr: os.Stderr,
+			Stdin:  os.Stdin,
+		}
+		err = cmd.Run()
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			os.Exit(exitErr.ExitCode())
+		}
+		//err = syscall.Exec(bin, argsCopy, env)
 		return errors.Wrapf(err, "%s: failed to execute %q", pkg, bin)
 	}
 	return errors.Errorf("%s: could not find binary %q", pkg, binary)
