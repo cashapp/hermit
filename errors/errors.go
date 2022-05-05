@@ -105,11 +105,6 @@ func Is(err, target error) bool {
 	return errors.Is(err, target)
 }
 
-// As mirrors the stdlib errors.As function.
-func As(err error, target interface{}) bool {
-	return errors.As(err, target)
-}
-
 // Unwrap aliases the stdlib errors.Unwrap function.
 func Unwrap(err error) error {
 	return errors.Unwrap(err)

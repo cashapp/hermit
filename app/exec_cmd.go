@@ -3,7 +3,6 @@ package app
 import (
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -58,22 +57,7 @@ func (e *execCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, env *hermi
 	if filepath.Base(e.Binary) == "hermit" {
 		env := os.Environ()
 		env = append(env, "HERMIT_ENV="+envDir)
-		cmd := &exec.Cmd{
-			Path:        self,
-			Args:        args,
-			Env:         env,
-			Stdout:      os.Stdout,
-			Stderr:      os.Stderr,
-			Stdin:       os.Stdin,
-			SysProcAttr: &syscall.SysProcAttr{Setpgid: true},
-		}
-		err = cmd.Run()
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
-			os.Exit(exitErr.ExitCode())
-		}
-		// return syscall.Exec(self, args, env)
-		return errors.Wrapf(err, "failed to execute %q", e.Binary)
+		return syscall.Exec(self, args, env)
 	}
 
 	pkg, binary, err := env.ResolveLink(l, e.Binary)
