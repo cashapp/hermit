@@ -70,7 +70,7 @@ func (e *execCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, env *hermi
 		if errors.As(err, &exitErr) {
 			os.Exit(exitErr.ExitCode())
 		}
-		//return syscall.Exec(self, args, env)
+		// return syscall.Exec(self, args, env)
 		return errors.Wrapf(err, "failed to execute %q", e.Binary)
 	}
 

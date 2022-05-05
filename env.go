@@ -778,7 +778,7 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 		if errors.As(err, &exitErr) {
 			os.Exit(exitErr.ExitCode())
 		}
-		//err = syscall.Exec(bin, argsCopy, env)
+		// err = syscall.Exec(bin, argsCopy, env)
 		return errors.Wrapf(err, "%s: failed to execute %q", pkg, bin)
 	}
 	return errors.Errorf("%s: could not find binary %q", pkg, binary)
