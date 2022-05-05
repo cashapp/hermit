@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/cashapp/hermit"
@@ -58,12 +59,13 @@ func (e *execCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, env *hermi
 		env := os.Environ()
 		env = append(env, "HERMIT_ENV="+envDir)
 		cmd := &exec.Cmd{
-			Path:   self,
-			Args:   args,
-			Env:    env,
-			Stdout: os.Stdout,
-			Stderr: os.Stderr,
-			Stdin:  os.Stdin,
+			Path:        self,
+			Args:        args,
+			Env:         env,
+			Stdout:      os.Stdout,
+			Stderr:      os.Stderr,
+			Stdin:       os.Stdin,
+			SysProcAttr: &syscall.SysProcAttr{Setpgid: true},
 		}
 		err = cmd.Run()
 		var exitErr *exec.ExitError

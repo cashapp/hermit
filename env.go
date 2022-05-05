@@ -16,6 +16,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/alecthomas/hcl"
@@ -766,12 +767,13 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 		timer()
 
 		cmd := &exec.Cmd{
-			Path:   bin,
-			Args:   argsCopy,
-			Env:    env,
-			Stdout: os.Stdout,
-			Stderr: os.Stderr,
-			Stdin:  os.Stdin,
+			Path:        bin,
+			Args:        argsCopy,
+			Env:         env,
+			Stdout:      os.Stdout,
+			Stderr:      os.Stderr,
+			Stdin:       os.Stdin,
+			SysProcAttr: &syscall.SysProcAttr{Setpgid: true},
 		}
 		err = cmd.Run()
 		var exitErr *exec.ExitError
