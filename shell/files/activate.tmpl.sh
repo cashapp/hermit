@@ -1,20 +1,5 @@
 # Hermit {{.Shell}} activation script
 
-export HERMIT_ENV={{.Root}}
-
-if [ -n "${ACTIVE_HERMIT+_}" ]; then
-  if [ "$ACTIVE_HERMIT" = "$HERMIT_ENV" ]; then
-    echo "This Hermit environment has already been activated. Skipping" >&2
-    return 34
-  else
-    export HERMIT_CURRENT_ENV=$HERMIT_ENV
-    export HERMIT_ENV=$ACTIVE_HERMIT
-    deactivate-hermit
-    export HERMIT_ENV=$HERMIT_CURRENT_ENV
-    unset HERMIT_CURRENT_ENV
-  fi
-fi
-
 _hermit_deactivate() {
   echo "Hermit environment $(${HERMIT_ENV}/bin/hermit env HERMIT_ENV) deactivated"
   eval "$(${ACTIVE_HERMIT}/bin/hermit env --deactivate-from-ops="${HERMIT_ENV_OPS}")"
@@ -37,23 +22,31 @@ _hermit_deactivate() {
 {{- if ne .Prompt "none"}}
   if test -n "${_HERMIT_OLD_PS1+_}"; then export PS1="${_HERMIT_OLD_PS1}"; unset _HERMIT_OLD_PS1; fi
 {{- end}}
+}
 
+_hermit_set_prompt() {
+  {{- if ne .Prompt "none" }}
+  if test -n "${PS1+_}"; then export _HERMIT_OLD_PS1="${PS1}"; export PS1="{{if eq .Prompt "env"}}{{ .EnvName }}{{end}}🐚 ${PS1}"; fi
+  {{- end}}
+
+  {{- if .Bash }}
+  if test -n "${PROMPT_COMMAND+_}"; then
+    _HERMIT_OLD_PROMPT_COMMAND="${PROMPT_COMMAND}"
+    PROMPT_COMMAND="update_hermit_env; $PROMPT_COMMAND"
+  else
+    PROMPT_COMMAND="update_hermit_env"
+  fi
+  {{- end}}
+
+  {{- if .Zsh }}
+  precmd_functions+=(update_hermit_env)
+  {{- end}}
 }
 
 deactivate-hermit() {
   export DEACTIVATED_HERMIT="$HERMIT_ENV"
   _hermit_deactivate
 }
-
-
-unset DEACTIVATED_HERMIT
-export ACTIVE_HERMIT=$HERMIT_ENV
-export HERMIT_ENV_OPS="$(${HERMIT_ENV}/bin/hermit env --ops)"
-export HERMIT_BIN_CHANGE=$(date -r ${HERMIT_ENV}/bin +"%s")
-
-{{- if ne .Prompt "none" }}
-if test -n "${PS1+_}"; then export _HERMIT_OLD_PS1="${PS1}"; export PS1="{{if eq .Prompt "env"}}{{ .EnvName }}{{end}}🐚 ${PS1}"; fi
-{{- end}}
 
 update_hermit_env() {
   local CURRENT=$(date -r ${HERMIT_ENV}/bin +"%s")
@@ -65,15 +58,24 @@ update_hermit_env() {
   export HERMIT_BIN_CHANGE=$CURRENT
 }
 
-{{- if .Bash }}
-if test -n "${PROMPT_COMMAND+_}"; then
-  _HERMIT_OLD_PROMPT_COMMAND="${PROMPT_COMMAND}"
-  PROMPT_COMMAND="update_hermit_env; $PROMPT_COMMAND"
-else
-  PROMPT_COMMAND="update_hermit_env"
-fi
-{{- end}}
+export HERMIT_ENV={{.Root}}
 
-{{- if .Zsh }}
-precmd_functions+=(update_hermit_env)
-{{- end}}
+if [ -n "${ACTIVE_HERMIT+_}" ]; then
+  if [ "$ACTIVE_HERMIT" = "$HERMIT_ENV" ]; then
+    echo "This Hermit environment has already been activated. Skipping" >&2
+    return 34
+  else
+    export HERMIT_CURRENT_ENV=$HERMIT_ENV
+    export HERMIT_ENV=$ACTIVE_HERMIT
+    deactivate-hermit
+    export HERMIT_ENV=$HERMIT_CURRENT_ENV
+    unset HERMIT_CURRENT_ENV
+  fi
+fi
+
+unset DEACTIVATED_HERMIT
+export ACTIVE_HERMIT=$HERMIT_ENV
+export HERMIT_ENV_OPS="$(${HERMIT_ENV}/bin/hermit env --ops)"
+export HERMIT_BIN_CHANGE=$(date -r ${HERMIT_ENV}/bin +"%s")
+
+_hermit_set_prompt
