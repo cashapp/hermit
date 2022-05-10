@@ -963,12 +963,7 @@ func (e *Env) EnvOps(l *ui.UI) (envars.Ops, error) {
 	if err != nil {
 		return nil, err
 	}
-	ops := e.envarsForPackages(pkgs...)
-	ops = append(ops, e.hermitPathEnvar())
-	ops = append(ops, e.hermitEnvarOps()...)
-	ops = append(ops, e.localEnvarOps()...)
-	ops = append(ops, e.ephemeralEnvars...)
-	return ops, nil
+	return e.allEnvarOpsForPackages(nil, pkgs...), nil
 }
 
 // SetEnv sets an extra environment variable.
@@ -1198,11 +1193,11 @@ func (e *Env) pkgLink(pkg *manifest.Package) string {
 // If "inherit" is true, system envars will be included.
 func (e *Env) allEnvarOpsForPackages(runtimeDeps []*manifest.Package, pkgs ...*manifest.Package) envars.Ops {
 	var ops envars.Ops
+	ops = append(ops, e.hermitPathEnvar())
+	ops = append(ops, e.hermitEnvarOps()...)
+	ops = append(ops, e.hermitRuntimeDepOps(runtimeDeps)...)
 	ops = append(ops, e.envarsForPackages(pkgs...)...)
 	ops = append(ops, e.localEnvarOps()...)
-	ops = append(ops, e.hermitPathEnvar())
-	ops = append(ops, e.hermitRuntimeDepOps(runtimeDeps)...)
-	ops = append(ops, e.hermitEnvarOps()...)
 	ops = append(ops, e.ephemeralEnvars...)
 	return ops
 }
