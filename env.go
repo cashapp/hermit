@@ -945,11 +945,10 @@ func (e *Env) ListInstalled(l *ui.UI) ([]*manifest.Package, error) {
 // only variables defined in Hermit itself will be available.
 func (e *Env) Envars(l *ui.UI, inherit bool) ([]string, error) {
 	defer ui.LogElapsed(l, "envars")()
-	pkgs, err := e.ListInstalled(l)
+	ops, err := e.EnvOps(l)
 	if err != nil {
 		return nil, err
 	}
-	ops := e.allEnvarOpsForPackages(nil, pkgs...)
 	return e.envarsFromOps(inherit, ops), nil
 }
 
@@ -1189,8 +1188,6 @@ func (e *Env) pkgLink(pkg *manifest.Package) string {
 }
 
 // Returns combined system + Hermit + package environment variables, fully expanded.
-//
-// If "inherit" is true, system envars will be included.
 func (e *Env) allEnvarOpsForPackages(runtimeDeps []*manifest.Package, pkgs ...*manifest.Package) envars.Ops {
 	var ops envars.Ops
 	ops = append(ops, e.hermitPathEnvar())
