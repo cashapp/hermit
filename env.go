@@ -945,11 +945,10 @@ func (e *Env) ListInstalled(l *ui.UI) ([]*manifest.Package, error) {
 // only variables defined in Hermit itself will be available.
 func (e *Env) Envars(l *ui.UI, inherit bool) ([]string, error) {
 	defer ui.LogElapsed(l, "envars")()
-	pkgs, err := e.ListInstalled(l)
+	ops, err := e.EnvOps(l)
 	if err != nil {
 		return nil, err
 	}
-	ops := e.allEnvarOpsForPackages(nil, pkgs...)
 	return e.envarsFromOps(inherit, ops), nil
 }
 
@@ -963,12 +962,7 @@ func (e *Env) EnvOps(l *ui.UI) (envars.Ops, error) {
 	if err != nil {
 		return nil, err
 	}
-	ops := e.envarsForPackages(pkgs...)
-	ops = append(ops, e.hermitPathEnvar())
-	ops = append(ops, e.hermitEnvarOps()...)
-	ops = append(ops, e.localEnvarOps()...)
-	ops = append(ops, e.ephemeralEnvars...)
-	return ops, nil
+	return e.allEnvarOpsForPackages(nil, pkgs...), nil
 }
 
 // SetEnv sets an extra environment variable.
@@ -1194,15 +1188,12 @@ func (e *Env) pkgLink(pkg *manifest.Package) string {
 }
 
 // Returns combined system + Hermit + package environment variables, fully expanded.
-//
-// If "inherit" is true, system envars will be included.
 func (e *Env) allEnvarOpsForPackages(runtimeDeps []*manifest.Package, pkgs ...*manifest.Package) envars.Ops {
 	var ops envars.Ops
+	ops = append(ops, e.hermitEnvarOps()...)
+	ops = append(ops, e.hermitRuntimeDepOps(runtimeDeps)...)
 	ops = append(ops, e.envarsForPackages(pkgs...)...)
 	ops = append(ops, e.localEnvarOps()...)
-	ops = append(ops, e.hermitPathEnvar())
-	ops = append(ops, e.hermitRuntimeDepOps(runtimeDeps)...)
-	ops = append(ops, e.hermitEnvarOps()...)
 	ops = append(ops, e.ephemeralEnvars...)
 	return ops
 }
@@ -1216,10 +1207,6 @@ func (e *Env) envarsFromOps(inherit bool, ops envars.Ops) []string {
 		return transform.Combined().System()
 	}
 	return transform.Changed(false).System()
-}
-
-func (e *Env) hermitPathEnvar() envars.Op {
-	return &envars.Prepend{Name: "PATH", Value: e.binDir}
 }
 
 // envarsForPackages returns the environment variable operations by the given packages.
@@ -1239,6 +1226,7 @@ func (e *Env) localEnvarOps() envars.Ops {
 // hermitEnvarOps returns the environment variables created and required by hermit itself
 func (e *Env) hermitEnvarOps() envars.Ops {
 	return envars.Ops{
+		&envars.Prepend{Name: "PATH", Value: e.binDir},
 		&envars.Force{Name: "HERMIT_BIN", Value: e.binDir},
 		&envars.Force{Name: "HERMIT_ENV", Value: e.envDir},
 	}

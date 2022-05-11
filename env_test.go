@@ -396,3 +396,20 @@ func TestManifestValidation(t *testing.T) {
 	_, err = f.Env.ValidateManifest(f.P, "test", &hermit.ValidationOptions{CheckSources: false})
 	require.NoError(t, err)
 }
+
+func TestEnv_EphemeralVariableSubstitutionOverride(t *testing.T) {
+	fixture := hermittest.NewEnvTestFixture(t, nil)
+	defer fixture.Clean()
+
+	err := fixture.Env.SetEnv("TOOL_HOME", "$HERMIT_ENV/.hermit/tool")
+	require.NoError(t, err)
+
+	envop := &envars.Set{Name: "TOOL_HOME", Value: "$HERMIT_ENV/.hermit/tool"}
+	ops, err := fixture.Env.EnvOps(fixture.P)
+	require.NoError(t, err)
+	require.Contains(t, ops, envop)
+
+	vars, err := fixture.Env.Envars(fixture.P, false)
+	require.NoError(t, err)
+	require.Contains(t, vars, "TOOL_HOME="+fixture.Env.Root()+"/.hermit/tool")
+}
