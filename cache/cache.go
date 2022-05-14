@@ -138,11 +138,13 @@ func (c *Cache) Download(b *ui.Task, checksum, uri string, mirrors ...string) (p
 			return "", "", errors.Errorf("failed to download from any of %s", strings.Join(uris, ", "))
 		}
 		msg := fmt.Sprintf("Failed to download any of %s on attempt %d/%d: %s", strings.Join(uris, ", "), attempt, attempts, lastError)
-		if attempt != attempts {
+		if attempt < attempts {
 			msg = "Retrying. " + msg
 		}
 		b.Warnf("%s", msg)
-		time.Sleep(time.Second)
+		if attempt < attempts {
+			time.Sleep(time.Second)
+		}
 	}
 	return "", "", errors.Wrap(lastError, uris[len(uris)-1])
 }
