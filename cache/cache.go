@@ -3,10 +3,12 @@ package cache
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/ui"
@@ -117,21 +119,30 @@ func (c *Cache) Open(b *ui.Task, checksum, uri string, mirrors ...string) (*os.F
 func (c *Cache) Download(b *ui.Task, checksum, uri string, mirrors ...string) (path string, etag string, err error) {
 	uris := append([]string{uri}, mirrors...)
 	var lastError error
-	for _, uri := range uris {
-		defer ui.LogElapsed(b, "Download %s", uri)()
-		source, err := c.GetSource(c.httpClient, uri)
-		if err != nil {
-			return "", "", errors.WithStack(err)
+	attempts := 3
+	for attempt := 1; attempt <= attempts; attempt++ {
+		for _, uri := range uris {
+			defer ui.LogElapsed(b, "Download %s", uri)()
+			source, err := c.GetSource(c.httpClient, uri)
+			if err != nil {
+				return "", "", errors.WithStack(err)
+			}
+			path, etag, err = source.Download(b, c, checksum)
+			if err == nil {
+				return path, etag, nil
+			}
+			lastError = err
+			b.Debugf("%s: %s", uri, err)
 		}
-		path, etag, err = source.Download(b, c, checksum)
-		if err == nil {
-			return path, etag, nil
+		if lastError == nil {
+			return "", "", errors.Errorf("failed to download from any of %s", strings.Join(uris, ", "))
 		}
-		lastError = err
-		b.Debugf("%s: %s", uri, err)
-	}
-	if lastError == nil {
-		return "", "", errors.Errorf("failed to download from any of %s", strings.Join(uris, ", "))
+		msg := fmt.Sprintf("Failed to download any of %s on attempt %d/%d: %s", strings.Join(uris, ", "), attempt, attempts, lastError)
+		if attempt != attempts {
+			msg = "Retrying. " + msg
+		}
+		b.Warnf("%s", msg)
+		time.Sleep(time.Second)
 	}
 	return "", "", errors.Wrap(lastError, uris[len(uris)-1])
 }
