@@ -56,6 +56,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+      - name: Ensure Up-to-date script.sha256 File
+        run: |
+          ./it/check_script_sha.sh
       - name: Build Hermit
         run: |
           mkdir build testenv

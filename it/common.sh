@@ -17,9 +17,12 @@ if [ ! -z $"HERMIT_EXE" ]; then
   unset HERMIT_EXE
 fi
 
-# Creates a "fake" release directory and sets HERMIT_DIST_URL to refer to it
+# Creates a "fake" release directory and sets HERMIT_DIST_URL to refer to it.
+# This function expects the basename of the first argument to be the
+# channel name, e.g., "release/canary" or "release/stable"
 fakeRelease() {
   DIR=$1
+  CHANNEL="$(basename "${DIR}")"
 
   echo "Compiling hermit"
   (
@@ -32,7 +35,7 @@ fakeRelease() {
   ARCH=$(../../bin/go version | awk '{print $NF}' | cut -d/ -f2)
   mkdir -p "$DIR"
   gzip -c hermit > "$DIR/hermit-${OS}-${ARCH}.gz"
-  ../../.hermit/go/bin/geninstaller --dest="${DIR}/install.sh" --dist-url=-https://github.com/cashapp/hermit/releases/download/stable
+  ../../.hermit/go/bin/geninstaller --dest="${DIR}/install.sh" --dist-url=https://github.com/cashapp/hermit/releases/download/"${CHANNEL}"
 
   export HERMIT_DIST_URL=file://$PWD/$DIR
   echo $HERMIT_DIST_URL
