@@ -19,7 +19,7 @@ import (
 
 type infoCmd struct {
 	Packages []manifest.GlobSelector `arg:"" required:"" help:"Packages to retrieve information for" predictor:"package"`
-	JSON     bool                    `help:"Format information as a JSON array" default:"false"`
+	JSONFormattable
 }
 
 func (i *infoCmd) Run(l *ui.UI, env *hermit.Env, sta *state.State) error {

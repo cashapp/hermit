@@ -13,6 +13,7 @@ import (
 type searchCmd struct {
 	Short      bool   `short:"s" help:"Short listing."`
 	Constraint string `arg:"" help:"Package regex." optional:""`
+	JSONFormattable
 }
 
 func (s *searchCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
@@ -49,6 +50,9 @@ func (s *searchCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
 		}
 		return nil
 	}
-	listPackages(pkgs, true)
+	err = listPackages(pkgs, true, s.JSON, l)
+	if err != nil {
+		return errors.Wrapf(err, "error listing search result")
+	}
 	return nil
 }

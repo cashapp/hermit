@@ -25,7 +25,12 @@ func TestCommandInfoJson(t *testing.T) {
 	})
 	defer f.Clean()
 
-	cmd := infoCmd{Packages: []manifest.GlobSelector{manifest.MustParseGlobSelector("test-version-1.1")}, JSON: true}
+	cmd := infoCmd{
+		Packages: []manifest.GlobSelector{manifest.MustParseGlobSelector("test-version-1.1")},
+		JSONFormattable: JSONFormattable{
+			JSON: true,
+		},
+	}
 	require.NoError(t, cmd.Run(l, f.Env, f.State))
 
 	var jss []map[string]json.RawMessage
