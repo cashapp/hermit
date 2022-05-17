@@ -1,6 +1,7 @@
 package app
 
 import (
+	"encoding/json"
 	"fmt"
 	"go/doc"
 	"os"
@@ -16,8 +17,14 @@ import (
 	"github.com/cashapp/hermit/ui"
 )
 
+// JSONFormattable contains the shared JSON boolean flag for Kong
+type JSONFormattable struct {
+	JSON bool `help:"Format information as a JSON array" default:"false"`
+}
+
 type listCmd struct {
 	Short bool `short:"s" help:"Short listing."`
+	JSONFormattable
 }
 
 func (cmd *listCmd) Run(l *ui.UI, env *hermit.Env) error {
@@ -31,11 +38,15 @@ func (cmd *listCmd) Run(l *ui.UI, env *hermit.Env) error {
 		}
 		return nil
 	}
-	listPackages(pkgs, false)
+	err = listPackages(pkgs, false, cmd.JSON, l)
+	if err != nil {
+		return errors.Wrapf(err, "error listing packages")
+	}
+
 	return nil
 }
 
-func listPackages(pkgs manifest.Packages, allVersions bool) {
+func listPackages(pkgs manifest.Packages, allVersions bool, isJSON bool, l *ui.UI) error {
 	byName := map[string][]*manifest.Package{}
 	for _, pkg := range pkgs {
 		name := pkg.Reference.Name
@@ -50,8 +61,17 @@ func listPackages(pkgs manifest.Packages, allVersions bool) {
 	if w == -1 {
 		w = 80
 	}
+
+	packages := make([]*manifest.Package, 0)
+
 	for _, name := range names {
 		pkgs := byName[name]
+
+		if isJSON {
+			packages = append(packages, pkgs...)
+			continue
+		}
+
 		var versions []string
 		for _, pkg := range pkgs {
 			if !allVersions && !pkg.Linked {
@@ -77,4 +97,16 @@ func listPackages(pkgs manifest.Packages, allVersions bool) {
 		colour.Println("^B^2" + name + "^R (" + strings.Join(versions, ", ") + ")")
 		doc.ToText(os.Stdout, pkgs[0].Description, "  ", "", w-2)
 	}
+
+	if isJSON {
+		content, err := json.Marshal(packages)
+		if err != nil {
+			return errors.Wrapf(err, "error formatting packages output to json")
+		}
+
+		l.Printf("%s\n", string(content))
+
+	}
+
+	return nil
 }
