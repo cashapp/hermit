@@ -3,6 +3,8 @@ package app
 import (
 	"bytes"
 	"crypto/sha256"
+
+	// Embed installer template
 	_ "embed"
 	"encoding/hex"
 	"fmt"
@@ -45,7 +47,7 @@ func GenInstaller(config Config) ([]byte, string, error) {
 	}
 	err := installerTemplate.Execute(&b, p)
 	if err != nil {
-		return nil, "", err
+		return nil, "", errors.WithStack(err)
 	}
 	sha256sum := sha256.Sum256(b.Bytes())
 	return b.Bytes(), hex.EncodeToString(sha256sum[:]), nil
