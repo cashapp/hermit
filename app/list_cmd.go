@@ -27,6 +27,22 @@ type listCmd struct {
 	JSONFormattable
 }
 
+func buildListJSONResult(byName map[string][]*manifest.Package, names []string) interface{} {
+	packages := make([]*manifest.Package, 0)
+
+	for _, name := range names {
+		pg := byName[name]
+
+		for _, pkg := range pg {
+			if pkg.Linked {
+				packages = append(packages, pkg)
+			}
+		}
+	}
+
+	return packages
+}
+
 func (cmd *listCmd) Run(l *ui.UI, env *hermit.Env) error {
 	pkgs, err := env.ListInstalled(l)
 	if err != nil {
@@ -38,7 +54,12 @@ func (cmd *listCmd) Run(l *ui.UI, env *hermit.Env) error {
 		}
 		return nil
 	}
-	err = listPackages(pkgs, false, cmd.JSON, l)
+	err = listPackagesInJSONFormat(pkgs, &listPackageOption{
+		AllVersions:   false,
+		TransformJSON: buildListJSONResult,
+		UI:            l,
+		JSON:          false,
+	})
 	if err != nil {
 		return errors.Wrapf(err, "error listing packages")
 	}
@@ -46,7 +67,7 @@ func (cmd *listCmd) Run(l *ui.UI, env *hermit.Env) error {
 	return nil
 }
 
-func listPackages(pkgs manifest.Packages, allVersions bool, isJSON bool, l *ui.UI) error {
+func groupPackages(pkgs []*manifest.Package) (map[string][]*manifest.Package, []string) {
 	byName := map[string][]*manifest.Package{}
 	for _, pkg := range pkgs {
 		name := pkg.Reference.Name
@@ -57,24 +78,48 @@ func listPackages(pkgs manifest.Packages, allVersions bool, isJSON bool, l *ui.U
 		names = append(names, name)
 	}
 	sort.Strings(names)
+
+	return byName, names
+}
+
+// transformPackagesToJSON transforms the given grouped packages and ordered names into the output JSON struct
+type transformPackagesToJSON func(byName map[string][]*manifest.Package, names []string) interface{}
+
+func listPackagesInJSONFormat(pkgs manifest.Packages, option *listPackageOption) error {
+	byName, names := groupPackages(pkgs)
+
+	val := option.TransformJSON(byName, names)
+	content, err := json.Marshal(val)
+	if err != nil {
+		return errors.Wrapf(err, "error formatting packages output to json")
+	}
+
+	option.UI.Printf("%s\n", string(content))
+
+	return nil
+}
+
+type listPackageOption struct {
+	AllVersions   bool
+	TransformJSON transformPackagesToJSON
+	UI            *ui.UI
+	JSON          bool
+}
+
+func listPackagesInCLI(pkgs manifest.Packages, option *listPackageOption) {
+	byName, names := groupPackages(pkgs)
+
 	w, _, _ := terminal.GetSize(0)
 	if w == -1 {
 		w = 80
 	}
 
-	packages := make([]*manifest.Package, 0)
-
 	for _, name := range names {
 		pkgs := byName[name]
 
-		if isJSON {
-			packages = append(packages, pkgs...)
-			continue
-		}
-
 		var versions []string
 		for _, pkg := range pkgs {
-			if !allVersions && !pkg.Linked {
+			if !option.AllVersions && !pkg.Linked {
 				continue
 			}
 			clr := ""
@@ -97,16 +142,14 @@ func listPackages(pkgs manifest.Packages, allVersions bool, isJSON bool, l *ui.U
 		colour.Println("^B^2" + name + "^R (" + strings.Join(versions, ", ") + ")")
 		doc.ToText(os.Stdout, pkgs[0].Description, "  ", "", w-2)
 	}
+}
 
-	if isJSON {
-		content, err := json.Marshal(packages)
-		if err != nil {
-			return errors.Wrapf(err, "error formatting packages output to json")
-		}
-
-		l.Printf("%s\n", string(content))
-
+func listPackages(pkgs manifest.Packages, option *listPackageOption) error {
+	if option.JSON {
+		return errors.WithStack(listPackagesInJSONFormat(pkgs, option))
 	}
+
+	listPackagesInCLI(pkgs, option)
 
 	return nil
 }
