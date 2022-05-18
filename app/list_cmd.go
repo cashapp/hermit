@@ -54,11 +54,11 @@ func (cmd *listCmd) Run(l *ui.UI, env *hermit.Env) error {
 		}
 		return nil
 	}
-	err = listPackagesInJSONFormat(pkgs, &listPackageOption{
+	err = listPackages(pkgs, &listPackageOption{
 		AllVersions:   false,
 		TransformJSON: buildListJSONResult,
 		UI:            l,
-		JSON:          false,
+		JSON:          cmd.JSON,
 	})
 	if err != nil {
 		return errors.Wrapf(err, "error listing packages")

@@ -99,7 +99,7 @@ func (s *searchCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
 	}
 
 	err = listPackages(pkgs, &listPackageOption{
-		AllVersions:   false,
+		AllVersions:   true,
 		TransformJSON: buildSearchJSONResults,
 		UI:            l,
 		JSON:          s.JSON,
