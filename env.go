@@ -115,11 +115,12 @@ type Env struct {
 var extDepData []byte
 
 // Init a new Env.
-func Init(l *ui.UI, env string, distURL string, stateDir string, config Config) error {
+func Init(l *ui.UI, env string, distURL string, stateDir string, config Config, installScriptSHA string) error {
 	env = util.RealPath(env)
 	l.Infof("Creating new Hermit environment in %s", env)
 	vars := map[string]string{
-		"HERMIT_DEFAULT_DIST_URL": distURL,
+		"HERMIT_DEFAULT_DIST_URL":      distURL,
+		"HERMIT_INSTALL_SCRIPT_SHA256": installScriptSHA,
 	}
 	bin := filepath.Join(env, "bin")
 	if err := os.Mkdir(bin, os.ModePerm); err != nil && !os.IsExist(err) {

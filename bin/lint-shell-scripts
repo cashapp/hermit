@@ -8,5 +8,5 @@ mkdir -p build
 
 go run ./cmd/hermit shell-hooks --zsh --print > $tmpzsh
 go run ./cmd/hermit shell-hooks --bash --print > $tmpbash
-go run -ldflags "-X main.channel=stable" ./cmd/hermit gen-installer --dest=./build/install.sh &>/dev/null
+go run -ldflags "-X main.channel=stable" ./cmd/hermit gen-installer --dest=./build/install.sh >/dev/null
 shellcheck -s bash ./build/install.sh ./files/hermit ./files/activate-hermit ./shell/files/sh_common_hooks.sh "$tmpzsh" "$tmpbash" ./it/check_script_sha.sh

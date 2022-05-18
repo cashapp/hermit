@@ -16,14 +16,14 @@ for channel in "canary" "stable"; do
   BIN_HERMIT_SHA=$(openssl dgst -sha256 "${PROJECT_DIR}/bin/hermit" | awk '{print $NF}')
   BIN_ACTIVATE_HERMIT_SHA=$(openssl dgst -sha256 "${PROJECT_DIR}/bin/activate-hermit" | awk '{print $NF}')
   if ! build/hermit script-sha | grep "${BIN_HERMIT_SHA}" &>/dev/null; then
-    echo "(${channel}) Script hermit's sha256 ${BIN_HERMIT_SHA} not found. Please add it to file script.sha256."
+    echo "(${channel}) Script hermit's sha256 ${BIN_HERMIT_SHA} not found. Please add it to files/script.sha256."
     exit 1
   fi
   if ! build/hermit script-sha | grep "${BIN_ACTIVATE_HERMIT_SHA}" &>/dev/null; then
-    echo "(${channel}) Script activate-hermit's sha256 ${BIN_ACTIVATE_HERMIT_SHA} not found. Please add it to file script.sha256."
+    echo "(${channel}) Script activate-hermit's sha256 ${BIN_ACTIVATE_HERMIT_SHA} not found. Please add it to files/script.sha256."
     exit 1
   fi
 done
-echo "File script.sha is up-to-date."
+echo "File files/script.sha is up-to-date."
 # Clean up
 rm -rf build
