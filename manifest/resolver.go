@@ -84,6 +84,7 @@ type Package struct {
 	Mirrors              []string
 	Root                 string
 	SHA256               string
+	Mutable              bool
 	Dest                 string
 	Test                 string
 	Strip                int
@@ -433,6 +434,9 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 		}
 		if layer.SHA256 != "" {
 			p.SHA256 = layer.SHA256
+		}
+		if layer.Mutable {
+			p.Mutable = layer.Mutable
 		}
 		if layer.Test != nil {
 			p.Test = *layer.Test

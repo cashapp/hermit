@@ -34,29 +34,9 @@ import (
 	"github.com/cashapp/hermit/util"
 )
 
-// tidySha256Db is a helper function to remove leading and trailing
-// whitespaces and empty lines from a multiline string containing
-// SHA-256 hash digests, and return a slice of digest strings that do
-// not start with a '#' character (used as a comment line indicator).
-func tidySha256Db(s string) []string {
-	ss := strings.Split(s, "\n")
-
-	var res []string
-	for _, x := range ss {
-		line := strings.TrimSpace(x)
-		// Add to result only when hash digest length is correct. Skip
-		// comment line.
-		if len(line) == 64 && !strings.HasPrefix(line, "#") {
-			res = append(res, line)
-		}
-	}
-
-	return res
-}
-
 // Reset environment variables.
 var (
-	//go:embed script.sha256
+	//go:embed files/script.sha256
 	sha256Db string
 
 	// ScriptSHAs contains the default known valid SHA256 sums for bin/activate-hermit and bin/hermit.
@@ -1408,4 +1388,24 @@ func (e *Env) resolver(l *ui.UI) (*manifest.Resolver, error) {
 	}
 	e.lazyResolver = resolver
 	return resolver, nil
+}
+
+// tidySha256Db is a helper function to remove leading and trailing
+// whitespaces and empty lines from a multiline string containing
+// SHA-256 hash digests, and return a slice of digest strings that do
+// not start with a '#' character (used as a comment line indicator).
+func tidySha256Db(s string) []string {
+	ss := strings.Split(s, "\n")
+
+	var res []string
+	for _, x := range ss {
+		line := strings.TrimSpace(x)
+		// Add to result only when hash digest length is correct. Skip
+		// comment line.
+		if len(line) == 64 && !strings.HasPrefix(line, "#") {
+			res = append(res, line)
+		}
+	}
+
+	return res
 }

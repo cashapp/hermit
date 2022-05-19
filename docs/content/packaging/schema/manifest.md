@@ -31,6 +31,7 @@ Each Hermit package manifest is a nested structure containing OS/architecture-sp
 | `files` | `{string: string}?` | Files to load strings from to be used in the manifest. |
 | `homepage` | `string?` | Home page. |
 | `mirrors` | `[string]?` | Mirrors to use if the primary source is unavailable. |
+| `mutable` | `boolean?` | Installed package will not be immutable. |
 | `provides` | `[string]?` | This package provides the given virtual packages. |
 | `rename` | `{string: string}?` | Rename files after unpacking to ${root}. |
 | `requires` | `[string]?` | Packages this one requires. |
