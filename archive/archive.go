@@ -78,19 +78,21 @@ func Extract(b *ui.Task, source string, pkg *manifest.Package) (finalise func() 
 	}
 
 	// Make the unpacked destination files read-only.
-	finalise = func() error {
-		return errors.WithStack(filepath.Walk(pkg.Dest, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			task.Tracef("chmod a-w %q", path)
-			err = os.Chmod(path, info.Mode()&^0222)
-			if errors.Is(err, os.ErrNotExist) {
-				task.Debugf("file did not exist during finalisation %q", path)
-				return nil
-			}
-			return errors.WithStack(err)
-		}))
+	if !pkg.Mutable {
+		finalise = func() error {
+			return errors.WithStack(filepath.Walk(pkg.Dest, func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
+				task.Tracef("chmod a-w %q", path)
+				err = os.Chmod(path, info.Mode()&^0222)
+				if errors.Is(err, os.ErrNotExist) {
+					task.Debugf("file did not exist during finalisation %q", path)
+					return nil
+				}
+				return errors.WithStack(err)
+			}))
+		}
 	}
 
 	// Cleanup or finalise temporary directory.

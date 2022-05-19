@@ -45,6 +45,7 @@ type Layer struct {
 	Linux       []*Layer          `hcl:"linux,block" help:"Linux-specific configuration."`
 	Platform    []*PlatformBlock  `hcl:"platform,block" help:"Platform-specific configuration. <attr> is a set regexes that must all match against one of CPU, OS, etc.."`
 	Triggers    []*Trigger        `hcl:"on,block" help:"Triggers to run on lifecycle events."`
+	Mutable     bool              `hcl:"mutable,optional" help:"Package will not be made read-only."`
 }
 
 func (c Layer) layers(os string, arch string) (out layers) {
