@@ -107,46 +107,33 @@ type listPackageOption struct {
 	Prefix        string
 }
 
-// NameList is a list of package names plus the prefix it searched for
-type NameList struct {
-	nl     []string
-	prefix string
-}
-
-func (n NameList) Len() int {
-	return len(n.nl)
-}
-func (n NameList) Swap(i, j int) {
-	n.nl[i], n.nl[j] = n.nl[j], n.nl[i]
-}
-
-// implements prefix-first search over this list
-func (n NameList) Less(i, j int) bool {
-	if n.prefix != "" {
-		left := strings.HasPrefix(n.nl[i], n.prefix)
-		right := strings.HasPrefix(n.nl[j], n.prefix)
-		if left && right {
-			return n.nl[i] < n.nl[j]
-		} else if left {
-			return true
-		} else if right {
-			return false
+func sortSliceWithPrefix(names []string, prefix string) {
+	sort.Slice(names, func(i, j int) bool {
+		if prefix != "" {
+			left := strings.HasPrefix(names[i], prefix)
+			right := strings.HasPrefix(names[j], prefix)
+			if left && right {
+				return names[i] < names[j]
+			} else if left {
+				return true
+			} else if right {
+				return false
+			}
 		}
-	}
-	return n.nl[i] < n.nl[j]
+		return names[i] < names[j]
+	})
 }
 
 func listPackagesInCLI(pkgs manifest.Packages, option *listPackageOption) {
 	byName, names := groupPackages(pkgs)
-	nl := NameList{names, option.Prefix}
-	sort.Sort(nl)
+	sortSliceWithPrefix(names, option.Prefix)
 
 	w, _, _ := terminal.GetSize(0)
 	if w == -1 {
 		w = 80
 	}
 
-	for _, name := range nl.nl {
+	for _, name := range names {
 		printPackage(byName[name], option, name, w)
 	}
 }
