@@ -8,7 +8,8 @@ import (
 
 func TestNameListWithoutPrefix(t *testing.T) {
 	names := []string{"attest", "test", "untested"}
-	orig := copy(make([]string, len(names)), names)
+	orig := make([]string, len(names))
+	copy(orig, names)
 	require.Equal(t, 3, len(names))
 	sortSliceWithPrefix(names, "")
 	require.Equal(t, names, orig)
