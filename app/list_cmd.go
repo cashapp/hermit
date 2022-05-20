@@ -107,27 +107,46 @@ type listPackageOption struct {
 	Prefix        string
 }
 
+// NameList is a list of package names plus the prefix it searched for
+type NameList struct {
+	nl     []string
+	prefix string
+}
+
+func (n NameList) Len() int {
+	return len(n.nl)
+}
+func (n NameList) Swap(i, j int) {
+	n.nl[i], n.nl[j] = n.nl[j], n.nl[i]
+}
+
+// implements prefix-first search over this list
+func (n NameList) Less(i, j int) bool {
+	if n.prefix != "" {
+		left := strings.HasPrefix(n.nl[i], n.prefix)
+		right := strings.HasPrefix(n.nl[j], n.prefix)
+		if left && right {
+			return n.nl[i] < n.nl[j]
+		} else if left {
+			return true
+		} else if right {
+			return false
+		}
+	}
+	return n.nl[i] < n.nl[j]
+}
+
 func listPackagesInCLI(pkgs manifest.Packages, option *listPackageOption) {
 	byName, names := groupPackages(pkgs)
+	nl := NameList{names, option.Prefix}
+	sort.Sort(nl)
 
 	w, _, _ := terminal.GetSize(0)
 	if w == -1 {
 		w = 80
 	}
 
-	// for each name, check if it's a prefix match
-	pkgMiss := make([]string, 0, len(names))
-	for _, name := range names {
-		if strings.HasPrefix(name, option.Prefix) {
-			// if so, print it immediately
-			printPackage(byName[name], option, name, w)
-		} else {
-			// otherwise, add it to the missing list
-			pkgMiss = append(pkgMiss, name)
-		}
-	}
-	// finally, print the remaining packages (in alphabetical order)
-	for _, name := range pkgMiss {
+	for _, name := range nl.nl {
 		printPackage(byName[name], option, name, w)
 	}
 }
