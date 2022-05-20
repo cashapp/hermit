@@ -115,13 +115,6 @@ func listPackagesInCLI(pkgs manifest.Packages, option *listPackageOption) {
 		w = 80
 	}
 
-	if option.Prefix != "" {
-		for i, pkg := range pkgs {
-			if strings.HasPrefix(pkg.Reference.Name, option.Prefix) {
-				pkgs = append(pkgs[:i], pkgs[i+1:]...)
-			}
-		}
-	}
 	// for each name, check if it's a prefix match
 	pkgMiss := make([]string, 0, len(names))
 	for _, name := range names {
