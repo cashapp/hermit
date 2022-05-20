@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+
 	"github.com/cashapp/hermit"
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/manifest"
@@ -103,6 +104,7 @@ func (s *searchCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
 		TransformJSON: buildSearchJSONResults,
 		UI:            l,
 		JSON:          s.JSON,
+		Prefix:        s.Constraint,
 	})
 	if err != nil {
 		return errors.Wrapf(err, "error listing packages")
