@@ -104,6 +104,7 @@ type listPackageOption struct {
 	TransformJSON transformPackagesToJSON
 	UI            *ui.UI
 	JSON          bool
+	Prefix        string
 }
 
 func listPackagesInCLI(pkgs manifest.Packages, option *listPackageOption) {
@@ -114,34 +115,55 @@ func listPackagesInCLI(pkgs manifest.Packages, option *listPackageOption) {
 		w = 80
 	}
 
-	for _, name := range names {
-		pkgs := byName[name]
-
-		var versions []string
-		for _, pkg := range pkgs {
-			if !option.AllVersions && !pkg.Linked {
-				continue
+	if option.Prefix != "" {
+		for i, pkg := range pkgs {
+			if strings.HasPrefix(pkg.Reference.Name, option.Prefix) {
+				pkgs = append(pkgs[:i], pkgs[i+1:]...)
 			}
-			clr := ""
-			suffix := ""
-			if pkg.Unsupported() {
-				clr = "^1"
-				suffix = " (architecture not supported)"
-			} else if pkg.Linked {
-				switch pkg.State {
-				case manifest.PackageStateRemote:
-					clr = "^1"
-				case manifest.PackageStateDownloaded:
-					clr = "^3"
-				case manifest.PackageStateInstalled:
-					clr = "^2"
-				}
-			}
-			versions = append(versions, fmt.Sprintf("%s%s%s^R", clr, pkg.Reference.StringNoName(), suffix))
 		}
-		colour.Println("^B^2" + name + "^R (" + strings.Join(versions, ", ") + ")")
-		doc.ToText(os.Stdout, pkgs[0].Description, "  ", "", w-2)
 	}
+	// for each name, check if it's a prefix match
+	pkgMiss := make([]string, 0, len(names))
+	for _, name := range names {
+		if strings.HasPrefix(name, option.Prefix) {
+			// if so, print it immediately
+			printPackage(byName[name], option, name, w)
+		} else {
+			// otherwise, add it to the missing list
+			pkgMiss = append(pkgMiss, name)
+		}
+	}
+	// finally, print the remaining packages (in alphabetical order)
+	for _, name := range pkgMiss {
+		printPackage(byName[name], option, name, w)
+	}
+}
+
+func printPackage(pkgs []*manifest.Package, option *listPackageOption, name string, w int) {
+	var versions []string
+	for _, pkg := range pkgs {
+		if !option.AllVersions && !pkg.Linked {
+			continue
+		}
+		clr := ""
+		suffix := ""
+		if pkg.Unsupported() {
+			clr = "^1"
+			suffix = " (architecture not supported)"
+		} else if pkg.Linked {
+			switch pkg.State {
+			case manifest.PackageStateRemote:
+				clr = "^1"
+			case manifest.PackageStateDownloaded:
+				clr = "^3"
+			case manifest.PackageStateInstalled:
+				clr = "^2"
+			}
+		}
+		versions = append(versions, fmt.Sprintf("%s%s%s^R", clr, pkg.Reference.StringNoName(), suffix))
+	}
+	colour.Println("^B^2" + name + "^R (" + strings.Join(versions, ", ") + ")")
+	doc.ToText(os.Stdout, pkgs[0].Description, "  ", "", w-2)
 }
 
 func listPackages(pkgs manifest.Packages, option *listPackageOption) error {
