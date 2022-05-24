@@ -146,6 +146,7 @@ type Manifest struct {
 	Default     string         `hcl:"default,optional" help:"Default version or channel if not specified."`
 	Description string         `hcl:"description" help:"Human readable description of the package."`
 	Homepage    string         `hcl:"homepage,optional" help:"Home page."`
+	Repository  string         `hcl:"repository,optional" help:"Source Repository."`
 	Versions    []VersionBlock `hcl:"version,block" help:"Definition of and configuration for a specific version."`
 	Channels    []ChannelBlock `hcl:"channel,block" help:"Definition of and configuration for an auto-update channel."`
 }

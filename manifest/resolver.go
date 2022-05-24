@@ -72,6 +72,7 @@ type ResolvedFileRef struct {
 type Package struct {
 	Description          string
 	Homepage             string
+	Repository           string
 	Reference            Reference
 	Arch                 string
 	Binaries             []string
@@ -387,6 +388,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	p := &Package{
 		Description:          manifest.Description,
 		Homepage:             manifest.Homepage,
+		Repository:           manifest.Repository,
 		Reference:            found,
 		Root:                 "${dest}",
 		Dest:                 root,
@@ -597,6 +599,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	for i, mirror := range p.Mirrors {
 		p.Mirrors[i] = expand(mirror, false)
 	}
+	inferPackageRepository(p)
 	for _, actions := range p.Triggers {
 		for _, action := range actions {
 			switch action := action.(type) {
@@ -668,6 +671,31 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 		return nil, errors.WithStack(err)
 	}
 	return p, err
+}
+
+func inferPackageRepository(p *Package) {
+	// start infer from source if no repository is given
+	if p == nil || p.Repository != "" || p.Source == "" {
+		return
+	}
+
+	githubComPrefix := "https://github.com/"
+
+	if strings.HasPrefix(p.Source, githubComPrefix) == false || strings.HasPrefix(p.Source, "https://github.com/cashapp/hermit-build") {
+		return
+	}
+
+	rest := strings.TrimPrefix(p.Source, githubComPrefix)
+
+	restSplit := strings.Split(rest, "/")
+
+	if len(restSplit) < 2 { //
+		return
+	}
+
+	result := fmt.Sprintf("%s%s", githubComPrefix, strings.Join(restSplit[0:2], "/"))
+
+	p.Repository = result
 }
 
 // HighestMatch returns the VersionBlock with highest version number matching the given Glob

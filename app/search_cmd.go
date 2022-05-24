@@ -23,6 +23,7 @@ type searchResult struct {
 	Channels       []string
 	CurrentVersion string
 	Description    string
+	Repository     string
 }
 
 // buildSearchResult constructs a search result from packages with same name
@@ -34,6 +35,9 @@ func buildSearchResult(p []*manifest.Package) *searchResult {
 	}
 
 	for _, pkg := range p {
+		if out.Repository == "" {
+			out.Repository = pkg.Repository
+		}
 		if out.Name == "" {
 			out.Name = pkg.Reference.Name
 			out.Description = pkg.Description
