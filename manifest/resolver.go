@@ -599,7 +599,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	for i, mirror := range p.Mirrors {
 		p.Mirrors[i] = expand(mirror, false)
 	}
-	inferPackageRepository(p)
+	inferPackageRepository(p, manifest.Manifest)
 	for _, actions := range p.Triggers {
 		for _, action := range actions {
 			switch action := action.(type) {
@@ -673,13 +673,22 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	return p, err
 }
 
-func inferPackageRepository(p *Package) {
+func inferPackageRepository(p *Package, manifest *Manifest) {
 	// start infer from source if no repository is given
 	if p == nil || p.Repository != "" || p.Source == "" {
 		return
 	}
 
 	githubComPrefix := "https://github.com/"
+
+	if manifest != nil {
+		for _, v := range manifest.Versions {
+			if v.AutoVersion != nil && v.AutoVersion.GitHubRelease != "" {
+				p.Repository = fmt.Sprintf("%s%s", githubComPrefix, v.AutoVersion.GitHubRelease)
+				return
+			}
+		}
+	}
 
 	if strings.HasPrefix(p.Source, githubComPrefix) == false || strings.HasPrefix(p.Source, "https://github.com/cashapp/hermit-build") {
 		return
