@@ -718,19 +718,22 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	ops := e.allEnvarOpsForPackages(runtimeDeps, installed...)
-	packageHermitBin, err := e.getPackageRuntimeEnvops(pkg)
-	if err != nil {
-		return errors.WithStack(err)
+	// Only re-apply envars if there is no active env or we're executing from an env different from the activated one.
+	var env []string
+	if os.Getenv("HERMIT_ENV") == "" || os.Getenv("HERMIT_ENV") != os.Getenv("ACTIVE_HERMIT") {
+		ops := e.allEnvarOpsForPackages(runtimeDeps, installed...)
+		packageHermitBin, err := e.getPackageRuntimeEnvops(pkg)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		if packageHermitBin != nil {
+			ops = append(ops, packageHermitBin)
+		}
+		env = e.envarsFromOps(true, ops)
+	} else {
+		env = os.Environ()
 	}
-	if packageHermitBin != nil {
-		ops = append(ops, packageHermitBin)
-	}
-	env := e.envarsFromOps(true, ops)
 
-	if err != nil {
-		return errors.WithStack(err)
-	}
 	for _, bin := range binaries {
 		if filepath.Base(bin) != filepath.Base(binary) {
 			continue
