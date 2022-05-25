@@ -10,6 +10,7 @@ func TestInferRepository(t *testing.T) {
 		name               string
 		Package            *Package
 		expectedRepository string
+		Manifest           *Manifest
 	}{
 		{
 			name:               "empty repository on no source",
@@ -36,11 +37,26 @@ func TestInferRepository(t *testing.T) {
 			Package:            &Package{Source: "https://github.com/bpkg/bpkg/archive/refs/tags/${version}.tar.gz"},
 			expectedRepository: "https://github.com/bpkg/bpkg",
 		},
+		{
+			name:    "able to figure out from manifest from github auto version",
+			Package: &Package{Source: "git@github.com:cashapp/test-project.git#v${version"},
+			Manifest: &Manifest{
+				Versions: []VersionBlock{
+					{
+						Version: nil,
+						AutoVersion: &AutoVersionBlock{
+							GitHubRelease: "cashapp/test-project",
+						},
+					},
+				},
+			},
+			expectedRepository: "https://github.com/cashapp/test-project",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			inferPackageRepository(tt.Package)
+			inferPackageRepository(tt.Package, tt.Manifest)
 
 			require.Equal(t, tt.Package.Repository, tt.expectedRepository)
 		})
