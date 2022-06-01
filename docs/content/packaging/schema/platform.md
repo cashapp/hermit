@@ -28,6 +28,7 @@ Used by: [channel](../channel#blocks) [darwin](../darwin#blocks) [linux](../linu
 | `env` | `{string: string}?` | Environment variables to export. |
 | `files` | `{string: string}?` | Files to load strings from to be used in the manifest. |
 | `mirrors` | `[string]?` | Mirrors to use if the primary source is unavailable. |
+| `mutable` | `boolean?` | Installed package will not be immutable. |
 | `provides` | `[string]?` | This package provides the given virtual packages. |
 | `rename` | `{string: string}?` | Rename files after unpacking to ${root}. |
 | `requires` | `[string]?` | Packages this one requires. |
