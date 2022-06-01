@@ -12,6 +12,19 @@ import (
 	"github.com/cashapp/hermit/ui"
 )
 
+// CommandRunner abstracts how we run command in a given directory
+type CommandRunner interface {
+	// RunInDir runs a command in the given directory.
+	RunInDir(log *ui.Task, dir string, args ...string) error
+}
+
+// RealCommandRunner actually calls command
+type RealCommandRunner struct{}
+
+func (g *RealCommandRunner) RunInDir(task *ui.Task, dir string, commands ...string) error { // nolint: golint
+	return errors.WithStack(RunInDir(task, dir, commands...))
+}
+
 // Run a command, outputting to stdout and stderr.
 func Run(log *ui.Task, args ...string) error {
 	return RunInDir(log, "", args...)

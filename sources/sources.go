@@ -1,6 +1,7 @@
 package sources
 
 import (
+	"github.com/cashapp/hermit/util"
 	"io/fs"
 	"net/url"
 	"os"
@@ -90,7 +91,7 @@ func getSource(b *ui.UI, source, dir, env string) (Source, error) {
 	defer task.Done()
 
 	if strings.HasSuffix(source, ".git") {
-		return NewGitSource(source, dir), nil
+		return NewGitSource(source, dir, &util.RealCommandRunner{}), nil
 	}
 
 	uri, err := url.Parse(source)
