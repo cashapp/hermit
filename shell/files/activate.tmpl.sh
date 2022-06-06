@@ -6,12 +6,14 @@ if [ -n "${ACTIVE_HERMIT+_}" ]; then
   if [ "$ACTIVE_HERMIT" = "$HERMIT_ENV" ]; then
     echo "This Hermit environment has already been activated. Skipping" >&2
     return 34
-  else
+  elif type deactivate-hermit &>/dev/null; then
     export HERMIT_CURRENT_ENV=$HERMIT_ENV
     export HERMIT_ENV=$ACTIVE_HERMIT
     deactivate-hermit
     export HERMIT_ENV=$HERMIT_CURRENT_ENV
     unset HERMIT_CURRENT_ENV
+  else
+    eval "$(${ACTIVE_HERMIT}/bin/hermit env --deactivate-from-ops="${HERMIT_ENV_OPS}")"
   fi
 fi
 
