@@ -259,7 +259,7 @@ Describe "Hermit"
 
   Describe "Runtime dependencies"
     . bin/activate-hermit
-    It "Does not install runtime-dependencies to the environment"
+    It "do not install to the environment"
       When call hermit install testbin1
       The status should be success
       The stderr should be blank
@@ -267,13 +267,13 @@ Describe "Hermit"
       The file ./bin/testbin2 should not be exist
     End
 
-    It "allows installing packages with binaries conflicting with runtime dependencies"
+    It "allow installing packages with binaries conflicting with the environment"
       When call hermit install faketestbin2
       The status should be success
       The stderr should be blank
     End
 
-    It "Calls the runtime dependency correctly"
+    It "calls the runtime dependency correctly"
       When call ./bin/testbin1
       The status should be success
       The stdout should equal "Hello from testbin2"
@@ -285,10 +285,28 @@ Describe "Hermit"
     ln -s . ./symlinked
     cd ./symlinked
     . bin/activate-hermit
-    It "Allows calling binaries in the environment"
+    It "allows calling binaries in the environment"
       When call ./bin/testbin1
       The status should be success
       The stdout should not be blank
+      The stderr should be blank
+    End
+  End
+
+  Describe "Environment variables"
+    . bin/activate-hermit
+    hermit install testbin3
+    It "default to the Hermit envar"
+      When call ./bin/testbin3
+      The status should be success
+      The stdout should not include foo
+      The stderr should be blank
+    End
+    It "can be overridden"
+      export GOBIN=foo
+      When call ./bin/testbin3
+      The status should be success
+      The stdout should include foo
       The stderr should be blank
     End
   End

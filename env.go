@@ -718,7 +718,11 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	ops := e.allEnvarOpsForPackages(runtimeDeps, installed...)
+	var ops envars.Ops
+	// If the environment is active assume it's sane. This also allows users to override envars.
+	if activeEnv, ok := os.LookupEnv("HERMIT_ENV"); !ok || activeEnv != e.envDir {
+		ops = e.allEnvarOpsForPackages(runtimeDeps, installed...)
+	}
 	packageHermitBin, err := e.getPackageRuntimeEnvops(pkg)
 	if err != nil {
 		return errors.WithStack(err)

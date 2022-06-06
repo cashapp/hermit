@@ -39,6 +39,7 @@ setupEnv() {
     cd ../testbins
     tar cvzf testbin1.tar.gz testbin1
     tar cvzf testbin2.tar.gz testbin2
+    tar cvzf testbin3.tar.gz testbin3
     cd fake
     tar cvzf ../faketestbin2.tar.gz testbin2
   )
