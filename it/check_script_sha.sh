@@ -15,11 +15,11 @@ for channel in "canary" "stable"; do
   build/hermit init "${PROJECT_DIR}"
   BIN_HERMIT_SHA=$(openssl dgst -sha256 "${PROJECT_DIR}/bin/hermit" | awk '{print $NF}')
   BIN_ACTIVATE_HERMIT_SHA=$(openssl dgst -sha256 "${PROJECT_DIR}/bin/activate-hermit" | awk '{print $NF}')
-  if ! build/hermit script-sha | grep -q "${BIN_HERMIT_SHA}"; then
+  if ! build/hermit script-sha | grep "${BIN_HERMIT_SHA}" &>/dev/null; then
     echo "(${channel}) Script hermit's sha256 ${BIN_HERMIT_SHA} not found. Please add it to file script.sha256."
     exit 1
   fi
-  if ! build/hermit script-sha | grep -q "${BIN_ACTIVATE_HERMIT_SHA}"; then
+  if ! build/hermit script-sha | grep "${BIN_ACTIVATE_HERMIT_SHA}" &>/dev/null; then
     echo "(${channel}) Script activate-hermit's sha256 ${BIN_ACTIVATE_HERMIT_SHA} not found. Please add it to file script.sha256."
     exit 1
   fi
