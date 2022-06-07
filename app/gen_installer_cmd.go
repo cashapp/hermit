@@ -3,9 +3,6 @@ package app
 import (
 	"bytes"
 	"crypto/sha256"
-
-	// Embed installer template
-	_ "embed"
 	"encoding/hex"
 	"fmt"
 	"os"
