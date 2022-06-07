@@ -1,7 +1,9 @@
 package files
 
-// Embed installer template
-import _ "embed"
+import (
+	// Embed installer template
+	_ "embed"
+)
 
 // InstallerTemplateSource is a string containing the installer template
 //go:embed "install.sh.tmpl"
