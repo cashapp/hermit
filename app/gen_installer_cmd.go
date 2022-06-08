@@ -9,12 +9,12 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/cashapp/hermit"
 	"github.com/cashapp/hermit/errors"
-	"github.com/cashapp/hermit/files"
 )
 
 var (
-	installerTemplateSource = files.InstallerTemplateSource
+	installerTemplateSource = hermit.InstallerTemplateSource
 	installerTemplate       = template.Must(template.New("install.sh").Funcs(template.FuncMap{
 		"string": func(b []byte) string { return string(b) },
 		"words":  func(s []string) string { return strings.Join(s, " ") },
