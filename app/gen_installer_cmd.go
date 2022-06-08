@@ -22,8 +22,7 @@ var (
 )
 
 type genInstallerCmd struct {
-	Dest         string   `required:"" placeholder:"FILE" help:"Where to write the installer script."`
-	InstallPaths []string `placeholder:"PATH" help:"Possible system-wide installation paths." default:"$${HOME}/bin,/opt/homebrew/bin,/usr/local/bin"`
+	Dest string `required:"" placeholder:"FILE" help:"Where to write the installer script."`
 }
 
 type params struct {
@@ -31,15 +30,14 @@ type params struct {
 	InstallPaths []string
 }
 
-// genInstaller generates an instaler script from the app configuration and the
-// system install paths passed in as a CLI parameter.
+// GenInstaller generates an instaler script from the app configuration.
 // It returns a byte slice of the generated installer script, its
 // SHA-256 digest as a hexadecimal string, and any error encountered.
-func (g *genInstallerCmd) genInstaller(config Config) ([]byte, string, error) {
+func GenInstaller(config Config) ([]byte, string, error) {
 	var b bytes.Buffer
 	p := params{
 		DistURL:      config.BaseDistURL,
-		InstallPaths: g.InstallPaths,
+		InstallPaths: config.InstallPaths,
 	}
 	err := installerTemplate.Execute(&b, p)
 	if err != nil {
@@ -55,7 +53,7 @@ func (g *genInstallerCmd) Run(config Config) error {
 		return errors.WithStack(err)
 	}
 	defer w.Close() // nolint
-	script, sum, err := g.genInstaller(config)
+	script, sum, err := GenInstaller(config)
 	if err != nil {
 		return errors.WithStack(err)
 	}
