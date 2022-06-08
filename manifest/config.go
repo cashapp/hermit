@@ -45,6 +45,7 @@ type Layer struct {
 	Linux       []*Layer          `hcl:"linux,block" help:"Linux-specific configuration."`
 	Platform    []*PlatformBlock  `hcl:"platform,block" help:"Platform-specific configuration. <attr> is a set regexes that must all match against one of CPU, OS, etc.."`
 	Triggers    []*Trigger        `hcl:"on,block" help:"Triggers to run on lifecycle events."`
+	Mutable     bool              `hcl:"mutable,optional" help:"Package will not be made read-only."`
 }
 
 func (c Layer) layers(os string, arch string) (out layers) {
@@ -145,6 +146,7 @@ type Manifest struct {
 	Default     string         `hcl:"default,optional" help:"Default version or channel if not specified."`
 	Description string         `hcl:"description" help:"Human readable description of the package."`
 	Homepage    string         `hcl:"homepage,optional" help:"Home page."`
+	Repository  string         `hcl:"repository,optional" help:"Source Repository."`
 	Versions    []VersionBlock `hcl:"version,block" help:"Definition of and configuration for a specific version."`
 	Channels    []ChannelBlock `hcl:"channel,block" help:"Definition of and configuration for an auto-update channel."`
 }
