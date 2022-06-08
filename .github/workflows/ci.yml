@@ -56,6 +56,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+      - name: geninstaller Cross Check
+        run: |
+          BASE_DIST_URL="https://github.com/cashapp/hermit/releases/download"
+          DEST=$(mktemp)
+          for i in {1..42}
+          do
+            CHANNEL=$(head -c 7 /dev/urandom | xxd -p)
+            ./bin/go run ./cmd/geninstaller --dest="${DEST}" --dist-url=https://github.com/cashapp/hermit/releases/download/"${CHANNEL}"
+            sum1=$(openssl dgst -sha256 "${DEST}" | awk '{print $NF}')
+            sum2=$(./bin/go run -ldflags "-X main.channel=${CHANNEL}" ./cmd/hermit gen-installer --dest="${DEST}")
+            [ "${sum1}" = "${sum2}" ] || exit 1
+          done
       - name: Ensure Up-to-date script.sha256 File
         run: |
           ./it/check_script_sha.sh

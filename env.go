@@ -45,6 +45,10 @@ var (
 	//go:embed files
 	files embed.FS
 
+	// InstallerTemplateSource is a string containing the installer template
+	//go:embed "files/install.sh.tmpl"
+	InstallerTemplateSource string
+
 	// UserStateDir should be passed to Open()/Init() in most cases.
 	UserStateDir = func() string {
 		// Check if state dir is explicitly set

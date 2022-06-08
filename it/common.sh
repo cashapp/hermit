@@ -27,15 +27,14 @@ fakeRelease() {
   echo "Compiling hermit"
   (
     . ../../bin/activate-hermit
-    go build -o hermit ../../cmd/hermit
-    go install ../../cmd/geninstaller
+    go build -ldflags "-X main.channel=${CHANNEL}" -o hermit ../../cmd/hermit
   )
 
   OS=$(../../bin/go version | awk '{print $NF}' | cut -d/ -f1)
   ARCH=$(../../bin/go version | awk '{print $NF}' | cut -d/ -f2)
   mkdir -p "$DIR"
   gzip -c hermit > "$DIR/hermit-${OS}-${ARCH}.gz"
-  ../../.hermit/go/bin/geninstaller --dest="${DIR}/install.sh" --dist-url=https://github.com/cashapp/hermit/releases/download/"${CHANNEL}"
+  ./hermit gen-installer --dest="${DIR}/install.sh"
 
   export HERMIT_DIST_URL=file://$PWD/$DIR
   echo $HERMIT_DIST_URL
