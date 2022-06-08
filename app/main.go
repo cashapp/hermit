@@ -37,8 +37,6 @@ type Config struct {
 	Version     string
 	LogLevel    ui.Level
 	BaseDistURL string
-	// Possible system-wide installation paths
-	InstallPaths []string
 	// SHA256 checksums for all known versions of per-environment scripts.
 	// If empty shell.ScriptSHAs will be used.
 	SHA256Sums  []string
@@ -87,13 +85,6 @@ func (c Config) defaultHTTPClient(logger ui.Logger) *http.Client {
 
 // Main runs the Hermit command-line application with the given config.
 func Main(config Config) {
-	if len(config.InstallPaths) == 0 {
-		config.InstallPaths = []string{
-			"${HOME}/bin",
-			"/opt/homebrew/bin",
-			"/usr/local/bin",
-		}
-	}
 	config.LogLevel = ui.AutoLevel(config.LogLevel)
 	if config.HTTP == nil {
 		config.HTTP = func(config HTTPTransportConfig) *http.Client {
