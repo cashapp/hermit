@@ -21,8 +21,7 @@ jobs:
           make GOOS=linux GOARCH=arm64 CHANNEL=stable build
           make GOOS=darwin GOARCH=amd64 CHANNEL=stable build
           make GOOS=darwin GOARCH=arm64 CHANNEL=stable build
-          INSTALLER_VERSION=$(go run -ldflags "-X main.channel=stable" ./cmd/hermit gen-installer --dest=build/install.sh)
-          cp build/install.sh build/install-"${INSTALLER_VERSION}".sh
+          go run ./cmd/geninstaller --dest=build/install.sh --dist-url=https://github.com/cashapp/hermit/releases/download/stable
       - name: Release versioned
         uses: ncipollo/release-action@v1
         with:

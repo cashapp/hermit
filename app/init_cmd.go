@@ -2,7 +2,6 @@ package app
 
 import (
 	"github.com/cashapp/hermit"
-	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/ui"
 )
 
@@ -14,13 +13,9 @@ type initCmd struct {
 }
 
 func (i *initCmd) Run(w *ui.UI, config Config) error {
-	_, sum, err := GenInstaller(config)
-	if err != nil {
-		return errors.WithStack(err)
-	}
 	return hermit.Init(w, i.Dir, config.BaseDistURL, hermit.UserStateDir, hermit.Config{
 		Sources:     i.Sources,
 		ManageGit:   !i.NoGit,
 		AddIJPlugin: i.Idea,
-	}, sum)
+	})
 }
