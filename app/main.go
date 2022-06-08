@@ -87,10 +87,12 @@ func (c Config) defaultHTTPClient(logger ui.Logger) *http.Client {
 
 // Main runs the Hermit command-line application with the given config.
 func Main(config Config) {
-	config.InstallPaths = []string{
-		"${HOME}/bin",
-		"/opt/homebrew/bin",
-		"/usr/local/bin",
+	if len(config.InstallPaths) == 0 {
+		config.InstallPaths = []string{
+			"${HOME}/bin",
+			"/opt/homebrew/bin",
+			"/usr/local/bin",
+		}
 	}
 	config.LogLevel = ui.AutoLevel(config.LogLevel)
 	if config.HTTP == nil {
