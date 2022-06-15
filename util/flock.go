@@ -51,7 +51,8 @@ func (l *FileLock) Acquire(ctx context.Context, log ui.Logger) error {
 						return nil
 					}
 				case <-ctx.Done():
-					return errors.New("timeout while waiting for the lock")
+					deadLine, _ := ctx.Deadline()
+					return errors.Errorf("timeout while waiting for the lock after %s", time.Until(deadLine))
 				}
 			}
 		}

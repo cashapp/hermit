@@ -44,7 +44,8 @@ type Config struct {
 	// Auto-generated mirrors.
 	AutoMirrors []AutoMirror
 	// Builtin sources.
-	Builtin *sources.BuiltInSource
+	Builtin     *sources.BuiltInSource
+	LockTimeout time.Duration
 }
 
 // State is the global hermit state shared between all local environments
@@ -59,6 +60,7 @@ type State struct {
 	cache       *cache.Cache
 	dao         *dao.DAO
 	lock        *util.FileLock
+	lockTimeout time.Duration
 }
 
 // Open the global Hermit state.
@@ -97,6 +99,7 @@ func Open(stateDir string, config Config, cache *cache.Cache) (*State, error) {
 		pkgDir:      pkgDir,
 		cache:       cache,
 		lock:        util.NewLock(filepath.Join(stateDir, ".lock"), 1*time.Second),
+		lockTimeout: config.LockTimeout,
 	}
 	return s, nil
 }
@@ -201,7 +204,8 @@ func (s *State) Sources(l *ui.UI) (*sources.Sources, error) {
 }
 
 func (s *State) acquireLock(log ui.Logger) (*util.FileLock, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	log.Tracef("timeout for acquiring the lock is %s", s.lockTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), s.lockTimeout)
 	err := s.lock.Acquire(ctx, log)
 	cancel()
 	if err != nil {
