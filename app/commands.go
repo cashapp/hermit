@@ -32,7 +32,7 @@ type cliBase struct {
 	Trace       bool             `help:"Enable trace logging." short:"t"`
 	Quiet       bool             `help:"Disable logging and progress UI, except fatal errors." env:"HERMIT_QUIET" short:"q"`
 	Level       ui.Level         `help:"Set minimum log level (${enum})." env:"HERMIT_LOG" default:"auto" enum:"auto,trace,debug,info,warn,error,fatal"`
-	LockTimeout time.Duration    `help:"Timeout for waiting on the lock" default:"30s" `
+	LockTimeout time.Duration    `help:"Timeout for waiting on the lock" default:"30s" env:"HERMIT_LOCK_TIMEOUT"`
 	GlobalState
 
 	Init       initCmd       `cmd:"" help:"Initialise an environment (idempotent)." group:"env"`
