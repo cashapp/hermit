@@ -221,6 +221,12 @@ func Main(config Config) {
 	if err != nil {
 		log.Fatalf("failed to open cache: %s", err)
 	}
+
+	ctx, err := parser.Parse(os.Args[1:])
+	parser.FatalIfErrorf(err)
+	configureLogging(cli, ctx.Command(), p)
+
+	config.State.LockTimeout = cli.getLockTimeout()
 	sta, err = state.Open(hermit.UserStateDir, config.State, cache)
 	if err != nil {
 		log.Fatalf("failed to open state: %s", err)
@@ -242,10 +248,6 @@ func Main(config Config) {
 		kongplete.WithPredictor("hclfile", complete.PredictFiles("*.hcl")),
 		kongplete.WithPredictor("file", complete.PredictFiles("*")),
 	)
-
-	ctx, err := parser.Parse(os.Args[1:])
-	parser.FatalIfErrorf(err)
-	configureLogging(cli, ctx.Command(), p)
 
 	if pprofPath := cli.getCPUProfile(); pprofPath != "" {
 		f, err := os.Create(pprofPath)

@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -33,7 +34,8 @@ func TestFileLockTimeout(t *testing.T) {
 
 	lock2 := NewLock(file, 10*time.Millisecond)
 	err2 := lock2.Acquire(timeoutCtx, logger2)
-	require.Equal(t, "timeout while waiting for the lock", err2.Error())
+
+	require.Equal(t, strings.HasPrefix(err2.Error(), "timeout while waiting for the lock"), true)
 
 	require.Contains(t, logger2buf.String(), "Waiting for a lock at "+file)
 }
