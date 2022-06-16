@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"regexp"
 
 	"github.com/cashapp/hermit"
 	"github.com/cashapp/hermit/errors"
@@ -11,8 +12,9 @@ import (
 )
 
 type searchCmd struct {
-	Short      bool   `short:"s" help:"Short listing."`
-	Constraint string `arg:"" help:"Package regex." optional:""`
+	Short   bool   `short:"s" help:"Short listing."`
+	Pattern string `arg:"" help:"Either a search term or regex to match a package name." optional:""`
+	Exact   bool   `short:"e" long:"exact" help:"Exact name matches only. Not compatible with regex patterns."`
 	JSONFormattable
 }
 
@@ -73,12 +75,16 @@ func (s *searchCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
 		pkgs manifest.Packages
 		err  error
 	)
+	pattern := s.Pattern
+	if s.Exact {
+		pattern = "^" + regexp.QuoteMeta(pattern) + "$"
+	}
 	if env != nil {
 		err = env.Update(l, false)
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		pkgs, err = env.Search(l, s.Constraint)
+		pkgs, err = env.Search(l, pattern)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -91,7 +97,7 @@ func (s *searchCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		pkgs, err = state.Search(l, s.Constraint)
+		pkgs, err = state.Search(l, pattern)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -108,7 +114,7 @@ func (s *searchCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
 		TransformJSON: buildSearchJSONResults,
 		UI:            l,
 		JSON:          s.JSON,
-		Prefix:        s.Constraint,
+		Prefix:        s.Pattern,
 	})
 	if err != nil {
 		return errors.Wrapf(err, "error listing packages")
