@@ -13,6 +13,7 @@ import (
 type searchCmd struct {
 	Short      bool   `short:"s" help:"Short listing."`
 	Constraint string `arg:"" help:"Package regex." optional:""`
+	Exact      bool   `short:"e" long:"exact" help:"Exact name matches only."`
 	JSONFormattable
 }
 
@@ -73,6 +74,9 @@ func (s *searchCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
 		pkgs manifest.Packages
 		err  error
 	)
+	if s.Exact {
+		s.Constraint = "^" + s.Constraint + "$"
+	}
 	if env != nil {
 		err = env.Update(l, false)
 		if err != nil {
