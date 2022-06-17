@@ -211,17 +211,22 @@ func synthesise(manifest *AnnotatedManifest) {
 	}
 	sort.Sort(versions)
 
-	channels := map[string]bool{}
+	channels := make([]string, 0, len(versions))
+	seen := make(map[string]bool, len(versions))
 	for _, version := range versions {
-		if version.Major().Clean().String() != version.Clean().String() {
-			channels[version.Major().Clean().String()] = true
+		major := version.Major().Clean().String()
+		if !seen[major] && major != version.Clean().String() {
+			seen[major] = true
+			channels = append(channels, major)
 		}
-		if version.MajorMinor().Clean().String() != version.Clean().String() {
-			channels[version.MajorMinor().Clean().String()] = true
+		majorMinor := version.MajorMinor().Clean().String()
+		if !seen[majorMinor] && majorMinor != version.Clean().String() {
+			seen[majorMinor] = true
+			channels = append(channels, majorMinor)
 		}
 	}
 
-	for version := range channels {
+	for _, version := range channels {
 		manifest.Channels = append(manifest.Channels, ChannelBlock{
 			Name:    version,
 			Update:  time.Hour * 24,
