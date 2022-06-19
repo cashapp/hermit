@@ -144,12 +144,14 @@ func (s *State) Resolve(l *ui.UI, mathcer manifest.Selector) (*manifest.Package,
 }
 
 // Search for packages without an active environment.
-func (s *State) Search(l *ui.UI, glob string) (manifest.Packages, error) {
+//
+// "pattern" is passed to Resolver.Search
+func (s *State) Search(l *ui.UI, pattern string) (manifest.Packages, error) {
 	resolver, err := s.resolver(l)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	pkgs, err := resolver.Search(l, glob)
+	pkgs, err := resolver.Search(l, pattern)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

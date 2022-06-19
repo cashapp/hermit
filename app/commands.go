@@ -1,8 +1,9 @@
 package app
 
 import (
-	"github.com/alecthomas/kong"
 	"time"
+
+	"github.com/alecthomas/kong"
 
 	"github.com/cashapp/hermit/envars"
 	"github.com/cashapp/hermit/ui"
@@ -49,6 +50,7 @@ type cliBase struct {
 	DumpUserConfigSchema dumpUserConfigSchema `cmd:"" help:"Dump user configuration schema." hidden:""`
 	ScriptSHA            scriptSHACmd         `cmd:"" help:"Print known sha256 sums of activate-hermit and hermit scripts." hidden:""`
 	GenInstaller         genInstallerCmd      `cmd:"" help:"Generate Hermit installer script." group:"global"`
+	PackageIndex         packageIndexCmd      `cmd:"" help:"Generate a static package index from a set of package sources." group:"global"`
 	kong.Plugins
 }
 

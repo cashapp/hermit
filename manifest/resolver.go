@@ -70,25 +70,26 @@ type ResolvedFileRef struct {
 
 // Package resolved from a manifest.
 type Package struct {
-	Description          string
-	Homepage             string
-	Repository           string
-	Reference            Reference
-	Arch                 string
-	Binaries             []string
-	Apps                 []string
-	Requires             []string
-	RuntimeDeps          []Reference
-	Provides             []string
-	Env                  envars.Ops
-	Source               string
-	Mirrors              []string
-	Root                 string
-	SHA256               string
-	Mutable              bool
-	Dest                 string
-	Test                 string
-	Strip                int
+	Description string      `json:",omitempty"`
+	Homepage    string      `json:",omitempty"`
+	Repository  string      `json:",omitempty"`
+	Reference   Reference   `json:",omitempty"`
+	Arch        string      `json:",omitempty"`
+	Binaries    []string    `json:",omitempty"`
+	Apps        []string    `json:",omitempty"`
+	Requires    []string    `json:",omitempty"`
+	RuntimeDeps []Reference `json:",omitempty"`
+	Provides    []string    `json:",omitempty"`
+	Env         envars.Ops  `json:",omitempty"`
+	Source      string      `json:",omitempty"`
+	Mirrors     []string    `json:",omitempty"`
+	Root        string      `json:",omitempty"`
+	SHA256      string      `json:",omitempty"`
+	Mutable     bool        `json:",omitempty"`
+	Dest        string      `json:",omitempty"`
+	Test        string      `json:",omitempty"`
+	Strip       int         `json:",omitempty"`
+
 	Triggers             map[Event][]Action  `json:"-"` // Triggers keyed by event.
 	UpdateInterval       time.Duration       // How often should we check for updates? 0, if never
 	Files                []*ResolvedFileRef  `json:"-"`
@@ -99,8 +100,8 @@ type Package struct {
 	// Filled in by Env.
 	Linked    bool `json:"-"` // Linked into environment.
 	State     PackageState
-	ETag      string
-	UpdatedAt time.Time
+	ETag      string    `json:",omitempty"`
+	UpdatedAt time.Time `json:",omitempty"`
 }
 
 func (p *Package) String() string {

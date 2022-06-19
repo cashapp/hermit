@@ -190,8 +190,8 @@ func (r References) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
 // A Reference to a package, potentially only providing partial versions, etc.
 type Reference struct {
 	Name    string
-	Version Version
-	Channel string
+	Version Version `json:",omitempty"`
+	Channel string  `json:",omitempty"`
 }
 
 // ParseReference parses a name+version for a package.
