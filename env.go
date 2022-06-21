@@ -1300,7 +1300,11 @@ func (e *Env) ResolveWithDeps(l *ui.UI, installed []manifest.Reference, selector
 		ref, err := e.resolveVirtual(l, req)
 		if err != nil && errors.Is(err, manifest.ErrUnknownPackage) {
 			// Secondly search by the package name
-			if err = e.ResolveWithDeps(l, installed, manifest.NameSelector(req), out); err != nil {
+			sel, err := manifest.ParseGlobSelector(req)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			if err = e.ResolveWithDeps(l, installed, sel, out); err != nil {
 				return errors.WithStack(err)
 			}
 		} else if err != nil {
