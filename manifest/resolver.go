@@ -424,6 +424,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 
 	vars := map[string]string{}
 	layerEnvars := make([]envars.Envars, 0, len(layers))
+	sums := map[string]string{}
 	for _, layer := range layers {
 		if len(layer.Env) > 0 {
 			layerEnvars = append(layerEnvars, layer.Env)
@@ -431,11 +432,11 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 		for k, v := range layer.Vars {
 			vars[k] = v
 		}
+		for k, v := range layer.SHA256Sums {
+			sums[k] = v
+		}
 		if layer.Arch != "" {
 			p.Arch = layer.Arch
-		}
-		if layer.SHA256 != "" {
-			p.SHA256 = layer.SHA256
 		}
 		if layer.Mutable {
 			p.Mutable = layer.Mutable
@@ -598,6 +599,15 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	p.Source = expand(p.Source, false)
 	for i, mirror := range p.Mirrors {
 		p.Mirrors[i] = expand(mirror, false)
+	}
+	// Get sha256 checksum after variable expansion for source, taking care of
+	// autoversion
+	for _, layer := range layers {
+		if layer.SHA256 != "" {
+			p.SHA256 = layer.SHA256
+		} else if sum, ok := sums[p.Source]; ok {
+			p.SHA256 = sum
+		}
 	}
 	inferPackageRepository(p, manifest.Manifest)
 	for _, actions := range p.Triggers {
