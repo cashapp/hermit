@@ -40,7 +40,8 @@ type Layer struct {
 	Vars        map[string]string `hcl:"vars,optional" help:"Set local variables used during manifest evaluation."`
 	Source      string            `hcl:"source,optional" help:"URL for source package. Valid URLs are Git repositories (using .git[#<tag>] suffix), Local Files (using file:// prefix), and Remote Files (using http:// or https:// prefix)"`
 	Mirrors     []string          `hcl:"mirrors,optional" help:"Mirrors to use if the primary source is unavailable."`
-	SHA256      string            `hcl:"sha256,optional" help:"SHA256 of source package for verification."`
+	SHA256      string            `hcl:"sha256,optional" help:"SHA256 of source package for verification. When in conflict with SHA256 in sha256sums, this value takes precedence."`
+	SHA256Sums  map[string]string `hcl:"sha256sums,optional" help:"SHA256 checksums of source packages for verification."`
 	Darwin      []*Layer          `hcl:"darwin,block" help:"Darwin-specific configuration."`
 	Linux       []*Layer          `hcl:"linux,block" help:"Linux-specific configuration."`
 	Platform    []*PlatformBlock  `hcl:"platform,block" help:"Platform-specific configuration. <attr> is a set regexes that must all match against one of CPU, OS, etc.."`
