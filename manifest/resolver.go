@@ -211,6 +211,9 @@ func (r *Resolver) Sync(l *ui.UI, force bool) error {
 	r.loader = NewLoader(r.sources)
 	return nil
 }
+func (r *Resolver) GetConfig() Config {
+	return r.config
+}
 
 // Search for packages using the given regular expression.
 func (r *Resolver) Search(l ui.Logger, pattern string) (Packages, error) {
@@ -288,11 +291,44 @@ func (r *Resolver) ResolveVirtual(name string) (pkgs []*Package, err error) {
 //
 // Returns the highest version matching the given reference
 func (r *Resolver) Resolve(l *ui.UI, selector Selector) (pkg *Package, err error) {
+	return r.ResolveWithConfig(l, selector, r.config)
+}
+
+// utility function to hide the platform details.
+func DarwinConfig(c Config, arch string) Config {
+	c.OS = "darwin"
+	if len(arch) == 0 {
+		c.Arch = "amd64"
+	} else {
+		c.Arch = arch
+	}
+	return c
+}
+
+// utility function to hide the platform details.
+func LinuxConfig(c Config) Config {
+	c.OS = "linux"
+	c.Arch = "amd64"
+	return c
+}
+
+// This had to be written to allow configs for non native OSes to be used.
+// For example:
+// Developing on x86_64 mac and trying to resolve a linux package from the manifest.
+func (r *Resolver) ResolveWithConfig(l *ui.UI, selector Selector, config Config) (pkg *Package, err error) {
 	manifest, err := r.loader.Load(l, selector.Name())
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return newPackage(manifest, r.config, selector)
+	return newPackage(manifest, config, selector)
+}
+
+func (r *Resolver) ResolveManifest(l *ui.UI, selector Selector) (m *AnnotatedManifest, err error) {
+	manifest, err := r.loader.Load(l, selector.Name())
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return manifest, nil
 }
 
 func matchVersion(manifest *AnnotatedManifest, selector Selector) (collected References, selected Reference) {

@@ -41,14 +41,14 @@ func (g *githubReleaseSource) OpenLocal(c *Cache, checksum string) (*os.File, er
 	return f, errors.WithStack(err)
 }
 
-func (g *githubReleaseSource) Download(b *ui.Task, c *Cache, checksum string) (path string, etag string, err error) {
+func (g *githubReleaseSource) Download(b *ui.Task, c *Cache, checksum string) (path string, etag string, actualChecksum string, err error) {
 	response, err := downloadGHPrivate(g.ghclient, g.info)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 	defer response.Body.Close()
 	cachePath := c.Path(checksum, g.url)
-	return downloadHTTP(b, response, checksum, g.url, cachePath)
+	return downloadHTTP(b, response, checksum, g.url, cachePath, c)
 }
 
 func (g *githubReleaseSource) ETag(b *ui.Task) (etag string, err error) {

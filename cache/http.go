@@ -30,19 +30,20 @@ func (s *httpSource) OpenLocal(c *Cache, checksum string) (*os.File, error) {
 	return f, errors.WithStack(err)
 }
 
-func (s *httpSource) Download(b *ui.Task, cache *Cache, checksum string) (path string, etag string, err error) {
+func (s *httpSource) Download(b *ui.Task, cache *Cache, checksum string) (path string, etag string, actualChecksum string, err error) {
 	cachePath := cache.Path(checksum, s.url)
+	b.Debugf("cachePath %v checksum %v url %v \n", cachePath, checksum, s.url)
 	ctx := context.Background()
 	req, err := http.NewRequestWithContext(ctx, "GET", s.url, &bytes.Reader{})
 	if err != nil {
-		return "", "", errors.Wrap(err, "could not fetch")
+		return "", "", "", errors.Wrap(err, "could not fetch")
 	}
 	response, err := s.client.Do(req)
 	if err != nil {
-		return "", "", errors.Wrap(err, "could not download to cache")
+		return "", "", "", errors.Wrap(err, "could not download to cache")
 	}
 	defer response.Body.Close()
-	return downloadHTTP(b, response, checksum, s.url, cachePath)
+	return downloadHTTP(b, response, checksum, s.url, cachePath, cache)
 }
 
 func (s *httpSource) ETag(b *ui.Task) (etag string, err error) {
@@ -82,9 +83,9 @@ func (s *httpSource) Validate() error {
 	return nil
 }
 
-func downloadHTTP(b *ui.Task, response *http.Response, checksum string, uri string, cachePath string) (path string, etag string, err error) {
+func downloadHTTP(b *ui.Task, response *http.Response, checksum string, uri string, cachePath string, cache *Cache) (path string, etag string, returnChecksum string, err error) {
 	if response.StatusCode < 200 || response.StatusCode > 299 {
-		return "", "", errors.Errorf("download failed: %s (%d)", response.Status, response.StatusCode)
+		return "", "", "", errors.Errorf("download failed: %s (%d)", response.Status, response.StatusCode)
 	}
 	task := b.SubTask("download")
 	cacheDir := filepath.Dir(cachePath)
@@ -92,7 +93,7 @@ func downloadHTTP(b *ui.Task, response *http.Response, checksum string, uri stri
 
 	w, err := ioutil.TempFile(cacheDir, filepath.Base(cachePath)+".*.hermit.tmp.download")
 	if err != nil {
-		return "", "", errors.Wrap(err, "couldn't create temporary for download")
+		return "", "", "", errors.Wrap(err, "couldn't create temporary for download")
 	}
 	defer w.Close() // nolint: gosec
 	defer os.Remove(w.Name())
@@ -104,7 +105,7 @@ func downloadHTTP(b *ui.Task, response *http.Response, checksum string, uri stri
 
 	info, err := w.Stat()
 	if err != nil {
-		return "", "", errors.WithStack(err)
+		return "", "", "", errors.WithStack(err)
 	}
 	resumed := info.Size()
 	task.Size(int(response.ContentLength + resumed))
@@ -117,27 +118,34 @@ func downloadHTTP(b *ui.Task, response *http.Response, checksum string, uri stri
 	_, err = io.Copy(w, r)
 	if err != nil {
 		_ = w.Close()
-		return "", "", errors.WithStack(err)
+		return "", "", "", errors.WithStack(err)
 	}
 	err = w.Close()
 	if err != nil {
-		return "", "", errors.WithStack(err)
+		return "", "", "", errors.WithStack(err)
 	}
 	// TODO: We'll need to checksum the existing content when resuming.
 	actualChecksum := hex.EncodeToString(h.Sum(nil))
 	if checksum != "" && checksum != actualChecksum {
-		return "", "", errors.Errorf("%s: checksum %s should have been %s", uri, actualChecksum, checksum)
+		return "", "", "", errors.Errorf("%s: checksum %s should have been %s", uri, actualChecksum, checksum)
 	}
 
 	err = response.Body.Close()
 	if err != nil {
-		return "", "", errors.WithStack(err)
+		return "", "", "", errors.WithStack(err)
 	}
+
+	// TODO: cleanup needed here. If we want to add functionality to the installe flow
+	// then we need this here.
+	//if checksum == "" {
+	//	fmt.Println("Actually setting checksum")
+	//	cachePath = cache.Path(actualChecksum, uri)
+	//}
 
 	// We finally have the checksummed file, move it into place.
 	err = os.Rename(w.Name(), cachePath)
 	if err != nil {
-		return "", "", errors.WithStack(err)
+		return "", "", "", errors.WithStack(err)
 	}
-	return cachePath, etag, nil
+	return cachePath, etag, actualChecksum, nil
 }

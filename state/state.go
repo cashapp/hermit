@@ -2,6 +2,8 @@ package state
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -293,7 +295,6 @@ func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 		return errors.WithStack(err)
 	}
 	defer lock.Release(b)
-
 	if !s.isExtracted(p) {
 		if err := s.extract(b, p); err != nil {
 			return errors.WithStack(err)
@@ -307,6 +308,32 @@ func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 	}
 
 	return nil
+}
+
+// This is needed as if you run CacheAndUnpack on x86_64 mac for a manifest
+// with an entry for arm64 mac packages it does on extract that as
+// isExtracted returns true.
+// This method will only cache the values and try to get a checksum.
+func (s *State) CacheAndDontUnpack(b *ui.Task, p *manifest.Package) (string, error) {
+	actualChecksum := ""
+	if !s.isCached(p) {
+		mirrors := append(p.Mirrors, s.generateMirrors(p.Source)...)
+		_, _, ch, err := s.cache.Download(b, p.SHA256, p.Source, mirrors...)
+		if err != nil {
+			return "", errors.WithStack(err)
+		}
+		actualChecksum = ch
+	} else {
+		path := s.cache.Path(p.SHA256, p.Source)
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return "", errors.WithStack(err)
+		}
+		h := sha256.New()
+		h.Write(data)
+		actualChecksum = hex.EncodeToString(h.Sum(nil))
+	}
+	return actualChecksum, nil
 }
 
 func (s *State) linkBinaries(p *manifest.Package) error {
@@ -328,20 +355,26 @@ func (s *State) linkBinaries(p *manifest.Package) error {
 	}
 	return nil
 }
-
+func (s *State) GetLocalFile(checksum string, uri string) string {
+	return s.cache.Path(checksum, uri)
+}
 func (s *State) extract(b *ui.Task, p *manifest.Package) error {
 	var (
-		path string
-		etag string
-		err  error
+		path           string
+		etag           string
+		actualChecksum string
+		err            error
 	)
 
 	if !s.isCached(p) {
 		mirrors := make([]string, len(p.Mirrors))
 		copy(mirrors, p.Mirrors)
-		mirrors = append(mirrors, s.generateMirrors(p.Source)...)
-		path, etag, err = s.cache.Download(b, p.SHA256, p.Source, mirrors...)
+		mirrors = append(p.Mirrors, s.generateMirrors(p.Source)...)
+		path, etag, actualChecksum, err = s.cache.Download(b, p.SHA256, p.Source, mirrors...)
 		p.ETag = etag
+		if len(p.SHA256) == 0 {
+			p.SHA256 = actualChecksum
+		}
 		if err != nil {
 			return errors.WithStack(err)
 		}
