@@ -290,7 +290,6 @@ func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 		return errors.WithStack(err)
 	}
 	defer lock.Release(b)
-
 	if !s.isExtracted(p) {
 		if err := s.extract(b, p); err != nil {
 			return errors.WithStack(err)
@@ -325,18 +324,24 @@ func (s *State) linkBinaries(p *manifest.Package) error {
 	}
 	return nil
 }
-
+func (s *State) GetLocalFile(checksum string, uri string) string {
+	return s.cache.Path(checksum, uri)
+}
 func (s *State) extract(b *ui.Task, p *manifest.Package) error {
 	var (
-		path string
-		etag string
-		err  error
+		path           string
+		etag           string
+		actualChecksum string
+		err            error
 	)
 
 	if !s.isCached(p) {
 		mirrors := append(p.Mirrors, s.generateMirrors(p.Source)...)
-		path, etag, err = s.cache.Download(b, p.SHA256, p.Source, mirrors...)
+		path, etag, actualChecksum, err = s.cache.Download(b, p.SHA256, p.Source, mirrors...)
 		p.ETag = etag
+		if len(p.SHA256) == 0 {
+			p.SHA256 = actualChecksum
+		}
 		if err != nil {
 			return errors.WithStack(err)
 		}

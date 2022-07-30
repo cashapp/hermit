@@ -20,7 +20,7 @@ func (s *gitSource) OpenLocal(c *Cache, checksum string) (*os.File, error) {
 	return f, errors.WithStack(err)
 }
 
-func (s *gitSource) Download(b *ui.Task, cache *Cache, checksum string) (string, string, error) {
+func (s *gitSource) Download(b *ui.Task, cache *Cache, checksum string) (string, string, string, error) {
 	base := BasePath(checksum, s.URL)
 	checkoutDir := filepath.Join(cache.root, base)
 	repo, tag := parseGitURL(s.URL)
@@ -30,16 +30,25 @@ func (s *gitSource) Download(b *ui.Task, cache *Cache, checksum string) (string,
 	}
 	err := util.RunInDir(b, cache.root, args...)
 	if err != nil {
-		return "", "", errors.WithStack(err)
+		return "", "", "", errors.WithStack(err)
 	}
 
 	bts, err := util.CaptureInDir(b, checkoutDir, "git", "rev-parse", "HEAD")
-	if err != nil {
-		return "", "", errors.WithStack(err)
+	// For git sources there is no need for an actual checksum.
+	// A tuple of git_source_url, commit is a unique enough combination.
+	// Also, it's hard to make sense of what this checksum would be.
+	// In other implementations of the Download interface function, it's sha256 value
+	// but here there is no obvious definition.
+	var sbts string = string(bts)
+	if checksum == "" {
+		base = BasePath(sbts, s.URL)
 	}
-	etag := strings.Trim(string(bts), "\n")
+	if err != nil {
+		return "", "", "", errors.WithStack(err)
+	}
+	etag := strings.Trim(sbts, "\n")
 
-	return filepath.Join(cache.root, base), etag, nil
+	return filepath.Join(cache.root, base), etag, sbts, nil
 }
 
 func (s *gitSource) ETag(b *ui.Task) (etag string, err error) {

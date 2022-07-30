@@ -106,7 +106,7 @@ func (c *Cache) Open(b *ui.Task, checksum, uri string, mirrors ...string) (*os.F
 	}
 
 	// No local cached copy, download it.
-	path, _, err := c.Download(b, checksum, uri, mirrors...)
+	path, _, _, err := c.Download(b, checksum, uri, mirrors...)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func (c *Cache) Open(b *ui.Task, checksum, uri string, mirrors ...string) (*os.F
 // Download a local or remote artifact, transparently caching it.
 //
 // If checksum is present it must be the SHA256 hash of the downloaded artifact.
-func (c *Cache) Download(b *ui.Task, checksum, uri string, mirrors ...string) (path string, etag string, err error) {
+func (c *Cache) Download(b *ui.Task, checksum, uri string, mirrors ...string) (path string, etag string, actualChecksum string, err error) {
 	uris := append([]string{uri}, mirrors...)
 	var lastError error
 	attempts := 3
@@ -125,17 +125,17 @@ func (c *Cache) Download(b *ui.Task, checksum, uri string, mirrors ...string) (p
 			defer ui.LogElapsed(b, "Download %s", uri)()
 			source, err := c.GetSource(c.httpClient, uri)
 			if err != nil {
-				return "", "", errors.WithStack(err)
+				return "", "", "", errors.WithStack(err)
 			}
-			path, etag, err = source.Download(b, c, checksum)
+			path, etag, actualChecksum, err = source.Download(b, c, checksum)
 			if err == nil {
-				return path, etag, nil
+				return path, etag, actualChecksum, nil
 			}
 			lastError = err
 			b.Debugf("%s: %s", uri, err)
 		}
 		if lastError == nil {
-			return "", "", errors.Errorf("failed to download from any of %s", strings.Join(uris, ", "))
+			return "", "", "", errors.Errorf("failed to download from any of %s", strings.Join(uris, ", "))
 		}
 		msg := fmt.Sprintf("Failed to download any of %s on attempt %d/%d: %s", strings.Join(uris, ", "), attempt, attempts, lastError)
 		if attempt < attempts {
@@ -146,7 +146,7 @@ func (c *Cache) Download(b *ui.Task, checksum, uri string, mirrors ...string) (p
 			time.Sleep(time.Second)
 		}
 	}
-	return "", "", errors.Wrap(lastError, uris[len(uris)-1])
+	return "", "", "", errors.Wrap(lastError, uris[len(uris)-1])
 }
 
 // ETag fetches the etag from given URI if available.

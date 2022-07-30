@@ -298,6 +298,14 @@ func (r *Resolver) Resolve(l *ui.UI, selector Selector) (pkg *Package, err error
 	return newPackage(manifest, r.config, selector)
 }
 
+func (r *Resolver) ResolveManifest(l *ui.UI, selector Selector) (m *AnnotatedManifest, err error) {
+	manifest, err := r.loader.Load(l, selector.Name())
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return manifest, nil
+}
+
 func matchVersion(manifest *AnnotatedManifest, selector Selector) (collected References, selected Reference) {
 	for _, v := range manifest.Versions {
 		for _, vstr := range v.Version {
