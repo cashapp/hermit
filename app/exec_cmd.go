@@ -23,17 +23,14 @@ type execCmd struct {
 }
 
 func (e *execCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, env *hermit.Env, globalState GlobalState, config Config, defaultHTTPClient *http.Client) error {
-	envDir, err := hermit.EnvDirFromProxyLink(e.Binary)
+	envDir, err := hermit.FindEnvDir(e.Binary)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	// If we're running a binary from a different environment, activate it first.
-	activeEnv := os.Getenv("ACTIVE_HERMIT")
-	if env == nil || (activeEnv != "" && envDir != "" && activeEnv != envDir) {
-		env, err = hermit.OpenEnv(envDir, sta, cache.GetSource, globalState.Env, defaultHTTPClient, nil)
-		if err != nil {
-			return errors.WithStack(err)
-		}
+
+	env, err = hermit.OpenEnv(envDir, sta, cache.GetSource, globalState.Env, defaultHTTPClient, nil)
+	if err != nil {
+		return errors.WithStack(err)
 	}
 
 	args := []string{e.Binary}
