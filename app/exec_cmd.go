@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -78,6 +79,14 @@ func (e *execCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, env *hermi
 	err = env.ResolveWithDeps(l, installed, manifest.ExactSelector(pkg.Reference), deps)
 	if err != nil {
 		return errors.WithStack(err)
+	}
+
+	messages, err := env.Trigger(l, manifest.EventExec)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	for _, message := range messages {
+		fmt.Fprintln(os.Stderr, message)
 	}
 
 	return env.Exec(l, pkg, binary, args, deps)

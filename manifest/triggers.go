@@ -25,6 +25,7 @@ const (
 	EventUnpack    Event = "unpack"
 	EventInstall   Event = "install"
 	EventUninstall Event = "uninstall"
+	EventExec      Event = "exec"
 	// Environment specific events
 	EventEnvActivate Event = "activate"
 )
@@ -34,6 +35,7 @@ var eventMap = map[Event]bool{
 	EventUnpack:      true,
 	EventInstall:     true,
 	EventUninstall:   true,
+	EventExec:        true,
 	EventEnvActivate: true,
 }
 
