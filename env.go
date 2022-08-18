@@ -220,30 +220,8 @@ func EnvDirFromProxyLink(executable string) (string, error) {
 	if filepath.Base(last) != "hermit" {
 		return "", errors.Errorf("binary is not a Hermit symlink: %s", links[0])
 	}
-	last = filepath.Dir(last)
-	if filepath.Base(last) != "bin" {
-		return "", errors.Errorf("Hermit not in a bin directory: %s", links[0])
-	}
-	last = filepath.Dir(last)
-	return last, nil
-}
-
-// FindEnvDir finds the highest priority active Hermit environment
-func FindEnvDir(binary string) (envDir string, err error) {
-	// Prefer an adjacent environment
-	envDir, err = EnvDirFromProxyLink(binary)
-	if err == nil {
-		return
-	}
-
-	// Fallback to the environment from the environment variable
-	envDir = os.Getenv("HERMIT_ENV")
-	if envDir != "" {
-		return envDir, nil
-	}
-
-	// Pass up the error from EnvDirFromProxyLink
-	return
+	envDir := filepath.Dir(filepath.Dir(last))
+	return envDir, nil
 }
 
 func getSources(l *ui.UI, envDir string, config *Config, state *state.State, defaultSources []string) (*sources.Sources, error) {
