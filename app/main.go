@@ -154,20 +154,20 @@ func Main(config Config) {
 		env *hermit.Env
 		sta *state.State
 	)
+	// By default, we assume Hermit will run in an unactivated state
 	isActivated := false
-	envPath := os.Getenv("HERMIT_ENV")
+	envPath, err := os.Getwd()
 	if err != nil {
-		log.Fatalf("failed to open state: %s", err) // nolint: gocritic
+		log.Fatalf("couldn't get working directory: %s", err) // nolint: gocritic
 	}
 	common := cliBase{Plugins: config.KongPlugins}
-	if envPath != "" {
+
+	// But we activate any environment we find
+	if envDir, err := hermit.FindEnvDir(os.Args[0]); err == nil {
+		envPath = envDir
 		isActivated = true
 		cli = &activated{cliBase: common}
 	} else {
-		envPath, err = os.Getwd()
-		if err != nil {
-			log.Fatalf("couldn't get working directory: %s", err)
-		}
 		cli = &unactivated{cliBase: common}
 	}
 

@@ -135,6 +135,15 @@ Describe "Hermit"
       The stderr should be blank
       The stdout should not be blank
     End
+
+    It "stub from other environment get environment variables"
+      cd ../anotherenv
+      . bin/activate-hermit
+      When call ../testenv/bin/hermit env
+      The status should be success
+      The stderr should be blank
+      The stdout should include "GOBIN='$(cd ../testenv && pwd)/out/bin'"
+    End
   End
 
   Describe "uninstalling a package"
