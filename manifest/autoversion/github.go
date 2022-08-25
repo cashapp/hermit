@@ -18,6 +18,9 @@ func gitHub(client GitHubClient, autoVersion *hmanifest.AutoVersionBlock) (strin
 	}
 	groups := versionRe.FindStringSubmatch(release.TagName)
 	if groups == nil {
+		if autoVersion.IgnoreInvalidVersions {
+			return "", nil
+		}
 		return "", errors.Errorf("%s: latest release must match the pattern %s but is %s", autoVersion.GitHubRelease, autoVersion.VersionPattern, release.TagName)
 	}
 	latestVersion := groups[1]

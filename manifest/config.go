@@ -90,7 +90,8 @@ type AutoVersionBlock struct {
 	GitHubRelease string                `hcl:"github-release,optional" help:"GitHub <user>/<repo> to retrieve and update versions from the releases API."`
 	HTML          *HTMLAutoVersionBlock `hcl:"html,block" help:"Extract version information from a HTML URL using XPath."`
 
-	VersionPattern string `hcl:"version-pattern,optional" help:"Regex with one capture group to extract the version number from the origin." default:"v?(.*)"`
+	VersionPattern        string `hcl:"version-pattern,optional" help:"Regex with one capture group to extract the version number from the origin." default:"v?(.*)"`
+	IgnoreInvalidVersions bool   `hcl:"ignore-invalid-versions,optional" help:"Ignore tags that don't match the versin-pattern instead of failing. Does not apply to versions extracted using HTML URL"`
 }
 
 // HTMLAutoVersionBlock defines how version numbers can be extracted from HTML.

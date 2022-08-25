@@ -15,10 +15,10 @@ import (
 	"github.com/cashapp/hermit/github"
 )
 
-type testGHAPI struct{}
+type testGHAPI string
 
 func (v testGHAPI) LatestRelease(repo string) (*github.Release, error) {
-	return &github.Release{TagName: "v3.2.150"}, nil
+	return &github.Release{TagName: string(v)}, nil
 }
 
 type testHTTPClient struct {
@@ -54,7 +54,7 @@ func TestAutoVersion(t *testing.T) {
 			require.NoError(t, err)
 			tmpFile.Close()
 
-			ghClient := testGHAPI{}
+			ghClient := testGHAPI("v3.2.150")
 			var hClient *http.Client
 			httpInput := strings.ReplaceAll(input, ".input.hcl", ".http")
 			if _, err := os.Stat(httpInput); err == nil {
