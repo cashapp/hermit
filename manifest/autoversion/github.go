@@ -4,25 +4,43 @@ import (
 	"regexp"
 
 	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/github"
 	hmanifest "github.com/cashapp/hermit/manifest"
 )
 
 func gitHub(client GitHubClient, autoVersion *hmanifest.AutoVersionBlock) (string, error) {
-	release, err := client.LatestRelease(autoVersion.GitHubRelease)
-	if err != nil {
-		return "", errors.WithStack(err)
+	var (
+		releases []*github.Release
+		err      error
+	)
+	const history = 100
+	// When there may be invalid versions, we need to fetch multiple release to find the latest valid one.
+	// When IgnoreInvalidVersions is off, fetch only the latest release for performance.
+	if autoVersion.IgnoreInvalidVersions {
+		releases, err = client.Releases(autoVersion.GitHubRelease, history)
+		if err != nil {
+			return "", errors.WithStack(err)
+		}
+	} else {
+		release, err := client.LatestRelease(autoVersion.GitHubRelease)
+		if err != nil {
+			return "", errors.WithStack(err)
+		}
+		releases = []*github.Release{release}
 	}
 	versionRe, err := regexp.Compile(autoVersion.VersionPattern)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
-	groups := versionRe.FindStringSubmatch(release.TagName)
-	if groups == nil {
-		if autoVersion.IgnoreInvalidVersions {
-			return "", nil
+	for _, release := range releases {
+		groups := versionRe.FindStringSubmatch(release.TagName)
+		if groups != nil {
+			latestVersion := groups[1]
+			return latestVersion, nil
 		}
-		return "", errors.Errorf("%s: latest release must match the pattern %s but is %s", autoVersion.GitHubRelease, autoVersion.VersionPattern, release.TagName)
+		if !autoVersion.IgnoreInvalidVersions {
+			return "", errors.Errorf("%s: latest release must match the pattern %s but is %s", autoVersion.GitHubRelease, autoVersion.VersionPattern, release.TagName)
+		}
 	}
-	latestVersion := groups[1]
-	return latestVersion, nil
+	return "", errors.Errorf("%s: did not find a release matching the pattern %s in the last %d releases", autoVersion.GitHubRelease, autoVersion.VersionPattern, history)
 }

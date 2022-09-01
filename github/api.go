@@ -93,18 +93,21 @@ func (a *Client) LatestRelease(repo string) (*Release, error) {
 	return release, a.decode(url, release)
 }
 
-// Releases for a particular repo.
-func (a *Client) Releases(repo string) (releases []Release, err error) {
+// Releases for a particular repo. If limit is 0, fetches all releases.
+func (a *Client) Releases(repo string, limit int) (releases []*Release, err error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/releases", repo)
 	// Paginate.
 	for n := 1; n < 100; n++ {
-		var page []Release
+		var page []*Release
 		url = fmt.Sprintf("%s?per_page=100&page=%d", url, n)
 		err = a.decode(url, &page)
 		if err != nil {
 			return nil, err
 		}
 		releases = append(releases, page...)
+		if limit > 0 && len(releases) >= limit {
+			return releases[:limit], nil
+		}
 		if len(page) < 100 {
 			return releases, nil
 		}
