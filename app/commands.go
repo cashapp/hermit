@@ -22,17 +22,19 @@ type cliInterface interface {
 	getLevel() ui.Level
 	getGlobalState() GlobalState
 	getLockTimeout() time.Duration
+	getAdditionalSources() []string
 }
 
 type cliBase struct {
-	VersionFlag kong.VersionFlag `help:"Show version." name:"version"`
-	CPUProfile  string           `placeholder:"PATH" name:"cpu-profile" help:"Enable CPU profiling to PATH." hidden:""`
-	MemProfile  string           `placeholder:"PATH" name:"mem-profile" help:"Enable memory profiling to PATH." hidden:""`
-	Debug       bool             `help:"Enable debug logging." short:"d"`
-	Trace       bool             `help:"Enable trace logging." short:"t"`
-	Quiet       bool             `help:"Disable logging and progress UI, except fatal errors." env:"HERMIT_QUIET" short:"q"`
-	Level       ui.Level         `help:"Set minimum log level (${enum})." env:"HERMIT_LOG" default:"auto" enum:"auto,trace,debug,info,warn,error,fatal"`
-	LockTimeout time.Duration    `help:"Timeout for waiting on the lock" default:"30s" env:"HERMIT_LOCK_TIMEOUT"`
+	VersionFlag       kong.VersionFlag `help:"Show version." name:"version"`
+	CPUProfile        string           `placeholder:"PATH" name:"cpu-profile" help:"Enable CPU profiling to PATH." hidden:""`
+	MemProfile        string           `placeholder:"PATH" name:"mem-profile" help:"Enable memory profiling to PATH." hidden:""`
+	Debug             bool             `help:"Enable debug logging." short:"d"`
+	Trace             bool             `help:"Enable trace logging." short:"t"`
+	Quiet             bool             `help:"Disable logging and progress UI, except fatal errors." env:"HERMIT_QUIET" short:"q"`
+	Level             ui.Level         `help:"Set minimum log level (${enum})." env:"HERMIT_LOG" default:"auto" enum:"auto,trace,debug,info,warn,error,fatal"`
+	LockTimeout       time.Duration    `help:"Timeout for waiting on the lock" default:"30s" env:"HERMIT_LOCK_TIMEOUT"`
+	AdditionalSources []string         `help:"Additional sources. Matched before those supplied in bin/hermit.hcl" env:"HERMIT_ADDITIONAL_SOURCES"`
 	GlobalState
 
 	Init       initCmd       `cmd:"" help:"Initialise an environment (idempotent)." group:"env"`
@@ -54,14 +56,15 @@ type cliBase struct {
 
 var _ cliInterface = &cliBase{}
 
-func (u *cliBase) getCPUProfile() string         { return u.CPUProfile }
-func (u *cliBase) getMemProfile() string         { return u.MemProfile }
-func (u *cliBase) getTrace() bool                { return u.Trace }
-func (u *cliBase) getDebug() bool                { return u.Debug }
-func (u *cliBase) getQuiet() bool                { return u.Quiet }
-func (u *cliBase) getLevel() ui.Level            { return ui.AutoLevel(u.Level) }
-func (u *cliBase) getGlobalState() GlobalState   { return u.GlobalState }
-func (u *cliBase) getLockTimeout() time.Duration { return u.LockTimeout }
+func (u *cliBase) getCPUProfile() string          { return u.CPUProfile }
+func (u *cliBase) getMemProfile() string          { return u.MemProfile }
+func (u *cliBase) getTrace() bool                 { return u.Trace }
+func (u *cliBase) getDebug() bool                 { return u.Debug }
+func (u *cliBase) getQuiet() bool                 { return u.Quiet }
+func (u *cliBase) getLevel() ui.Level             { return ui.AutoLevel(u.Level) }
+func (u *cliBase) getGlobalState() GlobalState    { return u.GlobalState }
+func (u *cliBase) getLockTimeout() time.Duration  { return u.LockTimeout }
+func (u *cliBase) getAdditionalSources() []string { return u.AdditionalSources }
 
 // CLI structure.
 type unactivated struct {
