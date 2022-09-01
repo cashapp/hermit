@@ -98,6 +98,11 @@ func getSource(b *ui.UI, source, dir, env string) (Source, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid source")
 	}
+
+	if uri.Scheme == "data" {
+		return NewDataSource(source)
+	}
+
 	var (
 		// Directory of source, if any, to check for existence.
 		checkDir  string
