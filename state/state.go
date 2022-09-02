@@ -79,9 +79,6 @@ func Open(stateDir string, config Config, cache *cache.Cache) (*State, error) {
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	if config.Sources == nil {
-		config.Sources = DefaultSources
-	}
 
 	autoMirrors, err := validateAndCompileAutoMirrors(config)
 	if err != nil {

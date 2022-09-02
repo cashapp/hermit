@@ -236,6 +236,13 @@ func Main(config Config) {
 	configureLogging(cli, ctx.Command(), p)
 
 	config.State.LockTimeout = cli.getLockTimeout()
+	// Note. Set default sources before applying additional sources so that the
+	// defaulting behavior doesn't change depending on if additional sources are applied.
+	// The default sources shouldn't disappear if additional sources are supplied.
+	if config.State.Sources == nil {
+		config.State.Sources = state.DefaultSources
+	}
+	// Note. Pre-pend additional sources so that they are earlier in the list.
 	config.State.Sources = append(cli.getAdditionalSources(), config.State.Sources...)
 
 	sta, err = state.Open(hermit.UserStateDir, config.State, cache)
