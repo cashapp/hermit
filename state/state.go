@@ -44,8 +44,7 @@ type Config struct {
 	// Auto-generated mirrors.
 	AutoMirrors []AutoMirror
 	// Builtin sources.
-	Builtin     *sources.BuiltInSource
-	LockTimeout time.Duration
+	Builtin *sources.BuiltInSource
 }
 
 // State is the global hermit state shared between all local environments
@@ -55,21 +54,38 @@ type State struct {
 	pkgDir      string // Path to unpacked packages.
 	sourcesDir  string // Path to extracted sources.
 	binaryDir   string // Path to directory with symlinks to package binaries
-	config      Config
 	autoMirrors []precompiledAutoMirror
 	cache       *cache.Cache
 	dao         *dao.DAO
 	lock        *util.FileLock
 	lockTimeout time.Duration
+	sources     []string
+	builtin     *sources.BuiltInSource
 }
 
 // Open the global Hermit state.
 //
 // See cache.Open for details on downloadStrategies.
-func Open(stateDir string, config Config, cache *cache.Cache) (*State, error) {
+func Open(
+	stateDir string,
+	config Config,
+	lockTimeout time.Duration,
+	additionalSources []string,
+	cache *cache.Cache,
+) (*State, error) {
 	if config.Builtin == nil {
 		return nil, errors.Errorf("state.Config.Builtin not provided")
 	}
+
+	// Note. Set default sources before applying additional sources so that the
+	// defaulting behavior doesn't change depending on if additional sources are applied.
+	// The default sources shouldn't disappear if additional sources are supplied.
+	sources := config.Sources
+	if sources == nil {
+		sources = DefaultSources
+	}
+	// Note. Pre-pend additional sources so that they are earlier in the list.
+	sources = append(additionalSources, sources...)
 
 	pkgDir := filepath.Join(stateDir, "pkg")
 	cacheDir := filepath.Join(stateDir, "cache")
@@ -92,11 +108,12 @@ func Open(stateDir string, config Config, cache *cache.Cache) (*State, error) {
 		cacheDir:    cacheDir,
 		sourcesDir:  sourcesDir,
 		binaryDir:   binaryDir,
-		config:      config,
 		pkgDir:      pkgDir,
 		cache:       cache,
 		lock:        util.NewLock(filepath.Join(stateDir, ".lock"), 1*time.Second),
-		lockTimeout: config.LockTimeout,
+		lockTimeout: lockTimeout,
+		sources:     sources,
+		builtin:     config.Builtin,
 	}
 	return s, nil
 }
@@ -153,9 +170,14 @@ func (s *State) Search(l *ui.UI, glob string) (manifest.Packages, error) {
 	return pkgs, nil
 }
 
-// Config returns the configuration stored in the global state.
-func (s *State) Config() Config {
-	return s.config
+// Builtin returns the built-in source
+func (s *State) Builtin() *sources.BuiltInSource {
+	return s.builtin
+}
+
+// DefaultSources returns the set of default sources
+func (s *State) DefaultSources() []string {
+	return s.sources
 }
 
 // SourcesDir returns the global directory for manifests
@@ -192,11 +214,11 @@ func (s *State) resolver(l *ui.UI) (*manifest.Resolver, error) {
 
 // Sources associated with the State.
 func (s *State) Sources(l *ui.UI) (*sources.Sources, error) {
-	ss, err := sources.ForURIs(l, s.SourcesDir(), "", s.config.Sources)
+	ss, err := sources.ForURIs(l, s.SourcesDir(), "", s.sources)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	ss.Prepend(s.config.Builtin)
+	ss.Prepend(s.builtin)
 	return ss, nil
 }
 

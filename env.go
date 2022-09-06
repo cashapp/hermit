@@ -256,7 +256,7 @@ func getSources(l *ui.UI, envDir string, config *Config, state *state.State, def
 		return nil, errors.WithStack(err)
 	}
 	// Always include the builtin sources required by Hermit.
-	ss.Prepend(state.Config().Builtin)
+	ss.Prepend(state.Builtin())
 	return ss, nil
 }
 
@@ -1392,7 +1392,7 @@ func (e *Env) sources(l *ui.UI) (*sources.Sources, error) {
 	if e.lazySources != nil {
 		return e.lazySources, nil
 	}
-	sources, err := getSources(l, e.envDir, e.config, e.state, e.state.Config().Sources)
+	sources, err := getSources(l, e.envDir, e.config, e.state, e.state.DefaultSources())
 	if err != nil {
 		return nil, errors.Wrap(err, e.configFile)
 	}

@@ -68,9 +68,15 @@ func (f *StateTestFixture) State() *state.State {
 	client := f.Server.Client()
 	cache, err := cache.Open(root, nil, client, client)
 	require.NoError(f.t, err)
-	sta, err := state.Open(root, state.Config{
-		Builtin: sources.NewBuiltInSource(vfs.InMemoryFS(nil)),
-	}, cache)
+	sta, err := state.Open(
+		root,
+		state.Config{
+			Builtin: sources.NewBuiltInSource(vfs.InMemoryFS(nil)),
+		},
+		0,
+		nil,
+		cache,
+	)
 	require.NoError(f.t, err)
 	return sta
 }
