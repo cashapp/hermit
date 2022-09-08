@@ -120,7 +120,7 @@ func (r *RunAction) Apply(p *Package) error { // nolint
 		cmd.Stdin = strings.NewReader(r.Stdin)
 	}
 
-	out, err := cmd.Output()
+	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return errors.Wrapf(err, "%s: failed to execute %q: %s", p, r.Command, string(out))
 	}
