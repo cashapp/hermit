@@ -21,11 +21,11 @@ type lockDigestsCmd struct {
 
 func (e *lockDigestsCmd) Help() string {
 	return `
-	This command will build a list of installed packages and their checksums(SHA256) values.
+	This command will build a list of installed packages and their digests(SHA256) values.
 	
 	That file can be manually reviewed by the project owner and checked in to the repo.
 
-	On subsequent uses of the hermit environment, the installed dependencies will have a reference checksum
+	On subsequent uses of the hermit environment, the installed dependencies will have a reference digest
 
 	value for hermit to validate against.
 	`
@@ -60,8 +60,8 @@ func (e *lockDigestsCmd) Run(l *ui.UI, env *hermit.Env, cache *cache.Cache, stat
 		}
 		l.Infof("Working on %s package", ref.Name)
 		for _, mc := range localmanifest.Manifest.Versions {
+			ref = manifest.ParseReference(ref.Name + "-" + mc.Version[0])
 			for _, p := range platform.Core {
-				ref = manifest.ParseReference(ref.Name + "-" + mc.Version[0])
 				config := manifest.Config{}
 				if p.OS == "Darwin" {
 					config = manifest.DarwinConfig(res.GetConfig(), p.Arch)
@@ -77,6 +77,7 @@ func (e *lockDigestsCmd) Run(l *ui.UI, env *hermit.Env, cache *cache.Cache, stat
 				// Trust model here is that an existing value is correct which is the assumption anyway.
 				if _, ok := localmanifest.Manifest.SHA256Sums[pkg.Source]; ok {
 					l.Debugf("Skipping shasum for %s as it's already present", pkg.Source)
+          continue
 				}
 				checksum, err := getDigest(l, state, pkg, &ref)
 				if err != nil {
