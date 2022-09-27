@@ -311,7 +311,8 @@ func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 	return nil
 }
 
-// This is needed as if you run CacheAndUnpack on x86_64 mac for a manifest
+// CacheAndDontUnpack Utility for Caching all platform artefacts.
+// If you run CacheAndUnpack on x86_64 mac for a manifest
 // with an entry for arm64 mac packages it does on extract that as
 // isExtracted returns true.
 // This method will only cache the values and try to get a Digest
@@ -331,7 +332,10 @@ func (s *State) CacheAndDontUnpack(b *ui.Task, p *manifest.Package) (string, err
 			return "", errors.WithStack(err)
 		}
 		h := sha256.New()
-		h.Write(data)
+		_, err = h.Write(data)
+		if err != nil {
+			return "", errors.WithStack(err)
+		}
 		actualDigest = hex.EncodeToString(h.Sum(nil))
 	}
 	return actualDigest, nil
@@ -356,6 +360,8 @@ func (s *State) linkBinaries(p *manifest.Package) error {
 	}
 	return nil
 }
+
+// GetLocalFile Get the hermit specific file name.
 func (s *State) GetLocalFile(checksum string, uri string) string {
 	return s.cache.Path(checksum, uri)
 }

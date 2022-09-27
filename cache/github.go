@@ -48,7 +48,7 @@ func (g *githubReleaseSource) Download(b *ui.Task, c *Cache, checksum string) (p
 	}
 	defer response.Body.Close()
 	cachePath := c.Path(checksum, g.url)
-	return downloadHTTP(b, response, checksum, g.url, cachePath, c)
+	return downloadHTTP(b, response, checksum, g.url, cachePath)
 }
 
 func (g *githubReleaseSource) ETag(b *ui.Task) (etag string, err error) {

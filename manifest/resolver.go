@@ -212,6 +212,7 @@ func (r *Resolver) Sync(l *ui.UI, force bool) error {
 	return nil
 }
 
+// GetConfig Get the config object.
 func (r *Resolver) GetConfig() Config {
 	return r.config
 }
@@ -295,7 +296,7 @@ func (r *Resolver) Resolve(l *ui.UI, selector Selector) (pkg *Package, err error
 	return r.ResolveWithConfig(l, selector, r.config)
 }
 
-// utility function to hide the platform details.
+// DarwinConfig utility function to hide the platform details.
 func DarwinConfig(c Config, arch string) Config {
 	c.OS = "darwin"
 	if len(arch) == 0 {
@@ -306,14 +307,14 @@ func DarwinConfig(c Config, arch string) Config {
 	return c
 }
 
-// utility function to hide the platform details.
+// LinuxConfig utility function to hide the platform details.
 func LinuxConfig(c Config) Config {
 	c.OS = "linux"
 	c.Arch = "amd64"
 	return c
 }
 
-// This had to be written to allow configs for non native OSes to be used.
+// ResolveWithConfig Allow configs for non native OSes to be used.
 // For example:
 // Developing on x86_64 mac and trying to resolve a linux package from the manifest.
 func (r *Resolver) ResolveWithConfig(l *ui.UI, selector Selector, config Config) (pkg *Package, err error) {
@@ -324,6 +325,7 @@ func (r *Resolver) ResolveWithConfig(l *ui.UI, selector Selector, config Config)
 	return newPackage(manifest, config, selector)
 }
 
+// ResolveManifest Get the manifest source for the selector.
 func (r *Resolver) ResolveManifest(l *ui.UI, selector Selector) (m *AnnotatedManifest, err error) {
 	manifest, err := r.loader.Load(l, selector.Name())
 	if err != nil {

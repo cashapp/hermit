@@ -41,11 +41,10 @@ func (e *lockDigestsCmd) Run(l *ui.UI, env *hermit.Env, cache *cache.Cache, stat
 	}
 	for _, ref := range installed {
 		task := l.Task(ref.String())
-		pkg, err := env.Resolve(l, manifest.ExactSelector(ref), false)
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		//infer the manifest file
+		// infer the manifest file
 		res, err := env.GetResolver(l)
 		if err != nil {
 			return errors.WithStack(err)
@@ -62,12 +61,12 @@ func (e *lockDigestsCmd) Run(l *ui.UI, env *hermit.Env, cache *cache.Cache, stat
 		for _, mc := range localmanifest.Manifest.Versions {
 			ref = manifest.ParseReference(ref.Name + "-" + mc.Version[0])
 			for _, p := range platform.Core {
-				config := manifest.Config{}
+
+				config := manifest.LinuxConfig(res.GetConfig())
 				if p.OS == "Darwin" {
 					config = manifest.DarwinConfig(res.GetConfig(), p.Arch)
-				} else {
-					config = manifest.LinuxConfig(res.GetConfig())
 				}
+
 				pkg, err := res.ResolveWithConfig(l, manifest.ExactSelector(ref), config)
 				if err != nil {
 					l.Debugf("Continuing with the next platform tuple.  Current %s: %s", p.OS, p.Arch)
@@ -77,22 +76,27 @@ func (e *lockDigestsCmd) Run(l *ui.UI, env *hermit.Env, cache *cache.Cache, stat
 				// Trust model here is that an existing value is correct which is the assumption anyway.
 				if _, ok := localmanifest.Manifest.SHA256Sums[pkg.Source]; ok {
 					l.Debugf("Skipping shasum for %s as it's already present", pkg.Source)
-          continue
+					continue
 				}
-				checksum, err := getDigest(l, state, pkg, &ref)
+				var digest string
+				digest, err = getDigest(l, state, pkg, ref)
 				if err != nil {
 					return errors.WithStack(err)
 				}
-				localmanifest.Manifest.SHA256Sums[pkg.Source] = checksum
+				localmanifest.Manifest.SHA256Sums[pkg.Source] = digest
 			}
 		}
 
 		value, _ := hcl.Marshal(localmanifest.Manifest)
 
-		//Now just write down fresh manifest files in a subdirectory in the `bin`.
+		// Now just write down fresh manifest files in a subdirectory in the `bin`.
 		err = os.MkdirAll(filepath.Join(env.BinDir(), "hermit.lock"), os.ModePerm)
 		if err != nil && os.IsExist(err) {
 			l.Errorf("Could not create directory %v", err)
+			return errors.WithStack(err)
+		}
+		pkg, err := env.Resolve(l, manifest.ExactSelector(ref), false)
+		if err != nil {
 			return errors.WithStack(err)
 		}
 		err = os.WriteFile(filepath.Join(env.BinDir(), "hermit.lock", pkg.Reference.Name+".hcl"), value, os.ModePerm)
@@ -111,7 +115,7 @@ func (e *lockDigestsCmd) Run(l *ui.UI, env *hermit.Env, cache *cache.Cache, stat
 	return nil
 }
 
-func getDigest(l *ui.UI, state *state.State, pkg *manifest.Package, ref *manifest.Reference) (string, error) {
+func getDigest(l *ui.UI, state *state.State, pkg *manifest.Package, ref manifest.Reference) (string, error) {
 	task := l.Task(ref.String())
 
 	digest, err := state.CacheAndDontUnpack(task, pkg)

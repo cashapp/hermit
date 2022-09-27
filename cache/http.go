@@ -32,7 +32,7 @@ func (s *httpSource) OpenLocal(c *Cache, checksum string) (*os.File, error) {
 
 func (s *httpSource) Download(b *ui.Task, cache *Cache, checksum string) (path string, etag string, actualChecksum string, err error) {
 	cachePath := cache.Path(checksum, s.url)
-	b.Debugf("cachePath %v checksum %v url %v \n", cachePath, checksum, s.url)
+	b.Tracef("cachePath %v checksum %v url %v \n", cachePath, checksum, s.url)
 	ctx := context.Background()
 	req, err := http.NewRequestWithContext(ctx, "GET", s.url, &bytes.Reader{})
 	if err != nil {
@@ -43,7 +43,7 @@ func (s *httpSource) Download(b *ui.Task, cache *Cache, checksum string) (path s
 		return "", "", "", errors.Wrap(err, "could not download to cache")
 	}
 	defer response.Body.Close()
-	return downloadHTTP(b, response, checksum, s.url, cachePath, cache)
+	return downloadHTTP(b, response, checksum, s.url, cachePath)
 }
 
 func (s *httpSource) ETag(b *ui.Task) (etag string, err error) {
@@ -83,7 +83,7 @@ func (s *httpSource) Validate() error {
 	return nil
 }
 
-func downloadHTTP(b *ui.Task, response *http.Response, checksum string, uri string, cachePath string, cache *Cache) (path string, etag string, returnChecksum string, err error) {
+func downloadHTTP(b *ui.Task, response *http.Response, checksum string, uri string, cachePath string) (path string, etag string, returnChecksum string, err error) {
 	if response.StatusCode < 200 || response.StatusCode > 299 {
 		return "", "", "", errors.Errorf("download failed: %s (%d)", response.Status, response.StatusCode)
 	}

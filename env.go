@@ -675,7 +675,7 @@ func (e *Env) Upgrade(l *ui.UI, pkg *manifest.Package) (*shell.Changes, error) {
 //
 // Link chains are in the form
 //
-//     <binary> -> <pkg>-<version>.pkg -> hermit
+//	<binary> -> <pkg>-<version>.pkg -> hermit
 func (e *Env) ResolveLink(l *ui.UI, executable string) (pkg *manifest.Package, binary string, err error) {
 	links, err := util.ResolveSymlinks(executable)
 	if err != nil {
@@ -815,6 +815,7 @@ func (e *Env) Resolve(l *ui.UI, selector manifest.Selector, syncOnMissing bool) 
 	return resolved, nil
 }
 
+// GetResolver Get the resolver object.
 func (e *Env) GetResolver(l *ui.UI) (*manifest.Resolver, error) {
 	resolver, err := e.resolver(l)
 	if err != nil {
