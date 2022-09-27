@@ -81,7 +81,7 @@ type activated struct {
 	Exec        execCmd              `cmd:"" help:"Directly execute a binary in a package." group:"env"`
 	Env         envCmd               `cmd:"" help:"Manage environment variables." group:"env"`
 	Validate    activatedValidateCmd `cmd:"" help:"Hermit validation." group:"global"`
-	LockDigests lockDigestsCmd       `cmd:"" help:"Lock the Digests for installed packages." group:"global"`
+	LockDigests lockDigestsCmd       `cmd:"" help:"Lock the Digests for installed packages using sha256sums." group:"global"`
 
 	Clean cleanCmd `cmd:"" help:"Clean hermit cache." group:"global"`
 	GC    gcCmd    `cmd:"" hidden:"" group:"global"`

@@ -815,7 +815,7 @@ func (e *Env) Resolve(l *ui.UI, selector manifest.Selector, syncOnMissing bool) 
 	return resolved, nil
 }
 
-func (e *Env) GetResolver(l *ui.UI, selector manifest.Selector, syncOnMissing bool) (*manifest.Resolver, error) {
+func (e *Env) GetResolver(l *ui.UI) (*manifest.Resolver, error) {
 	resolver, err := e.resolver(l)
 	if err != nil {
 		return nil, errors.WithStack(err)

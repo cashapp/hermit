@@ -135,13 +135,6 @@ func downloadHTTP(b *ui.Task, response *http.Response, checksum string, uri stri
 		return "", "", "", errors.WithStack(err)
 	}
 
-	// TODO: cleanup needed here. If we want to add functionality to the installe flow
-	// then we need this here.
-	//if checksum == "" {
-	//	fmt.Println("Actually setting checksum")
-	//	cachePath = cache.Path(actualChecksum, uri)
-	//}
-
 	// We finally have the checksummed file, move it into place.
 	err = os.Rename(w.Name(), cachePath)
 	if err != nil {

@@ -46,7 +46,7 @@ func (s *gitSource) Download(b *ui.Task, cache *Cache, checksum string) (string,
 	if err != nil {
 		return "", "", "", errors.WithStack(err)
 	}
-	etag := strings.Trim(sbts, "\n")
+	etag := strings.TrimSpace(sbts)
 
 	return filepath.Join(cache.root, base), etag, sbts, nil
 }
