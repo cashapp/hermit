@@ -294,6 +294,7 @@ func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
+
 	defer lock.Release(b)
 	if !s.isExtracted(p) {
 		if err := s.extract(b, p); err != nil {
@@ -313,16 +314,16 @@ func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 // This is needed as if you run CacheAndUnpack on x86_64 mac for a manifest
 // with an entry for arm64 mac packages it does on extract that as
 // isExtracted returns true.
-// This method will only cache the values and try to get a checksum.
+// This method will only cache the values and try to get a Digest
 func (s *State) CacheAndDontUnpack(b *ui.Task, p *manifest.Package) (string, error) {
-	actualChecksum := ""
+	actualDigest := ""
 	if !s.isCached(p) {
 		mirrors := append(p.Mirrors, s.generateMirrors(p.Source)...)
 		_, _, ch, err := s.cache.Download(b, p.SHA256, p.Source, mirrors...)
 		if err != nil {
 			return "", errors.WithStack(err)
 		}
-		actualChecksum = ch
+		actualDigest = ch
 	} else {
 		path := s.cache.Path(p.SHA256, p.Source)
 		data, err := os.ReadFile(path)
@@ -331,9 +332,9 @@ func (s *State) CacheAndDontUnpack(b *ui.Task, p *manifest.Package) (string, err
 		}
 		h := sha256.New()
 		h.Write(data)
-		actualChecksum = hex.EncodeToString(h.Sum(nil))
+		actualDigest = hex.EncodeToString(h.Sum(nil))
 	}
-	return actualChecksum, nil
+	return actualDigest, nil
 }
 
 func (s *State) linkBinaries(p *manifest.Package) error {

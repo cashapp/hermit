@@ -211,6 +211,7 @@ func (r *Resolver) Sync(l *ui.UI, force bool) error {
 	r.loader = NewLoader(r.sources)
 	return nil
 }
+
 func (r *Resolver) GetConfig() Config {
 	return r.config
 }

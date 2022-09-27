@@ -79,7 +79,6 @@ func AutoVersion(httpClient *http.Client, ghClient GitHubClient, path string) (l
 // "hclBlock" is the block containing the auto-version information. Its "Labels" field should be updated with the new versions, if any.
 func parseVersionBlockFromManifest(manifest []byte) (ast *hcl.AST, hclBlock *hcl.Block, autoVersionBlock *hmanifest.AutoVersionBlock, err error) {
 	ast, err = hcl.ParseBytes(manifest)
-
 	if err != nil {
 		return nil, nil, nil, errors.WithStack(err)
 	}

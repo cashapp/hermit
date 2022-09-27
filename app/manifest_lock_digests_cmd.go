@@ -31,7 +31,6 @@ func (e *lockDigestsCmd) Help() string {
 	`
 }
 func (e *lockDigestsCmd) Run(l *ui.UI, env *hermit.Env, cache *cache.Cache, state *state.State) error {
-	//time.Sleep(time.Second * 7)
 	installed, err := env.ListInstalledReferences()
 	if err != nil {
 		return errors.WithStack(err)
@@ -79,7 +78,7 @@ func (e *lockDigestsCmd) Run(l *ui.UI, env *hermit.Env, cache *cache.Cache, stat
 				if _, ok := localmanifest.Manifest.SHA256Sums[pkg.Source]; ok {
 					l.Debugf("Skipping shasum for %s as it's already present", pkg.Source)
 				}
-				checksum, err := getSHASum(l, state, pkg, &ref)
+				checksum, err := getDigest(l, state, pkg, &ref)
 				if err != nil {
 					return errors.WithStack(err)
 				}
@@ -110,14 +109,15 @@ func (e *lockDigestsCmd) Run(l *ui.UI, env *hermit.Env, cache *cache.Cache, stat
 
 	return nil
 }
-func getSHASum(l *ui.UI, state *state.State, pkg *manifest.Package, ref *manifest.Reference) (string, error) {
+
+func getDigest(l *ui.UI, state *state.State, pkg *manifest.Package, ref *manifest.Reference) (string, error) {
 	task := l.Task(ref.String())
 
-	checksum, err := state.CacheAndDontUnpack(task, pkg)
+	digest, err := state.CacheAndDontUnpack(task, pkg)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
 	task.Done()
-	return checksum, nil
+	return digest, nil
 
 }
