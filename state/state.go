@@ -294,7 +294,6 @@ func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-
 	defer lock.Release(b)
 
 	if !s.isExtracted(p) {
