@@ -39,10 +39,7 @@ type Config struct {
 	Env string
 	// State path where packages are installed.
 	State string
-	// Optional OS (will use runtime.GOOS if not provided).
-	OS string
-	// Optional Arch (will use runtime.GOARCH if not provided).
-	Arch string
+	platform.Platform
 }
 
 // Packages sortable by name + version.

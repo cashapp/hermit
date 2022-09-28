@@ -22,8 +22,10 @@ func TestResolver_Resolve(t *testing.T) {
 	config := Config{
 		Env:   "/home/user/project",
 		State: "/home/user/.cache/hermit",
-		OS:    platform.Linux,
-		Arch:  platform.Amd64,
+		Platform: platform.Platform{
+			OS:   platform.Linux,
+			Arch: platform.Amd64,
+		},
 	}
 	tests := []struct {
 		name           string
@@ -373,8 +375,10 @@ func TestSearchVersionsAndChannelsCoexist(t *testing.T) {
 	config := Config{
 		Env:   "/home/user/project",
 		State: "/home/user/.cache/hermit",
-		OS:    "Linux",
-		Arch:  "x86_64",
+		Platform: platform.Platform{
+			OS:   "Linux",
+			Arch: "x86_64",
+		},
 	}
 	logger := ui.New(ui.LevelInfo, os.Stdout, os.Stderr, true, true)
 	ffs := vfs.InMemoryFS(files)

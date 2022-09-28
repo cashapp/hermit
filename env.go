@@ -858,8 +858,10 @@ func (e *Env) validateReference(l *ui.UI, srcs *sources.Sources, ref manifest.Re
 		resolver, err := manifest.New(srcs, manifest.Config{
 			Env:   e.envDir,
 			State: e.state.Root(),
-			OS:    p.OS,
-			Arch:  p.Arch,
+			Platform: platform.Platform{
+				OS:   p.OS,
+				Arch: p.Arch,
+			},
 		})
 		if err != nil {
 			return nil, errors.WithStack(err)
@@ -1411,8 +1413,10 @@ func (e *Env) resolver(l *ui.UI) (*manifest.Resolver, error) {
 	resolver, err := manifest.New(sources, manifest.Config{
 		Env:   e.envDir,
 		State: e.state.Root(),
-		OS:    runtime.GOOS,
-		Arch:  runtime.GOARCH,
+		Platform: platform.Platform{
+			OS:   runtime.GOOS,
+			Arch: runtime.GOARCH,
+		},
 	})
 	if err != nil {
 		return nil, errors.WithStack(err)
