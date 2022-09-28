@@ -311,12 +311,12 @@ func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 	return nil
 }
 
-// CacheAndDontUnpack Utility for Caching all platform artefacts.
+// CacheAndDigest Utility for Caching all platform artefacts.
 // If you run CacheAndUnpack on x86_64 mac for a manifest
 // with an entry for arm64 mac packages it does on extract that as
 // isExtracted returns true.
-// This method will only cache the values and try to get a Digest
-func (s *State) CacheAndDontUnpack(b *ui.Task, p *manifest.Package) (string, error) {
+// This method will only cache the values and get a digest.
+func (s *State) CacheAndDigest(b *ui.Task, p *manifest.Package) (string, error) {
 	actualDigest := ""
 	if !s.isCached(p) {
 		mirrors := append(p.Mirrors, s.generateMirrors(p.Source)...)
@@ -326,6 +326,7 @@ func (s *State) CacheAndDontUnpack(b *ui.Task, p *manifest.Package) (string, err
 		}
 		actualDigest = ch
 	} else {
+		// if the artifact is cached then just calculate the digest.
 		path := s.cache.Path(p.SHA256, p.Source)
 		data, err := os.ReadFile(path)
 		if err != nil {

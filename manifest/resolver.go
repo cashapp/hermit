@@ -296,24 +296,6 @@ func (r *Resolver) Resolve(l *ui.UI, selector Selector) (pkg *Package, err error
 	return r.ResolveWithConfig(l, selector, r.config)
 }
 
-// DarwinConfig utility function to hide the platform details.
-func DarwinConfig(c Config, arch string) Config {
-	c.OS = "darwin"
-	if len(arch) == 0 {
-		c.Arch = "amd64"
-	} else {
-		c.Arch = arch
-	}
-	return c
-}
-
-// LinuxConfig utility function to hide the platform details.
-func LinuxConfig(c Config) Config {
-	c.OS = "linux"
-	c.Arch = "amd64"
-	return c
-}
-
 // ResolveWithConfig Allow configs for non native OSes to be used.
 // For example:
 // Developing on x86_64 mac and trying to resolve a linux package from the manifest.
@@ -358,7 +340,11 @@ func matchChannel(manifest *AnnotatedManifest, selector Selector) (collected Ref
 	}
 	return
 }
-
+func NewPackage(manifest *AnnotatedManifest, platform2 platform.Platform, ref Reference) (*Package, error) {
+	config := Config{}
+	config.Platform = platform2
+	return newPackage(manifest, config, ExactSelector(ref))
+}
 func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (*Package, error) {
 	// If a version was not specified and the manifest defines a default, use it.
 	if !selector.IsFullyQualified() && manifest.Default != "" {

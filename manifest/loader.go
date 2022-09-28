@@ -181,6 +181,18 @@ func load(bundle fs.FS, name, filename string) *AnnotatedManifest {
 	return annotated
 }
 
+// LoadManifestFile Utility function to just load a manifest file.
+func LoadManifestFile(dir fs.FS, name, filename string) *AnnotatedManifest {
+	m := load(dir, name, filename)
+	if m == nil {
+		return nil
+	}
+	if m.Manifest == nil {
+		return nil
+	}
+	return m
+}
+
 // Synthesise a "stable" channel and a channel for each major version.
 func synthesise(manifest *AnnotatedManifest) {
 	highest, version := manifest.HighestMatch(glob.MustCompile("*"))
