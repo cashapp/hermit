@@ -212,11 +212,6 @@ func (r *Resolver) Sync(l *ui.UI, force bool) error {
 	return nil
 }
 
-// GetConfig Get the config object.
-func (r *Resolver) GetConfig() Config {
-	return r.config
-}
-
 // Search for packages using the given regular expression.
 func (r *Resolver) Search(l ui.Logger, pattern string) (Packages, error) {
 	re, err := regexp.Compile("(?i)" + pattern + "")
@@ -293,27 +288,11 @@ func (r *Resolver) ResolveVirtual(name string) (pkgs []*Package, err error) {
 //
 // Returns the highest version matching the given reference
 func (r *Resolver) Resolve(l *ui.UI, selector Selector) (pkg *Package, err error) {
-	return r.ResolveWithConfig(l, selector, r.config)
-}
-
-// ResolveWithConfig Allow configs for non native OSes to be used.
-// For example:
-// Developing on x86_64 mac and trying to resolve a linux package from the manifest.
-func (r *Resolver) ResolveWithConfig(l *ui.UI, selector Selector, config Config) (pkg *Package, err error) {
 	manifest, err := r.loader.Load(l, selector.Name())
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return newPackage(manifest, config, selector)
-}
-
-// ResolveManifest Get the manifest source for the selector.
-func (r *Resolver) ResolveManifest(l *ui.UI, selector Selector) (m *AnnotatedManifest, err error) {
-	manifest, err := r.loader.Load(l, selector.Name())
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	return manifest, nil
+	return newPackage(manifest, r.config, selector)
 }
 
 func matchVersion(manifest *AnnotatedManifest, selector Selector) (collected References, selected Reference) {

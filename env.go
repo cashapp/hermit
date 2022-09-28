@@ -815,15 +815,6 @@ func (e *Env) Resolve(l *ui.UI, selector manifest.Selector, syncOnMissing bool) 
 	return resolved, nil
 }
 
-// GetResolver Get the resolver object.
-func (e *Env) GetResolver(l *ui.UI) (*manifest.Resolver, error) {
-	resolver, err := e.resolver(l)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	return resolver, nil
-}
-
 // ValidationOptions for manifest validation
 type ValidationOptions struct {
 	// CheckSources if true, check that the package sources are reachable
