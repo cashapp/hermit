@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/cashapp/hermit/envars"
+	"github.com/cashapp/hermit/platform"
 	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/ui"
 )
@@ -257,8 +258,10 @@ func TestManifest(t *testing.T) {
 			}), Config{
 				Env:   "/project",
 				State: "/tmp/hermit",
-				OS:    hos,
-				Arch:  arch,
+				Platform: platform.Platform{
+					OS:   hos,
+					Arch: arch,
+				},
 			})
 			require.NoError(t, err)
 			pkg, err := resolver.Resolve(logger, ExactSelector(ParseReference(test.pkg)))

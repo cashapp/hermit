@@ -14,6 +14,7 @@ import (
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/internal/dao"
 	"github.com/cashapp/hermit/manifest"
+	"github.com/cashapp/hermit/platform"
 	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/ui"
 	"github.com/cashapp/hermit/util"
@@ -188,8 +189,10 @@ func (s *State) resolver(l *ui.UI) (*manifest.Resolver, error) {
 	}
 	return manifest.New(ss, manifest.Config{
 		State: s.Root(),
-		OS:    runtime.GOOS,
-		Arch:  runtime.GOARCH,
+		Platform: platform.Platform{
+			OS:   runtime.GOOS,
+			Arch: runtime.GOARCH,
+		},
 	})
 }
 

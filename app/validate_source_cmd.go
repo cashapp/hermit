@@ -7,6 +7,7 @@ import (
 	"github.com/cashapp/hermit"
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/manifest"
+	"github.com/cashapp/hermit/platform"
 	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/state"
 	"github.com/cashapp/hermit/ui"
@@ -34,8 +35,10 @@ func (g *validateSourceCmd) Run(l *ui.UI, env *hermit.Env, sta *state.State) err
 		}
 		resolver, err := manifest.New(srcs, manifest.Config{
 			State: sta.Root(),
-			OS:    runtime.GOOS,
-			Arch:  runtime.GOARCH,
+			Platform: platform.Platform{
+				OS:   runtime.GOOS,
+				Arch: runtime.GOARCH,
+			},
 		})
 		if err != nil {
 			return errors.WithStack(err)
