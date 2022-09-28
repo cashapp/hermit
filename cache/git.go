@@ -39,16 +39,15 @@ func (s *gitSource) Download(b *ui.Task, cache *Cache, checksum string) (string,
 	// Also, it's hard to make sense of what this checksum would be.
 	// In other implementations of the Download interface function, it's sha256 value
 	// but here there is no obvious definition.
-	var sbts string = string(bts)
+	var sbts = strings.TrimSpace(string(bts))
 	if checksum == "" {
 		base = BasePath(sbts, s.URL)
 	}
 	if err != nil {
 		return "", "", "", errors.WithStack(err)
 	}
-	etag := strings.TrimSpace(sbts)
 
-	return filepath.Join(cache.root, base), etag, sbts, nil
+	return filepath.Join(cache.root, base), sbts, sbts, nil
 }
 
 func (s *gitSource) ETag(b *ui.Task) (etag string, err error) {

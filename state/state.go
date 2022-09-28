@@ -367,21 +367,18 @@ func (s *State) GetLocalFile(checksum string, uri string) string {
 }
 func (s *State) extract(b *ui.Task, p *manifest.Package) error {
 	var (
-		path           string
-		etag           string
-		actualChecksum string
-		err            error
+		path string
+		etag string
+		err  error
 	)
 
 	if !s.isCached(p) {
 		mirrors := make([]string, len(p.Mirrors))
 		copy(mirrors, p.Mirrors)
 		mirrors = append(p.Mirrors, s.generateMirrors(p.Source)...)
-		path, etag, actualChecksum, err = s.cache.Download(b, p.SHA256, p.Source, mirrors...)
+		path, etag, _, err = s.cache.Download(b, p.SHA256, p.Source, mirrors...)
 		p.ETag = etag
-		if len(p.SHA256) == 0 {
-			p.SHA256 = actualChecksum
-		}
+
 		if err != nil {
 			return errors.WithStack(err)
 		}
