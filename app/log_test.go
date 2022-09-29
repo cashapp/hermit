@@ -10,7 +10,7 @@ import (
 	"text/template"
 
 	"github.com/acarl005/stripansi"
-	"github.com/stretchr/testify/require"
+	"github.com/alecthomas/assert/v2"
 
 	"github.com/cashapp/hermit/cache"
 	"github.com/cashapp/hermit/hermittest"
@@ -30,7 +30,7 @@ func TestLogs(t *testing.T) {
 				manifest.MustParseGlobSelector("tpkg-0.9.0"),
 			}}
 			err := cmd.Run(l, f.Env, f.State)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 		},
 		tmpl: `
 			info:tpkg-0.9.0:install: Installing tpkg-0.9.0
@@ -46,7 +46,7 @@ func TestLogs(t *testing.T) {
 		fn: func(l *ui.UI, f *hermittest.EnvTestFixture) {
 			cmd := upgradeCmd{Packages: nil}
 			err := cmd.Run(l, f.Env)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 		},
 		tmpl: `
 			info:tpkg:upgrade: Upgrading tpkg-0.9.0 to tpkg-0.10.0
@@ -64,7 +64,7 @@ func TestLogs(t *testing.T) {
 		fn: func(l *ui.UI, f *hermittest.EnvTestFixture) {
 			cmd := uninstallCmd{Packages: []manifest.GlobSelector{manifest.MustParseGlobSelector("tpkg")}}
 			err := cmd.Run(l, f.Env)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 		},
 		tmpl: `
 			info:tpkg-0.10.0:uninstall: Uninstalling tpkg-0.10.0
@@ -118,7 +118,7 @@ func testLogsFor(
 
 	trimmed := strings.TrimSpace(trimLines(tmpl))
 	expected, err := template.New("expected").Parse(trimmed)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	tbuf := bytes.Buffer{}
 	uri := f.Server.URL + "/archive.tar.gz"
@@ -129,14 +129,14 @@ func testLogsFor(
 		Env:    f.Env.EnvDir(),
 		Bin:    f.Env.BinDir(),
 	})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	test(l, f)
 
 	log := buf.String()
 	log = stripansi.Strip(log)
 
-	require.Equal(t, tbuf.String(), strings.TrimSpace(log))
+	assert.Equal(t, tbuf.String(), strings.TrimSpace(log))
 }
 
 func trimLines(s string) string {
@@ -156,7 +156,7 @@ func staticFileHTTPHandler(t *testing.T, dir string) http.HandlerFunc {
 			w.WriteHeader(http.StatusNotFound)
 		} else {
 			_, err := w.Write(dat)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 		}
 	}
 }

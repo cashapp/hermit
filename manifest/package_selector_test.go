@@ -3,7 +3,7 @@ package manifest
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/alecthomas/assert/v2"
 )
 
 func TestSelector_Matches(t *testing.T) {
@@ -87,6 +87,6 @@ func TestSelector_Matches(t *testing.T) {
 func newGlobSelector(t *testing.T, str string) Selector {
 	t.Helper()
 	m, err := ParseGlobSelector(str)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	return m
 }

@@ -5,14 +5,15 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
+	"github.com/alecthomas/assert/v2"
 	"github.com/cashapp/hermit"
 	"github.com/cashapp/hermit/envars"
+	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/hermittest"
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/manifest/manifesttest"
@@ -35,10 +36,10 @@ func TestConflictingBinariesError(t *testing.T) {
 		Result()
 
 	_, err := fixture.Env.Install(fixture.P, pkg1)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	_, err = fixture.Env.Install(fixture.P, pkg2)
-	require.Errorf(t, err, "test2-1 can not be installed, the following binaries already exist: darwin_exe, linux_exe")
+	assert.EqualError(t, err, "test2-1 can not be installed, the following binaries already exist: darwin_exe, linux_exe")
 }
 
 // Test that the update timestamp and etag are written to the DB correctly when
@@ -49,7 +50,7 @@ func TestUpdateTimestampOnInstall(t *testing.T) {
 		w.Header().Add("ETag", "testtag")
 		dat, _ := ioutil.ReadFile("archive/testdata/archive.tar.gz")
 		_, err := w.Write(dat)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		calls++
 	})
 	fixture := hermittest.NewEnvTestFixture(t, handler)
@@ -63,14 +64,14 @@ func TestUpdateTimestampOnInstall(t *testing.T) {
 		Result()
 
 	_, err := fixture.Env.Install(fixture.P, pkg)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	dbPkg := fixture.GetDBPackage("test@stable")
 	actual := dbPkg.UpdateCheckedAt.Unix()
-	require.GreaterOrEqual(t, time.Now().Add(1*time.Minute).Unix(), actual)
-	require.LessOrEqual(t, time.Now().Add(-1*time.Minute).Unix(), actual)
-	require.Equal(t, "testtag", dbPkg.Etag)
-	require.Equal(t, 1, calls)
+	assert.True(t, time.Now().Add(1*time.Minute).Unix() >= actual)
+	assert.True(t, time.Now().Add(-1*time.Minute).Unix() <= actual)
+	assert.Equal(t, "testtag", dbPkg.Etag)
+	assert.Equal(t, 1, calls)
 }
 
 // Tests that EnsureUpToDate only updates the package when the etag has changed
@@ -106,63 +107,63 @@ func TestEnsureUpToDate(t *testing.T) {
 
 	// Initial install
 	_, err := fixture.Env.Install(fixture.P, pkg)
-	require.NoError(t, err)
-	require.Equal(t, 1, getCalls)
-	require.Equal(t, 0, headCalls)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, getCalls)
+	assert.Equal(t, 0, headCalls)
 
 	// Update before update check is due
 	err = fixture.Env.EnsureChannelIsUpToDate(fixture.P, pkg)
-	require.NoError(t, err)
-	require.Equal(t, 1, getCalls)
-	require.Equal(t, 0, headCalls)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, getCalls)
+	assert.Equal(t, 0, headCalls)
 	file, _ := ioutil.ReadFile(filepath.Join(pkg.Dest, "bin"))
-	require.Equal(t, data, string(file))
+	assert.Equal(t, data, string(file))
 
 	// Update after a check is needed but etag has not changed
 	pkg.UpdatedAt = time.Now().Add(-2 * time.Hour)
 	err = fixture.Env.EnsureChannelIsUpToDate(fixture.P, pkg)
-	require.NoError(t, err)
-	require.Equal(t, 1, getCalls)
-	require.Equal(t, 1, headCalls)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, getCalls)
+	assert.Equal(t, 1, headCalls)
 	file, _ = ioutil.ReadFile(filepath.Join(pkg.Dest, "bin"))
-	require.Equal(t, data, string(file))
+	assert.Equal(t, data, string(file))
 
 	// Update after a check is needed and the etag has changed
 	pkg.UpdatedAt = time.Now().Add(-2 * time.Hour)
 	etag = "changed"
 	data = strings.Repeat("other", 1024)
 	err = fixture.Env.EnsureChannelIsUpToDate(fixture.P, pkg)
-	require.NoError(t, err)
-	require.Equal(t, 2, getCalls)
-	require.Equal(t, 2, headCalls)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, getCalls)
+	assert.Equal(t, 2, headCalls)
 	file, _ = ioutil.ReadFile(filepath.Join(pkg.Dest, "bin"))
-	require.Equal(t, data, string(file))
+	assert.Equal(t, data, string(file))
 
 	// Check that the package is still in the DB after the upgrade
 	dbPkg, err := dao.GetPackage(pkg.Reference.String())
-	require.NoError(t, err)
-	require.NotNil(t, dbPkg)
+	assert.NoError(t, err)
+	assert.NotZero(t, dbPkg)
 
 	// Check etag retained when the connection fails
 	fail = true
 	pkg.UpdatedAt = time.Now().Add(-2 * time.Hour)
 	err = fixture.Env.EnsureChannelIsUpToDate(fixture.P, pkg)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	dbPkg, err = dao.GetPackage(pkg.Reference.String())
-	require.NoError(t, err)
-	require.Equal(t, etag, dbPkg.Etag)
+	assert.NoError(t, err)
+	assert.Equal(t, etag, dbPkg.Etag)
 }
 
 // Test that files referred in the Files map are copied correctly
 func TestCopyFiles(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 
 	f, err := os.Create(filepath.Join(dir, "from"))
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	err = f.Close()
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	fixture := hermittest.NewEnvTestFixture(t, nil)
 	defer fixture.Clean()
@@ -173,22 +174,22 @@ func TestCopyFiles(t *testing.T) {
 		WithFile("from", filepath.Join(dir, "to"), os.DirFS(dir)).
 		Result()
 	_, err = fixture.Env.Install(fixture.P, pkg)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	_, err = os.Stat(filepath.Join(dir, "to"))
-	require.NoError(t, err)
+	assert.NoError(t, err)
 }
 
 // Test that files referred in the Files map are copied correctly
 func TestCopyFilesAction(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 
 	f, err := os.Create(filepath.Join(dir, "from"))
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	err = f.Close()
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	fixture := hermittest.NewEnvTestFixture(t, nil)
 	defer fixture.Clean()
@@ -204,27 +205,27 @@ func TestCopyFilesAction(t *testing.T) {
 		}).
 		Result()
 	_, err = fixture.Env.Install(fixture.P, pkg)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	info, err := os.Stat(filepath.Join(dir, "to"))
-	require.NoError(t, err)
-	require.Equal(t, 0755, int(info.Mode()))
+	assert.NoError(t, err)
+	assert.Equal(t, 0755, int(info.Mode()))
 }
 
 func TestTriggers(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 
 	file := filepath.Join(dir, "test.sh")
 	target := filepath.Join(dir, "success")
 
 	fd, err := os.Create(file)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	_, err = fd.WriteString("#!/bin/sh\ntouch " + target)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	err = fd.Close()
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	fixture := hermittest.NewEnvTestFixture(t, nil)
 	defer fixture.Clean()
@@ -242,10 +243,10 @@ func TestTriggers(t *testing.T) {
 			}).
 		Result()
 	_, err = fixture.Env.Install(fixture.P, pkg)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	_, err = os.Stat(target)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 }
 
 func TestExpandEnvars(t *testing.T) {
@@ -285,7 +286,7 @@ func TestExpandEnvars(t *testing.T) {
 			Apply("", ops).
 			Combined().
 			System()
-		require.Equal(t, test.expected, actual)
+		assert.Equal(t, test.expected, actual)
 	}
 }
 
@@ -343,28 +344,28 @@ func TestDependencyResolution(t *testing.T) {
 	defer f.Clean()
 
 	pkg, err := f.Env.Resolve(f.P, manifest.NameSelector("dep"), false)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	_, err = f.Env.Install(f.P, pkg)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	installed, err := f.Env.ListInstalledReferences()
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	// Test that dependencies can be resolved based on the package name
 	err = f.Env.ResolveWithDeps(f.P, installed, manifest.NameSelector("pkg1"), map[string]*manifest.Package{})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	// Test that dependencies can be resolved based on the virtual package name
 	err = f.Env.ResolveWithDeps(f.P, installed, manifest.NameSelector("pkg2"), map[string]*manifest.Package{})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	// Test that missing dependencies fail
 	err = f.Env.ResolveWithDeps(f.P, installed, manifest.NameSelector("pkg3"), map[string]*manifest.Package{})
-	require.ErrorIs(t, err, manifest.ErrUnknownPackage)
+	assert.True(t, errors.Is(err, manifest.ErrUnknownPackage))
 
 	// Test that resolving package where requirement is fulfilled by multiple uninstalled packages fails
 	err = f.Env.ResolveWithDeps(f.P, installed, manifest.NameSelector("pkg4"), map[string]*manifest.Package{})
-	require.Errorf(t, err, "multiple packages satisfy the required dependency \"virtual2\", please install one of the following manually: pkg1, pkg2")
+	assert.EqualError(t, err, "multiple packages satisfy the required dependency \"virtual2\", please install one of the following manually: pkg1, pkg2")
 }
 
 func TestManifestValidation(t *testing.T) {
@@ -390,11 +391,11 @@ func TestManifestValidation(t *testing.T) {
 	defer f.Clean()
 
 	_, err := f.Env.ValidateManifest(f.P, "test", &hermit.ValidationOptions{CheckSources: true})
-	require.Error(t, err)
-	require.Equal(t, "test-1.0.0: darwin-amd64: invalid source: could not retrieve source archive from "+f.Server.URL+"/bar: 404 Not Found", err.Error())
+	assert.Error(t, err)
+	assert.Equal(t, "test-1.0.0: darwin-amd64: invalid source: could not retrieve source archive from "+f.Server.URL+"/bar: 404 Not Found", err.Error())
 
 	_, err = f.Env.ValidateManifest(f.P, "test", &hermit.ValidationOptions{CheckSources: false})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 }
 
 func TestEnv_EphemeralVariableSubstitutionOverride(t *testing.T) {
@@ -402,14 +403,24 @@ func TestEnv_EphemeralVariableSubstitutionOverride(t *testing.T) {
 	defer fixture.Clean()
 
 	err := fixture.Env.SetEnv("TOOL_HOME", "$HERMIT_ENV/.hermit/tool")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
-	envop := &envars.Set{Name: "TOOL_HOME", Value: "$HERMIT_ENV/.hermit/tool"}
+	var envop envars.Op = &envars.Set{Name: "TOOL_HOME", Value: "$HERMIT_ENV/.hermit/tool"}
 	ops, err := fixture.Env.EnvOps(fixture.P)
-	require.NoError(t, err)
-	require.Contains(t, ops, envop)
+	assert.NoError(t, err)
+	opsContains(t, ops, envop)
 
 	vars, err := fixture.Env.Envars(fixture.P, false)
-	require.NoError(t, err)
-	require.Contains(t, vars, "TOOL_HOME="+fixture.Env.Root()+"/.hermit/tool")
+	assert.NoError(t, err)
+	opsContains(t, vars, "TOOL_HOME="+fixture.Env.Root()+"/.hermit/tool")
+}
+
+func opsContains[T any](t *testing.T, slice []T, needle T) {
+	t.Helper()
+	for _, el := range slice {
+		if reflect.DeepEqual(el, needle) {
+			return
+		}
+	}
+	t.Fatalf("%v does not contain %v", slice, needle)
 }

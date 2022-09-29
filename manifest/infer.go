@@ -28,7 +28,7 @@ var (
 //
 // "url" should be the full URL to a package artefact.
 //
-//     https://github.com/protocolbuffers/protobuf-go/releases/download/v1.27.1/protoc-gen-go.v1.27.1.darwin.amd64.tar.gz
+//	https://github.com/protocolbuffers/protobuf-go/releases/download/v1.27.1/protoc-gen-go.v1.27.1.darwin.amd64.tar.gz
 //
 // "version" may be specified if it cannot be inferred from the URL.
 func InferFromArtefact(p *ui.UI, packageSource cache.PackageSourceSelector, httpClient *http.Client, ghClient *github.Client, url, version string) (*Manifest, error) {

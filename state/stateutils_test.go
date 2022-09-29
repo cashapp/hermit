@@ -9,8 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
+	"github.com/alecthomas/assert/v2"
 	"github.com/cashapp/hermit/cache"
 	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/state"
@@ -49,7 +48,7 @@ func (f *StateTestFixture) Clean() {
 			return nil
 		})
 		err := os.RemoveAll(r)
-		require.NoError(f.t, err)
+		assert.NoError(f.t, err)
 	}
 }
 
@@ -57,7 +56,7 @@ func (f *StateTestFixture) State() *state.State {
 	root := f.root
 	if root == "" {
 		nroot, err := ioutil.TempDir("", "")
-		require.NoError(f.t, err)
+		assert.NoError(f.t, err)
 		root = nroot
 	}
 
@@ -67,11 +66,11 @@ func (f *StateTestFixture) State() *state.State {
 	f.roots[root] = true
 	client := f.Server.Client()
 	cache, err := cache.Open(root, nil, client, client)
-	require.NoError(f.t, err)
+	assert.NoError(f.t, err)
 	sta, err := state.Open(root, state.Config{
 		Builtin: sources.NewBuiltInSource(vfs.InMemoryFS(nil)),
 	}, cache)
-	require.NoError(f.t, err)
+	assert.NoError(f.t, err)
 	return sta
 }
 

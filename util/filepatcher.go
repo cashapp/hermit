@@ -53,7 +53,7 @@ func (fp *FilePatcher) Patch(fileName, content string) (bool, error) {
 		return false, nil
 	}
 
-	err = os.WriteFile(fileName, []byte(result), 0644)
+	err = os.WriteFile(fileName, []byte(result), 0600)
 	if err != nil {
 		return false, errors.WithStack(err)
 	}

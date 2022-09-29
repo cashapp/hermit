@@ -33,7 +33,7 @@ func (g *upgradeCmd) Run(l *ui.UI, env *hermit.Env) error {
 		}
 		for _, name := range g.Packages {
 			if packageNames[name] == nil {
-				return errors.Errorf("no installed package '%s' found.", name)
+				return errors.Errorf("no installed package '%s' found", name)
 			}
 			packages = append(packages, packageNames[name])
 		}

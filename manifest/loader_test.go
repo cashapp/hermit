@@ -4,8 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
+	"github.com/alecthomas/assert/v2"
 	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/ui"
 )
@@ -18,14 +17,14 @@ func TestLoader(t *testing.T) {
 		sources.NewLocalSource("test://", os.DirFS("./testdata")),
 	})
 	loader := NewLoader(srcs)
-	require.Len(t, srcs.Sources(), 1)
+	assert.Equal(t, len(srcs.Sources()), 1)
 	manifest, err := loader.Load(l, "protoc")
-	require.NoError(t, err)
-	require.Equal(t, "protoc is a compiler for protocol buffers definitions files.", manifest.Description)
+	assert.NoError(t, err)
+	assert.Equal(t, "protoc is a compiler for protocol buffers definitions files.", manifest.Description)
 
 	manifests, err := loader.All()
-	require.NoError(t, err)
-	require.Len(t, loader.Errors(), 1)
-	require.Contains(t, loader.Errors(), "test:///corrupt.hcl")
-	require.Len(t, manifests, 2)
+	assert.NoError(t, err)
+	assert.Equal(t, len(loader.Errors()), 1)
+	assert.NotZero(t, loader.Errors()["test:///corrupt.hcl"])
+	assert.Equal(t, len(manifests), 2)
 }

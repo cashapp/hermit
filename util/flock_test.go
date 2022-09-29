@@ -9,15 +9,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
+	"github.com/alecthomas/assert/v2"
 	"github.com/cashapp/hermit/ui"
 )
 
 // Test that a lock eventually times out if the lock has been opened by someone else
 func TestFileLockTimeout(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 
 	file := filepath.Join(dir, "lock")
@@ -29,21 +28,21 @@ func TestFileLockTimeout(t *testing.T) {
 
 	lock := NewLock(file, 5*time.Millisecond)
 	err1 := lock.Acquire(timeoutCtx, logger1)
-	require.NoError(t, err1)
+	assert.NoError(t, err1)
 	defer lock.Release(logger1)
 
 	lock2 := NewLock(file, 10*time.Millisecond)
 	err2 := lock2.Acquire(timeoutCtx, logger2)
 
-	require.Equal(t, strings.HasPrefix(err2.Error(), "timeout while waiting for the lock"), true)
+	assert.Equal(t, strings.HasPrefix(err2.Error(), "timeout while waiting for the lock"), true)
 
-	require.Contains(t, logger2buf.String(), "Waiting for a lock at "+file)
+	assert.Contains(t, logger2buf.String(), "Waiting for a lock at "+file)
 }
 
 // Test that releasing a lock allows others to lock it again
 func TestFileLockRelease(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 
 	file := filepath.Join(dir, "lock")
@@ -52,22 +51,22 @@ func TestFileLockRelease(t *testing.T) {
 
 	lock1 := NewLock(file, 5*time.Millisecond)
 	err1 := lock1.Acquire(context.Background(), logger1)
-	require.NoError(t, err1)
+	assert.NoError(t, err1)
 	lock1.Release(logger1)
 
 	lock2 := NewLock(file, 5*time.Millisecond)
 	err2 := lock2.Acquire(context.Background(), logger2)
-	require.NoError(t, err2)
+	assert.NoError(t, err2)
 	lock2.Release(logger2)
 
-	require.Empty(t, logger1buf.String())
-	require.Empty(t, logger2buf.String())
+	assert.Zero(t, logger1buf.String())
+	assert.Zero(t, logger2buf.String())
 }
 
 // Test that releasing a lock allows other waiting locks to proceed
 func TestFileLockProceed(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 
 	file := filepath.Join(dir, "lock")
@@ -86,13 +85,13 @@ func TestFileLockProceed(t *testing.T) {
 			}
 		}
 	}()
-	require.NoError(t, err1)
+	assert.NoError(t, err1)
 
 	lock2 := NewLock(file, 5*time.Millisecond)
 	err2 := lock2.Acquire(context.Background(), logger2)
-	require.NoError(t, err2)
+	assert.NoError(t, err2)
 	lock2.Release(logger2)
 
-	require.Empty(t, logger1buf.String())
-	require.Contains(t, logger2buf.String(), "Waiting for a lock at "+file)
+	assert.Zero(t, logger1buf.String())
+	assert.Contains(t, logger2buf.String(), "Waiting for a lock at "+file)
 }

@@ -5,16 +5,16 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/alecthomas/assert/v2"
 )
 
 func TestReferenceMatch(t *testing.T) {
-	require.True(t, ParseReference("go-1.13").Match(ParseReference("go-1.13.7")))
-	require.False(t, ParseReference("go-1.12").Match(ParseReference("go-1.13.7")))
-	require.False(t, ParseReference("protoc-3.15.0-square-1.0").Match(ParseReference("protoc-3.15.0")))
-	require.False(t, ParseReference("protoc-3.15.0-square-1.0").Match(ParseReference("protoc-3.15.0-square-1")))
-	require.True(t, ParseReference("protoc-3.15.0-square-1").Match(ParseReference("protoc-3.15.0-square-1.0")))
-	require.True(t, ParseReference("protoc-3.15.0-square-1.0").Match(ParseReference("protoc-3.15.0-square-1.0")))
+	assert.True(t, ParseReference("go-1.13").Match(ParseReference("go-1.13.7")))
+	assert.False(t, ParseReference("go-1.12").Match(ParseReference("go-1.13.7")))
+	assert.False(t, ParseReference("protoc-3.15.0-square-1.0").Match(ParseReference("protoc-3.15.0")))
+	assert.False(t, ParseReference("protoc-3.15.0-square-1.0").Match(ParseReference("protoc-3.15.0-square-1")))
+	assert.True(t, ParseReference("protoc-3.15.0-square-1").Match(ParseReference("protoc-3.15.0-square-1.0")))
+	assert.True(t, ParseReference("protoc-3.15.0-square-1.0").Match(ParseReference("protoc-3.15.0-square-1.0")))
 }
 
 func TestParseReferences(t *testing.T) {
@@ -29,9 +29,9 @@ func TestParseReferences(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.version, func(t *testing.T) {
 			v := ParseVersion(test.version)
-			require.Equal(t, test.parts, strings.Join(v.Components(), "."))
-			require.Equal(t, test.prerelease, v.Prerelease())
-			require.Equal(t, test.metadata, v.Metadata())
+			assert.Equal(t, test.parts, strings.Join(v.Components(), "."))
+			assert.Equal(t, test.prerelease, v.Prerelease())
+			assert.Equal(t, test.metadata, v.Metadata())
 		})
 	}
 }
@@ -58,13 +58,13 @@ func TestParseVersions(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.version, func(t *testing.T) {
 			v := ParseVersion(test.version)
-			require.Equal(t, test.version, v.String())
-			require.Equal(t, test.clean, v.Clean().String())
-			require.Equal(t, test.majorMinor, v.MajorMinor().String())
-			require.Equal(t, test.major, v.Major().String())
-			require.Equal(t, test.parts, strings.Join(v.Components(), "."))
-			require.Equal(t, test.prerelease, v.Prerelease())
-			require.Equal(t, test.metadata, v.Metadata())
+			assert.Equal(t, test.version, v.String())
+			assert.Equal(t, test.clean, v.Clean().String())
+			assert.Equal(t, test.majorMinor, v.MajorMinor().String())
+			assert.Equal(t, test.major, v.Major().String())
+			assert.Equal(t, test.parts, strings.Join(v.Components(), "."))
+			assert.Equal(t, test.prerelease, v.Prerelease())
+			assert.Equal(t, test.metadata, v.Metadata())
 		})
 	}
 }
@@ -77,7 +77,7 @@ func TestSortVersions(t *testing.T) {
 	v4 := ParseVersion("1.13rc3")
 	versions := Versions{v0, v1, v2, v3, v4}
 	sort.Sort(versions)
-	require.Equal(t, Versions{v4, v3, v0, v2, v1}, versions)
+	assert.Equal(t, Versions{v4, v3, v0, v2, v1}, versions)
 }
 
 func TestSortReferences(t *testing.T) {
@@ -89,5 +89,5 @@ func TestSortReferences(t *testing.T) {
 	v5 := ParseReference("go@stable")
 	refs := References{v0, v1, v2, v3, v4, v5}
 	sort.Sort(refs)
-	require.Equal(t, References{v5, v4, v3, v0, v2, v1}, refs)
+	assert.Equal(t, References{v5, v4, v3, v0, v2, v1}, refs)
 }
