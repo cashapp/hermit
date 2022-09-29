@@ -1,6 +1,6 @@
-description = "test package"
-binaries = ["testbin2"]
+description = "test package 3"
+binaries = ["testbin3"]
 
-source = "./bin/testbin2.tar.gz"
+source = "./bin/testbin3.tar.gz"
 
 version "1.0.0" {}

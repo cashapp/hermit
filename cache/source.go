@@ -1,12 +1,12 @@
 package cache
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+
+	"github.com/cashapp/hermit/util"
 
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/ui"
@@ -58,7 +58,7 @@ func (s *fileSource) OpenLocal(_ *Cache, _ string) (*os.File, error) {
 	return f, errors.WithStack(err)
 }
 
-func (s *fileSource) Download(_ *ui.Task, _ *Cache, _ string) (path string, etag string, actualChecksum string, err error) {
+func (s *fileSource) Download(_ *ui.Task, _ *Cache, checksum string) (path string, etag string, actualChecksum string, err error) {
 	info, err := os.Stat(s.path)
 	if err != nil {
 		return "", "", "", errors.WithStack(err)
@@ -67,18 +67,15 @@ func (s *fileSource) Download(_ *ui.Task, _ *Cache, _ string) (path string, etag
 	if info.IsDir() {
 		return s.path, "", "", nil
 	}
-	var data []byte
-	data, err = os.ReadFile(s.path)
+	var calculatedDigest string
+	calculatedDigest, err = util.Sha256LocalFile(s.path)
 	if err != nil {
 		return "", "", "", errors.WithStack(err)
 	}
-	h := sha256.New()
-	_, err = h.Write(data)
-	if err != nil {
-		return "", "", "", errors.WithStack(err)
+	if checksum != "" && checksum != calculatedDigest {
+		return "", "", "", errors.Errorf("%s: checksum %s should have been %s", s.path, calculatedDigest, checksum)
 	}
-	actualDigest := hex.EncodeToString(h.Sum(nil))
-	return s.path, "", actualDigest, nil
+	return s.path, "", calculatedDigest, nil
 }
 
 func (s *fileSource) ETag(b *ui.Task) (etag string, err error) {

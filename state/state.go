@@ -2,8 +2,6 @@ package state
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -318,26 +316,20 @@ func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 // This method will only cache the values and get a digest.
 func (s *State) CacheAndDigest(b *ui.Task, p *manifest.Package) (string, error) {
 	actualDigest := ""
+	var err error
 	if !s.isCached(p) {
 		mirrors := append(p.Mirrors, s.generateMirrors(p.Source)...)
-		_, _, ch, err := s.cache.Download(b, p.SHA256, p.Source, mirrors...)
+		_, _, actualDigest, err = s.cache.Download(b, p.SHA256, p.Source, mirrors...)
 		if err != nil {
 			return "", errors.WithStack(err)
 		}
-		actualDigest = ch
 	} else {
 		// if the artifact is cached then just calculate the digest.
 		path := s.cache.Path(p.SHA256, p.Source)
-		data, err := os.ReadFile(path)
+		actualDigest, err = util.Sha256LocalFile(path)
 		if err != nil {
 			return "", errors.WithStack(err)
 		}
-		h := sha256.New()
-		_, err = h.Write(data)
-		if err != nil {
-			return "", errors.WithStack(err)
-		}
-		actualDigest = hex.EncodeToString(h.Sum(nil))
 	}
 	return actualDigest, nil
 }

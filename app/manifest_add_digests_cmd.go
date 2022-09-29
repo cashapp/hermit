@@ -32,9 +32,10 @@ func (e *addDigestsCmd) Run(l *ui.UI, state *state.State) error {
 		}
 		dir := filepath.Dir(absolutePath)
 		packageName := strings.Replace(f, ".hcl", "", 1)
+		base := filepath.Base(f)
 		task := l.Task(packageName)
 		var localmanifest *manifest.AnnotatedManifest
-		localmanifest, err = manifest.LoadManifestFile(os.DirFS(dir), packageName, f)
+		localmanifest, err = manifest.LoadManifestFile(os.DirFS(dir), packageName, base)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -53,7 +54,7 @@ func (e *addDigestsCmd) Run(l *ui.UI, state *state.State) error {
 		err = os.WriteFile(f, value, os.ModePerm)
 		if err != nil {
 			l.Errorf("Could not write the manifest file %s", f)
-			return errors.WithStack(err)
+			return errors.Wrapf(err, "Could not write the manifest file %s", f)
 		}
 
 		task.Done()
