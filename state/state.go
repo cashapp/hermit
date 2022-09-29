@@ -326,11 +326,17 @@ func (s *State) CacheAndDigest(b *ui.Task, p *manifest.Package) (string, error) 
 			return "", errors.WithStack(err)
 		}
 	} else {
-		// if the artifact is cached then just calculate the digest.
-		path := s.cache.Path(p.SHA256, p.Source)
-		actualDigest, err = util.Sha256LocalFile(path)
-		if err != nil {
-			return "", errors.WithStack(err)
+		// If the manifest has SHA256 value then the package installation must have
+		// checked that. So just use it.
+		if p.SHA256 != "" {
+			actualDigest = p.SHA256
+		} else {
+			// if the artifact is cached then just calculate the digest.
+			path := s.cache.Path(p.SHA256, p.Source)
+			actualDigest, err = util.Sha256LocalFile(path)
+			if err != nil {
+				return "", errors.WithStack(err)
+			}
 		}
 	}
 	return actualDigest, nil
