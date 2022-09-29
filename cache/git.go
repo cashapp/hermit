@@ -34,20 +34,12 @@ func (s *gitSource) Download(b *ui.Task, cache *Cache, checksum string) (string,
 	}
 
 	bts, err := util.CaptureInDir(b, checkoutDir, "git", "rev-parse", "HEAD")
-	// For git sources there is no need for an actual checksum.
-	// A tuple of git_source_url, commit is a unique enough combination.
-	// Also, it's hard to make sense of what this checksum would be.
-	// In other implementations of the Download interface function, it's sha256 value
-	// but here there is no obvious definition.
-	var sbts = strings.TrimSpace(string(bts))
-	if checksum == "" {
-		base = BasePath(sbts, s.URL)
-	}
 	if err != nil {
 		return "", "", "", errors.WithStack(err)
 	}
+	etag := strings.Trim(string(bts), "\n")
 
-	return filepath.Join(cache.root, base), sbts, sbts, nil
+	return filepath.Join(cache.root, base), etag, "", nil
 }
 
 func (s *gitSource) ETag(b *ui.Task) (etag string, err error) {
