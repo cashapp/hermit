@@ -318,7 +318,9 @@ func (s *State) CacheAndDigest(b *ui.Task, p *manifest.Package) (string, error) 
 	actualDigest := ""
 	var err error
 	if !s.isCached(p) {
-		mirrors := append(p.Mirrors, s.generateMirrors(p.Source)...)
+		mirrors := make([]string, len(p.Mirrors))
+		copy(mirrors, p.Mirrors)
+		mirrors = append(mirrors, s.generateMirrors(p.Source)...)
 		_, _, actualDigest, err = s.cache.Download(b, p.SHA256, p.Source, mirrors...)
 		if err != nil {
 			return "", errors.WithStack(err)
@@ -364,7 +366,7 @@ func (s *State) extract(b *ui.Task, p *manifest.Package) error {
 	if !s.isCached(p) {
 		mirrors := make([]string, len(p.Mirrors))
 		copy(mirrors, p.Mirrors)
-		mirrors = append(p.Mirrors, s.generateMirrors(p.Source)...)
+		mirrors = append(mirrors, s.generateMirrors(p.Source)...)
 		path, etag, _, err = s.cache.Download(b, p.SHA256, p.Source, mirrors...)
 		p.ETag = etag
 
