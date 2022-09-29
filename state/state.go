@@ -362,10 +362,6 @@ func (s *State) linkBinaries(p *manifest.Package) error {
 	return nil
 }
 
-// GetLocalFile Get the hermit specific file name.
-func (s *State) GetLocalFile(checksum string, uri string) string {
-	return s.cache.Path(checksum, uri)
-}
 func (s *State) extract(b *ui.Task, p *manifest.Package) error {
 	var (
 		path string

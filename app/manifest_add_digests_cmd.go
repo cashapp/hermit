@@ -13,18 +13,18 @@ import (
 	"github.com/cashapp/hermit/ui"
 )
 
-type AddDigestsCmd struct {
+type addDigestsCmd struct {
 	ManifestFiles []string `arg:"" help:"List of files that need to be updated with digests"`
 }
 
-func (e *AddDigestsCmd) Help() string {
+func (e *addDigestsCmd) Help() string {
 	return `
 	This command will go through each manifest file in input and add missing digest values.
 	It will use the sha256sums attribute in the manifest files to add digests.
 	Note: It might download packages that are not in the local cache. So it might take some time.
 	`
 }
-func (e *AddDigestsCmd) Run(l *ui.UI, state *state.State) error {
+func (e *addDigestsCmd) Run(l *ui.UI, state *state.State) error {
 	for _, f := range e.ManifestFiles {
 		absolutePath, err := filepath.Abs(f)
 		if err != nil {
