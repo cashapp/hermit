@@ -43,6 +43,21 @@ linters:
     - paralleltest
     - ifshort # so annoying
     - prealloc
+    - nolintlint
+    - varnamelen
+    - nosnakecase
+    - nonamedreturns
+    - nilnil
+    - ireturn
+    - exhaustruct
+    - forcetypeassert
+    - usestdlibvars
+    - wrapcheck
+    - tagliatelle
+    - makezero
+    - maintidx
+    - nilerr
+    - errchkjson
 
 linters-settings:
   govet:
@@ -84,9 +99,10 @@ issues:
     # Weird error only seen on Kochiku...
     - 'internal error: no range for'
     - 'exported method `.*\.(MarshalJSON|UnmarshalJSON|URN|Payload|GoString|Close|Provides|Requires|ExcludeFromHash|MarshalText|UnmarshalText|Description|Check|Poll|Severity)` should have comment or be unexported'
-    - 'composite literal uses unkeyed fields'
     - 'declaration of "err" shadows declaration'
     - 'by other packages, and that stutters'
     - 'Potential file inclusion via variable'
     - 'at least one file in a package should have a package comment'
     - 'bad syntax for struct tag pair'
+    - 'should have.*comment'
+    - 'uses unkeyed fields'

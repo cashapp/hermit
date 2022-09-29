@@ -3,8 +3,8 @@ package autoversion
 import (
 	"testing"
 
+	"github.com/alecthomas/assert/v2"
 	"github.com/cashapp/hermit/manifest"
-	"github.com/stretchr/testify/require"
 )
 
 func TestGitHubVersions(t *testing.T) {
@@ -51,11 +51,11 @@ func TestGitHubVersions(t *testing.T) {
 				IgnoreInvalidVersions: test.ignoreInvalid,
 			})
 			if test.error {
-				require.Error(t, err)
+				assert.Error(t, err)
 			} else {
-				require.NoError(t, err)
+				assert.NoError(t, err)
 			}
-			require.Equal(t, test.expectedVersion, version)
+			assert.Equal(t, test.expectedVersion, version)
 		})
 	}
 }

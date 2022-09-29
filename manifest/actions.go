@@ -16,8 +16,6 @@ import (
 	"github.com/cashapp/hermit/vfs"
 )
 
-// go-sumtype:decl Action EnvOp
-
 // Action interface implemented by all lifecycle trigger actions.
 type Action interface {
 	position() hcl.Position

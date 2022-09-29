@@ -675,7 +675,7 @@ func (e *Env) Upgrade(l *ui.UI, pkg *manifest.Package) (*shell.Changes, error) {
 //
 // Link chains are in the form
 //
-//     <binary> -> <pkg>-<version>.pkg -> hermit
+//	<binary> -> <pkg>-<version>.pkg -> hermit
 func (e *Env) ResolveLink(l *ui.UI, executable string) (pkg *manifest.Package, binary string, err error) {
 	links, err := util.ResolveSymlinks(executable)
 	if err != nil {
@@ -1361,6 +1361,7 @@ func (e *Env) resolveVirtual(l *ui.UI, name string) (manifest.Reference, error) 
 			}
 		}
 	}
+	sort.Strings(candidates)
 	return manifest.Reference{}, errors.Errorf("multiple packages satisfy the required dependency %q, please install one of the following manually: %s", name, strings.Join(candidates, ", "))
 }
 

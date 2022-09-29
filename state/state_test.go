@@ -7,8 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
+	"github.com/alecthomas/assert/v2"
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/manifest/manifesttest"
 	"github.com/cashapp/hermit/ui"
@@ -19,10 +18,10 @@ func TestCacheAndUnpackDownloadsOnlyWhenNeeded(t *testing.T) {
 	fixture := NewStateTestFixture(t).
 		WithHTTPHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			fr, err := os.Open("../archive/testdata/archive.tar.gz")
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			defer fr.Close() // nolint
 			_, err = io.Copy(w, fr)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			calls++
 		}))
 	defer fixture.Clean()
@@ -32,24 +31,24 @@ func TestCacheAndUnpackDownloadsOnlyWhenNeeded(t *testing.T) {
 	pkg := manifesttest.NewPkgBuilder(state.PkgDir()).WithSource(fixture.Server.URL).Result()
 
 	err := state.CacheAndUnpack(log.Task("test"), pkg)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	err = state.CleanCache(log.Task("test"))
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	// Check that removing the cache does not re-download the package if it is extracted
 	err = state.CacheAndUnpack(log.Task("test"), pkg)
-	require.NoError(t, err)
-	require.Equal(t, 1, calls)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, calls)
 }
 
 func TestCacheAndUnpackHooksRunOnMutablePackage(t *testing.T) {
 	fixture := NewStateTestFixture(t).
 		WithHTTPHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			fr, err := os.Open("../archive/testdata/archive.tar.gz")
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			defer fr.Close() // nolint
 			_, err = io.Copy(w, fr)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 		}))
 	defer fixture.Clean()
 	state := fixture.State()
@@ -64,27 +63,28 @@ func TestCacheAndUnpackHooksRunOnMutablePackage(t *testing.T) {
 		Result()
 
 	err := state.CacheAndUnpack(log.Task("test"), pkg)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
-	require.FileExists(t, filepath.Join(state.PkgDir(), "file_renamed"))
+	_, err = os.Stat(filepath.Join(state.PkgDir(), "file_renamed"))
+	assert.NoError(t, err)
 
 	info, err := os.Stat(state.PkgDir())
-	require.NoError(t, err)
-	require.Equal(t, os.FileMode(0500), info.Mode()&0777, info.Mode().String())
+	assert.NoError(t, err)
+	assert.Equal(t, os.FileMode(0500), info.Mode()&0777, info.Mode().String())
 
 	info, err = os.Stat(filepath.Join(state.PkgDir(), "file_renamed"))
-	require.NoError(t, err)
-	require.Equal(t, os.FileMode(0500), info.Mode()&0777, info.Mode().String())
+	assert.NoError(t, err)
+	assert.Equal(t, os.FileMode(0500), info.Mode()&0777, info.Mode().String())
 }
 
 func TestCacheAndUnpackCreatesBinarySymlinks(t *testing.T) {
 	fixture := NewStateTestFixture(t).
 		WithHTTPHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			fr, err := os.Open("../archive/testdata/archive.tar.gz")
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			defer fr.Close() // nolint
 			_, err = io.Copy(w, fr)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 		}))
 	defer fixture.Clean()
 	state := fixture.State()
@@ -94,7 +94,9 @@ func TestCacheAndUnpackCreatesBinarySymlinks(t *testing.T) {
 		WithSource(fixture.Server.URL).
 		Result()
 
-	require.NoError(t, state.CacheAndUnpack(log.Task("test"), pkg))
-	require.FileExists(t, filepath.Join(state.BinaryDir(), pkg.Reference.String(), "darwin_exe"))
-	require.FileExists(t, filepath.Join(state.BinaryDir(), pkg.Reference.String(), "linux_exe"))
+	assert.NoError(t, state.CacheAndUnpack(log.Task("test"), pkg))
+	_, err := os.Stat(filepath.Join(state.BinaryDir(), pkg.Reference.String(), "darwin_exe"))
+	assert.NoError(t, err)
+	_, err = os.Stat(filepath.Join(state.BinaryDir(), pkg.Reference.String(), "linux_exe"))
+	assert.NoError(t, err)
 }

@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/alecthomas/assert/v2"
 )
 
 func TestFilePatcher_patches_existing_files_more(t *testing.T) {
@@ -83,7 +83,7 @@ foobar
 	}}
 
 	dir, err := ioutil.TempDir("", "")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 
 	for _, test := range tests {
@@ -94,12 +94,12 @@ foobar
 				file = fileWith(t, dir, test.contents)
 			}
 			changed, err := patcher.Patch(file, test.patch)
-			require.Equal(t, test.changed, changed)
-			require.NoError(t, err)
+			assert.Equal(t, test.changed, changed)
+			assert.NoError(t, err)
 
 			bts, err := os.ReadFile(file)
-			require.NoError(t, err)
-			require.Equal(t, test.expected, string(bts))
+			assert.NoError(t, err)
+			assert.Equal(t, test.expected, string(bts))
 		})
 	}
 }
@@ -107,9 +107,9 @@ foobar
 func fileWith(t *testing.T, dir, content string) (fileName string) {
 	t.Helper()
 	file, err := os.CreateTemp(dir, ".file")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	name := file.Name()
 	err = ioutil.WriteFile(name, []byte(content), 0644) // nolint: gosec
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	return name
 }

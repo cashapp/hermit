@@ -1,8 +1,9 @@
 package manifest
 
 import (
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/alecthomas/assert/v2"
 )
 
 func TestInferRepository(t *testing.T) {
@@ -58,7 +59,7 @@ func TestInferRepository(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			inferPackageRepository(tt.Package, tt.Manifest)
 
-			require.Equal(t, tt.Package.Repository, tt.expectedRepository)
+			assert.Equal(t, tt.Package.Repository, tt.expectedRepository)
 		})
 	}
 }

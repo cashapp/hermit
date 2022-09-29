@@ -337,7 +337,9 @@ func (s *State) extract(b *ui.Task, p *manifest.Package) error {
 	)
 
 	if !s.isCached(p) {
-		mirrors := append(p.Mirrors, s.generateMirrors(p.Source)...)
+		mirrors := make([]string, len(p.Mirrors))
+		copy(mirrors, p.Mirrors)
+		mirrors = append(mirrors, s.generateMirrors(p.Source)...)
 		path, etag, err = s.cache.Download(b, p.SHA256, p.Source, mirrors...)
 		p.ETag = etag
 		if err != nil {
@@ -437,7 +439,9 @@ func (s *State) UpgradeChannel(b *ui.Task, pkg *manifest.Package) error {
 	}
 
 	name := pkg.Reference.String()
-	mirrors := append(pkg.Mirrors, s.generateMirrors(pkg.Source)...)
+	mirrors := make([]string, len(pkg.Mirrors))
+	copy(mirrors, pkg.Mirrors)
+	mirrors = append(mirrors, s.generateMirrors(pkg.Source)...)
 
 	etag, err := s.cache.ETag(b, pkg.Source, mirrors...)
 	if err != nil {

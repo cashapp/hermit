@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/hcl"
 	"github.com/alecthomas/repr"
-	"github.com/stretchr/testify/require"
 
 	"github.com/cashapp/hermit/envars"
 	. "github.com/cashapp/hermit/manifest"
@@ -327,16 +327,16 @@ func TestResolver_Resolve(t *testing.T) {
 				ss = append(ss, sources.NewMemSource(name, content))
 			}
 			l, err := New(sources.New("", ss), config)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			if tt.reference != "" {
 				gotPkg, err := l.Resolve(logger, PrefixSelector(ParseReference(tt.reference)))
 				if err != nil || tt.wantErr != "" {
-					require.Equal(t, tt.wantErr, err.Error())
+					assert.Equal(t, tt.wantErr, err.Error())
 				}
 				if gotPkg != nil {
 					gotPkg.FS = nil
 				}
-				require.Equal(t,
+				assert.Equal(t,
 					repr.String(tt.wantPkg, repr.Indent("  "), repr.Hide(hcl.Position{})),
 					repr.String(gotPkg, repr.Indent("  "), repr.Hide(hcl.Position{})))
 			}
@@ -345,7 +345,7 @@ func TestResolver_Resolve(t *testing.T) {
 				wantErrors = map[string][]string{}
 			} else {
 				err = l.LoadAll()
-				require.NoError(t, err)
+				assert.NoError(t, err)
 			}
 			errorMsgs := map[string][]string{}
 			for k, errors := range l.Errors() {
@@ -353,7 +353,7 @@ func TestResolver_Resolve(t *testing.T) {
 					errorMsgs[k] = append(errorMsgs[k], e.Error())
 				}
 			}
-			require.Equal(t, wantErrors, errorMsgs)
+			assert.Equal(t, wantErrors, errorMsgs)
 		})
 	}
 }
@@ -387,9 +387,9 @@ func TestSearchVersionsAndChannelsCoexist(t *testing.T) {
 		ss = append(ss, sources.NewMemSource(name, content))
 	}
 	l, err := New(sources.New("", ss), config)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	pkgs, err := l.Search(logger.Task("search"), "test")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	expected := Packages{
 		manifesttest.NewPkgBuilder(config.State + "/pkg/test@1").
 			WithName("test").
@@ -431,5 +431,5 @@ func TestSearchVersionsAndChannelsCoexist(t *testing.T) {
 			WithFS(ffs).
 			Result(),
 	}
-	require.Equal(t, repr.String(expected, repr.Indent("  ")), repr.String(pkgs, repr.Indent("  ")))
+	assert.Equal(t, repr.String(expected, repr.Indent("  ")), repr.String(pkgs, repr.Indent("  ")))
 }

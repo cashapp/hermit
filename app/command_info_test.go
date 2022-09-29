@@ -4,8 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
+	"github.com/alecthomas/assert/v2"
 	"github.com/cashapp/hermit/hermittest"
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/ui"
@@ -31,27 +30,27 @@ func TestCommandInfoJson(t *testing.T) {
 			JSON: true,
 		},
 	}
-	require.NoError(t, cmd.Run(l, f.Env, f.State))
+	assert.NoError(t, cmd.Run(l, f.Env, f.State))
 
 	var jss []map[string]json.RawMessage
-	require.NoError(t, json.Unmarshal(buf.Bytes(), &jss))
-	require.Equal(t, 1, len(jss))
+	assert.NoError(t, json.Unmarshal(buf.Bytes(), &jss))
+	assert.Equal(t, 1, len(jss))
 	js := jss[0]
 
-	require.Equal(t, stringValue(t, js["Description"]), "test package")
-	require.Equal(t, stringValue(t, js["Reference"], "Name"), "test-version")
-	require.Equal(t, stringValue(t, js["Reference"], "Version"), "1.1")
-	require.Equal(t, stringValue(t, js["Root"]), f.State.PkgDir()+"/test-version-1.1")
+	assert.Equal(t, stringValue(t, js["Description"]), "test package")
+	assert.Equal(t, stringValue(t, js["Reference"], "Name"), "test-version")
+	assert.Equal(t, stringValue(t, js["Reference"], "Version"), "1.1")
+	assert.Equal(t, stringValue(t, js["Root"]), f.State.PkgDir()+"/test-version-1.1")
 }
 
 func stringValue(t *testing.T, from json.RawMessage, path ...string) string {
 	t.Helper()
 	if len(path) == 0 {
 		res := ""
-		require.NoError(t, json.Unmarshal(from, &res))
+		assert.NoError(t, json.Unmarshal(from, &res))
 		return res
 	}
 	var jss map[string]json.RawMessage
-	require.NoError(t, json.Unmarshal(from, &jss))
+	assert.NoError(t, json.Unmarshal(from, &jss))
 	return stringValue(t, jss[path[0]], path[1:]...)
 }

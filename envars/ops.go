@@ -57,8 +57,6 @@ func (e Envars) Revert(envRoot string, ops Ops) *Transform {
 	return transform
 }
 
-// go:sumtype decl Op
-
 // Op is an operation on an environment variable.
 type Op interface {
 	fmt.Stringer

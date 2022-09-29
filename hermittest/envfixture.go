@@ -9,8 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
+	"github.com/alecthomas/assert/v2"
 	"github.com/cashapp/hermit"
 	"github.com/cashapp/hermit/cache"
 	"github.com/cashapp/hermit/envars"
@@ -38,27 +37,27 @@ type EnvTestFixture struct {
 func NewEnvTestFixture(t *testing.T, handler http.Handler) *EnvTestFixture {
 	t.Helper()
 	envDir, err := ioutil.TempDir("", "")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	stateDir, err := ioutil.TempDir("", "")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	log, buf := ui.NewForTesting()
 
 	err = hermit.Init(log, envDir, "", stateDir, hermit.Config{}, "BYPASS")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	server := httptest.NewServer(handler)
 	client := server.Client()
 	cache, err := cache.Open(stateDir, nil, client, client)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	sta, err := state.Open(stateDir, state.Config{
 		Sources: []string{},
 		Builtin: sources.NewBuiltInSource(vfs.InMemoryFS(nil)),
 	}, cache)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	env, err := hermit.OpenEnv(envDir, sta, cache.GetSource, envars.Envars{}, server.Client(), nil)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	return &EnvTestFixture{
 		Cache:   cache,
@@ -80,7 +79,7 @@ func (f *EnvTestFixture) RootDir() string {
 // DAO returns the DAO using the underlying hermit database
 func (f *EnvTestFixture) DAO() *dao.DAO {
 	d, err := dao.Open(f.State.Root())
-	require.NoError(f.t, err)
+	assert.NoError(f.t, err)
 	return d
 }
 
@@ -96,12 +95,12 @@ func (f *EnvTestFixture) Clean() {
 // NewEnv returns a new environment using the state directory from this fixture
 func (f *EnvTestFixture) NewEnv() *hermit.Env {
 	envDir, err := ioutil.TempDir("", "")
-	require.NoError(f.t, err)
+	assert.NoError(f.t, err)
 	log, _ := ui.NewForTesting()
 	err = hermit.Init(log, envDir, "", f.State.Root(), hermit.Config{}, "BYPASS")
-	require.NoError(f.t, err)
+	assert.NoError(f.t, err)
 	env, err := hermit.OpenEnv(envDir, f.State, f.Cache.GetSource, envars.Envars{}, f.Server.Client(), nil)
-	require.NoError(f.t, err)
+	assert.NoError(f.t, err)
 	return env
 }
 
@@ -109,7 +108,7 @@ func (f *EnvTestFixture) NewEnv() *hermit.Env {
 func (f *EnvTestFixture) GetDBPackage(ref string) *dao.Package {
 	dao := f.DAO()
 	dbPkg, err := dao.GetPackage(ref)
-	require.NoError(f.t, err)
+	assert.NoError(f.t, err)
 	return dbPkg
 }
 
@@ -119,7 +118,7 @@ func (f *EnvTestFixture) GetDBPackage(ref string) *dao.Package {
 func (f *EnvTestFixture) WithManifests(files map[string]string) *EnvTestFixture {
 	for name, content := range files {
 		err := f.Env.AddSource(f.P, sources.NewMemSource(name, content))
-		require.NoError(f.t, err)
+		assert.NoError(f.t, err)
 	}
 	return f
 }

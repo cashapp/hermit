@@ -6,8 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
+	"github.com/alecthomas/assert/v2"
 	"github.com/cashapp/hermit/cache"
 	"github.com/cashapp/hermit/github"
 	"github.com/cashapp/hermit/ui"
@@ -36,7 +35,7 @@ func TestInfer(t *testing.T) {
 		srv.URL+"/releases/download/0.1.1/pkg-0.1.1-linux-amd64.tgz",
 		"",
 	)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	expected := &Manifest{
 		Layer: Layer{
 			Binaries: []string{},
@@ -54,5 +53,5 @@ func TestInfer(t *testing.T) {
 			},
 		}},
 	}
-	require.Equal(t, expected, actual)
+	assert.Equal(t, expected, actual)
 }

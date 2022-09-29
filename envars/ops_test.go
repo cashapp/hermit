@@ -3,8 +3,8 @@ package envars
 import (
 	"testing"
 
+	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/repr"
-	"github.com/stretchr/testify/require"
 )
 
 func TestOpApplyRevert(t *testing.T) {
@@ -48,10 +48,10 @@ func TestOpApplyRevert(t *testing.T) {
 			tr := transform("", test.env)
 			test.op.Apply(tr)
 			actual := tr.Combined()
-			require.Equal(t, test.expected, actual)
+			assert.Equal(t, test.expected, actual)
 			tr = transform("", actual)
 			test.op.Revert(tr)
-			require.Equal(t, test.env, tr.Combined())
+			assert.Equal(t, test.env, tr.Combined())
 		})
 	}
 }
@@ -82,9 +82,9 @@ func TestOpsApplyRevert(t *testing.T) {
 		"_HERMIT_OLD_GOPATH_1B15BBB670152CB3": "/home/larry/go",
 	}
 	actual := original.Apply("", ops).Combined()
-	require.Equal(t, expected, actual)
+	assert.Equal(t, expected, actual)
 	actual = actual.Revert("", ops).Combined()
-	require.Equal(t, original, actual)
+	assert.Equal(t, original, actual)
 }
 
 func TestTransform(t *testing.T) {
@@ -93,8 +93,8 @@ func TestTransform(t *testing.T) {
 	})
 	tr.set("GOPATH", "/go/bin")
 	tr.set("PATH", "/usr/bin:${PATH}")
-	require.Equal(t, Envars{"PATH": "/usr/bin:/bin", "GOPATH": "/go/bin"}, tr.Combined())
-	require.Equal(t, Envars{"GOPATH": "/go/bin", "PATH": "/usr/bin:/bin"}, tr.Changed(false))
+	assert.Equal(t, Envars{"PATH": "/usr/bin:/bin", "GOPATH": "/go/bin"}, tr.Combined())
+	assert.Equal(t, Envars{"GOPATH": "/go/bin", "PATH": "/usr/bin:/bin"}, tr.Changed(false))
 }
 
 func TestIssue47(t *testing.T) {
@@ -113,9 +113,9 @@ func TestIssue47(t *testing.T) {
 		"NPM_CONFIG_PREFIX": "/home/user/project/.hermit/node",
 		"PATH":              "/home/user/project/node_modules/.bin:/home/user/project/.hermit/node/bin:/bin",
 	}
-	require.Equal(t, expected, actual)
+	assert.Equal(t, expected, actual)
 	reverted := expected.Revert("/home/user/project", ops).Combined()
-	require.Equal(t, original, reverted)
+	assert.Equal(t, original, reverted)
 }
 
 func TestEncodeDecodeOps(t *testing.T) {
@@ -128,9 +128,9 @@ func TestEncodeDecodeOps(t *testing.T) {
 		&Prefix{"PREFIX", "prefix_"},
 	}
 	data, err := MarshalOps(actual)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	t.Log(string(data))
 	expected, err := UnmarshalOps(data)
-	require.NoError(t, err)
-	require.Equal(t, repr.String(expected, repr.Indent("  ")), repr.String(actual, repr.Indent("  ")))
+	assert.NoError(t, err)
+	assert.Equal(t, repr.String(expected, repr.Indent("  ")), repr.String(actual, repr.Indent("  ")))
 }

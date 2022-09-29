@@ -1,12 +1,13 @@
 package sources_test
 
 import (
+	"io/ioutil"
+	"testing"
+
+	"github.com/alecthomas/assert/v2"
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/ui"
-	"github.com/stretchr/testify/require"
-	"io/ioutil"
-	"testing"
 )
 
 type FailingGit struct {
@@ -25,10 +26,10 @@ func TestGitDoesNotRemoveSourceAfterSyncFailure(t *testing.T) {
 	// Create the initial directory for sources by successfully syncing
 	u, _ := ui.NewForTesting()
 	err := source.Sync(u, true)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	files, err := ioutil.ReadDir(sourceDir)
-	require.NoError(t, err)
-	require.Len(t, files, 1)
+	assert.NoError(t, err)
+	assert.Equal(t, len(files), 1)
 	gitDir := files[0].Name()
 
 	// Fail the sync
@@ -36,12 +37,12 @@ func TestGitDoesNotRemoveSourceAfterSyncFailure(t *testing.T) {
 	err = source.Sync(u, true)
 
 	// no error as it was not an initial clone
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	// the directory should still be in place after git failed to update
 	files, err = ioutil.ReadDir(sourceDir)
-	require.NoError(t, err)
-	require.Len(t, files, 1)
-	require.Equal(t, gitDir, files[0].Name())
+	assert.NoError(t, err)
+	assert.Equal(t, len(files), 1)
+	assert.Equal(t, gitDir, files[0].Name())
 
 }

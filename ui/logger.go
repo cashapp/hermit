@@ -89,7 +89,7 @@ type Logger interface {
 
 // LogElapsed logs the duration of a function call. Use with defer:
 //
-//             defer LogElapsed(log, "something")()
+//	defer LogElapsed(log, "something")()
 func LogElapsed(log Logger, message string, args ...interface{}) func() {
 	start := time.Now()
 	return func() {

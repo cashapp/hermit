@@ -3,8 +3,8 @@ package shell
 import (
 	"testing"
 
+	"github.com/alecthomas/assert/v2"
 	"github.com/kballard/go-shellquote"
-	"github.com/stretchr/testify/require"
 )
 
 func TestShellQuote(t *testing.T) {
@@ -17,9 +17,9 @@ func TestShellQuote(t *testing.T) {
 		{`'hello' 'world'`, `\''hello'\'' '\''world'\'`},
 	}
 	for _, test := range tests {
-		require.Equal(t, test.quoted, Quote(test.original))
+		assert.Equal(t, test.quoted, Quote(test.original))
 		original, err := shellquote.Split(test.quoted)
-		require.NoError(t, err)
-		require.Equal(t, []string{test.original}, original)
+		assert.NoError(t, err)
+		assert.Equal(t, []string{test.original}, original)
 	}
 }

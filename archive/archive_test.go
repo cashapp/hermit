@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/unix"
 
+	"github.com/alecthomas/assert/v2"
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/ui"
 )
@@ -36,7 +36,7 @@ func TestExtract(t *testing.T) {
 			p, _ := ui.NewForTesting()
 
 			dest, err := ioutil.TempDir("", "")
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			defer os.RemoveAll(dest)
 
 			dest = filepath.Join(dest, "extracted")
@@ -45,12 +45,12 @@ func TestExtract(t *testing.T) {
 				filepath.Join("testdata", test.file),
 				&manifest.Package{Dest: dest, Source: test.file},
 			)
-			require.NoError(t, err)
-			require.NoError(t, finalise())
+			assert.NoError(t, err)
+			assert.NoError(t, finalise())
 			for _, expected := range test.expected {
 				info, err := os.Stat(filepath.Join(dest, expected))
-				require.NoError(t, err)
-				require.True(t, info.Mode()&unix.S_IXUSR != 0, "is not executable")
+				assert.NoError(t, err)
+				assert.True(t, info.Mode()&unix.S_IXUSR != 0, "is not executable")
 			}
 		})
 	}

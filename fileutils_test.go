@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
+	"github.com/alecthomas/assert/v2"
 )
 
 type TestTarGz struct {
@@ -32,10 +32,10 @@ func (targz *TestTarGz) Write(t *testing.T, w io.Writer) {
 		header, _ := tar.FileInfoHeader(&StringFileInfo{name, data}, "")
 
 		err := tw.WriteHeader(header)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
 		_, err = tw.Write([]byte(data))
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	}
 }
 

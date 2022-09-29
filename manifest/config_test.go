@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/repr"
-	"github.com/stretchr/testify/require"
 
 	"github.com/cashapp/hermit/envars"
 	"github.com/cashapp/hermit/platform"
@@ -263,16 +263,16 @@ func TestManifest(t *testing.T) {
 					Arch: arch,
 				},
 			})
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			pkg, err := resolver.Resolve(logger, ExactSelector(ParseReference(test.pkg)))
 			if test.fail != "" {
-				require.EqualError(t, err, test.fail)
+				assert.EqualError(t, err, test.fail)
 			} else {
-				require.NoError(t, err)
+				assert.NoError(t, err)
 				test.expected.Root = "/tmp/hermit/pkg/" + test.pkg
 				test.expected.Dest = "/tmp/hermit/pkg/" + test.pkg
 				pkg.FS = nil
-				require.Equal(t,
+				assert.Equal(t,
 					repr.String(test.expected, repr.Indent("  ")),
 					repr.String(pkg, repr.Indent("  ")))
 			}
@@ -283,5 +283,5 @@ func TestManifest(t *testing.T) {
 // TODO: Currently not working because the structure is recursive. The HCL package should
 //   (somehow?) support recursive schemas.
 // func TestHelp(t *testing.T) {
-// require.Equal(t, ``, Help())
+// assert.Equal(t, ``, Help())
 // }
