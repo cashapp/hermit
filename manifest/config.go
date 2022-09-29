@@ -65,6 +65,7 @@ func (c Layer) layers(os string, arch string) (out layers) {
 			}
 		}
 	}
+	osArch := os + "-" + arch
 nextPlatform:
 	for _, platform := range c.Platform {
 		for _, attr := range platform.Attrs {
@@ -72,7 +73,7 @@ nextPlatform:
 			if err != nil {
 				continue
 			}
-			if !re.MatchString(os) && !re.MatchString(arch) {
+			if !re.MatchString(os) && !re.MatchString(arch) && !re.MatchString(osArch) {
 				continue nextPlatform
 			}
 		}
@@ -104,7 +105,7 @@ type HTMLAutoVersionBlock struct {
 //
 // The PlatformBlock replaces "linux" and "darwin".
 type PlatformBlock struct {
-	Attrs []string `hcl:"attr,label" help:"Platform attributes to match."`
+	Attrs []string `hcl:"attr,label" help:"Regex to match against platform attributes <arch>, <os>, and <arch>-<os>."`
 	Layer
 }
 
