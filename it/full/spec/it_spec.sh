@@ -255,6 +255,23 @@ Describe "Hermit"
     End
   End
 
+  Describe "Running the add-digests command"
+    populate_digest(){
+      sum=$(sha256sum ./bin/testbin2.tar.gz | cut -f 1 -d " ")
+      hermit manifest add-digests testbin3.hcl
+      sum2=$(grep -A 1 "sha256sums" testbin3.hcl | tail -1 | cut -f 2 -d ":" | sed -e 's/",//g')
+      [ "$sum" = "$sum2" ]
+      grep -q $sum testbin3.hcl
+    }
+    It "testbin3.hcl add digest"
+      cp ../../packages/testbin3.hcl .
+      When call populate_digest
+      The status should be success
+      The stdout should be blank
+      The stderr should be blank
+    End
+  End
+
   Describe "Interacting with an old project on an empty state"
     clear_state
     cd ../testoldenv

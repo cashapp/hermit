@@ -59,9 +59,16 @@ func (s *fileSource) OpenLocal(_ *Cache, _ string) (*os.File, error) {
 }
 
 func (s *fileSource) Download(_ *ui.Task, _ *Cache, _ string) (path string, etag string, actualChecksum string, err error) {
-	// TODO: Checksum it again?
-	// Local file, just open it.
-	data, err := os.ReadFile(path)
+	info, err := os.Stat(s.path)
+	if err != nil {
+		return "", "", "", errors.WithStack(err)
+	}
+	// If the file is a directory then no checksum is required
+	if info.IsDir() {
+		return s.path, "", "", nil
+	}
+	var data []byte
+	data, err = os.ReadFile(s.path)
 	if err != nil {
 		return "", "", "", errors.WithStack(err)
 	}
