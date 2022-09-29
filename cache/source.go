@@ -1,6 +1,8 @@
 package cache
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"net/url"
 	"os"
@@ -59,7 +61,17 @@ func (s *fileSource) OpenLocal(_ *Cache, _ string) (*os.File, error) {
 func (s *fileSource) Download(_ *ui.Task, _ *Cache, _ string) (path string, etag string, actualChecksum string, err error) {
 	// TODO: Checksum it again?
 	// Local file, just open it.
-	return s.path, "", "", nil
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", "", "", errors.WithStack(err)
+	}
+	h := sha256.New()
+	_, err = h.Write(data)
+	if err != nil {
+		return "", "", "", errors.WithStack(err)
+	}
+	actualDigest := hex.EncodeToString(h.Sum(nil))
+	return s.path, "", actualDigest, nil
 }
 
 func (s *fileSource) ETag(b *ui.Task) (etag string, err error) {
