@@ -182,15 +182,25 @@ func load(bundle fs.FS, name, filename string) *AnnotatedManifest {
 }
 
 // LoadManifestFile Utility function to just load a manifest file.
-func LoadManifestFile(dir fs.FS, name, filename string) *AnnotatedManifest {
-	m := load(dir, name, filename)
-	if m == nil {
-		return nil
+func LoadManifestFile(dir fs.FS, name, filename string) (*AnnotatedManifest, error) {
+	annotated := &AnnotatedManifest{
+		FS:   dir,
+		Name: name,
+		Path: fmt.Sprintf("%s/%s", dir, filename),
 	}
-	if m.Manifest == nil {
-		return nil
+	data, err := fs.ReadFile(dir, filename)
+	if err != nil {
+		return nil, errors.WithStack(err)
 	}
-	return m
+
+	manifest := &Manifest{}
+	err = hcl.Unmarshal(data, manifest)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	annotated.Manifest = manifest
+
+	return annotated, nil
 }
 
 // Synthesise a "stable" channel and a channel for each major version.

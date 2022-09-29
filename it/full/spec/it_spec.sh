@@ -255,6 +255,15 @@ Describe "Hermit"
     End
   End
 
+  Describe "add digests populates known shasums."
+    It "populates sha256sums"
+      cp ../../packages/testbin1.hcl .
+      When call hermit manifest add-digests testbin1.hcl && cat testbin1.hcl
+      The status should be success
+      The stdout should include "testbin1"
+    End
+  End
+
   Describe "Interacting with an old project on an empty state"
     clear_state
     cd ../testoldenv

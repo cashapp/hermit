@@ -33,10 +33,10 @@ func (e *addDigestsCmd) Run(l *ui.UI, state *state.State) error {
 		dir := filepath.Dir(absolutePath)
 		packageName := strings.Replace(f, ".hcl", "", 1)
 		task := l.Task(packageName)
-
-		localmanifest := manifest.LoadManifestFile(os.DirFS(dir), packageName, f)
-		if localmanifest == nil {
-			return errors.New("Cannot load manifest: " + f)
+		var localmanifest *manifest.AnnotatedManifest
+		localmanifest, err = manifest.LoadManifestFile(os.DirFS(dir), packageName, f)
+		if err != nil {
+			return errors.WithStack(err)
 		}
 		if localmanifest.Manifest.SHA256Sums == nil {
 			localmanifest.Manifest.SHA256Sums = make(map[string]string)
