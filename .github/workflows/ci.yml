@@ -47,6 +47,8 @@ jobs:
           cd it/sanity
           ./run.sh
   it:
+    # The integration tests cannot be run in an active Hermit environment,
+    # so we don't activate it here.
     name: Integration Tests
     runs-on: [ ubuntu-latest ]
     steps:
@@ -73,7 +75,9 @@ jobs:
           ./bin/go build -o ./build/hermit ./cmd/hermit
       - name: Install shells
         run: sudo apt-get install zsh
-      - name: Run Full Integration tests
+      - name: Run Go Integration Tests
+        run: ./bin/go test -tags integration -v ./integration
+      - name: Run Full Integration Tests
         run: |
           export PATH=$PWD/build:$PATH
           cd it/full

@@ -14,6 +14,7 @@ require (
 	github.com/antchfx/xpath v1.2.0
 	github.com/avvmoto/buf-readerat v0.0.0-20171115124131-a17c8cb89270
 	github.com/blakesmith/ar v0.0.0-20190502131153-809d4375e1fb
+	github.com/creack/pty v1.1.18
 	github.com/gabriel-vasile/mimetype v1.4.0
 	github.com/gobwas/glob v0.2.3
 	github.com/gofrs/flock v0.8.1
