@@ -255,6 +255,56 @@ Describe "Hermit"
     End
   End
 
+  Describe "Running the add-digests command"
+    populate_digest(){
+      sum=$(sha256sum ./bin/testbin3.tar.gz | cut -f 1 -d " ")
+      hermit manifest add-digests testbin3.hcl
+      sum2=$(grep -A 1 "sha256sums" testbin3.hcl | tail -1 | cut -f 2 -d ":" | sed -e 's/",//g')
+      [ "$sum" = "$sum2" ]
+      grep -q $sum testbin3.hcl
+    }
+    It "testbin3.hcl add digest"
+      cp ../../packages/testbin3.hcl .
+      When call populate_digest
+      The status should be success
+      The stdout should be blank
+      The stderr should be blank
+    End
+  End
+
+  Describe "Check if hermit verifies the digest correctly from sha256sums"
+    ensure_digest_check(){
+      sum=$(sha256sum ./bin/testbin3.tar.gz | cut -f 1 -d " ")
+      hermit manifest add-digests testbin3.hcl
+      cp bin/hermit.hcl bin/hermit.hcl.bak
+      echo "sources = [\"env:///bin\"]" > bin/hermit.hcl
+      badhash="aaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      sed -i -e "s/${sum}/${badhash}/g" testbin3.hcl
+      grep -q $badhash testbin3.hcl
+      cp testbin3.hcl bin/.
+
+      . ./bin/activate-hermit
+      # this should fail because of wrong hash
+      rc=0
+      # capturing the error because I need to cleanup for other tests.
+      hermit install testbin3-1.0.0 || rc=1
+
+      #cleanup
+      cp bin/hermit.hcl.bak bin/hermit.hcl
+      deactivate-hermit
+      # this makes sure that hermit install failed.
+      [ $rc = 1 ]
+    }
+    It "ensure installation fails on bad digest"
+    cp ../../packages/testbin3.hcl .
+    When call ensure_digest_check
+    The status should be success
+    The stdout should include "activated"
+    The stderr should include " should have been aaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    End
+  End
+
+
   Describe "Interacting with an old project on an empty state"
     clear_state
     cd ../testoldenv

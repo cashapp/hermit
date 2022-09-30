@@ -1,8 +1,9 @@
 package app
 
 import (
-	"github.com/alecthomas/kong"
 	"time"
+
+	"github.com/alecthomas/kong"
 
 	"github.com/cashapp/hermit/envars"
 	"github.com/cashapp/hermit/ui"
@@ -72,14 +73,15 @@ type unactivated struct {
 type activated struct {
 	cliBase
 
-	Status    statusCmd            `cmd:"" help:"Show status of Hermit environment." group:"env"`
-	Install   installCmd           `cmd:"" help:"Install packages." group:"env"`
-	Uninstall uninstallCmd         `cmd:"" help:"Uninstall packages." group:"env"`
-	Upgrade   upgradeCmd           `cmd:"" help:"Upgrade packages" group:"env"`
-	List      listCmd              `cmd:"" help:"List local packages." group:"env"`
-	Exec      execCmd              `cmd:"" help:"Directly execute a binary in a package." group:"env"`
-	Env       envCmd               `cmd:"" help:"Manage environment variables." group:"env"`
-	Validate  activatedValidateCmd `cmd:"" help:"Hermit validation." group:"global"`
+	Status     statusCmd            `cmd:"" help:"Show status of Hermit environment." group:"env"`
+	Install    installCmd           `cmd:"" help:"Install packages." group:"env"`
+	Uninstall  uninstallCmd         `cmd:"" help:"Uninstall packages." group:"env"`
+	Upgrade    upgradeCmd           `cmd:"" help:"Upgrade packages" group:"env"`
+	List       listCmd              `cmd:"" help:"List local packages." group:"env"`
+	Exec       execCmd              `cmd:"" help:"Directly execute a binary in a package." group:"env"`
+	Env        envCmd               `cmd:"" help:"Manage environment variables." group:"env"`
+	Validate   activatedValidateCmd `cmd:"" help:"Hermit validation." group:"global"`
+	AddDigests addDigestsCmd        `cmd:"" help:"Add digests for all versions/platforms to the input manifest files." group:"global"`
 
 	Clean cleanCmd `cmd:"" help:"Clean hermit cache." group:"global"`
 	GC    gcCmd    `cmd:"" hidden:"" group:"global"`

@@ -309,6 +309,39 @@ func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 	return nil
 }
 
+// CacheAndDigest Utility for Caching all platform artefacts.
+// If you run CacheAndUnpack on x86_64 mac for a manifest
+// with an entry for arm64 mac packages it does on extract that as
+// isExtracted returns true.
+// This method will only cache the values and get a digest.
+func (s *State) CacheAndDigest(b *ui.Task, p *manifest.Package) (string, error) {
+	actualDigest := ""
+	var err error
+	if !s.isCached(p) {
+		mirrors := make([]string, len(p.Mirrors))
+		copy(mirrors, p.Mirrors)
+		mirrors = append(mirrors, s.generateMirrors(p.Source)...)
+		_, _, actualDigest, err = s.cache.Download(b, p.SHA256, p.Source, mirrors...)
+		if err != nil {
+			return "", errors.WithStack(err)
+		}
+	} else {
+		// If the manifest has SHA256 value then the package installation must have
+		// checked that. So just use it.
+		if p.SHA256 != "" {
+			actualDigest = p.SHA256
+		} else {
+			// if the artifact is cached then just calculate the digest.
+			path := s.cache.Path(p.SHA256, p.Source)
+			actualDigest, err = util.Sha256LocalFile(path)
+			if err != nil {
+				return "", errors.WithStack(err)
+			}
+		}
+	}
+	return actualDigest, nil
+}
+
 func (s *State) linkBinaries(p *manifest.Package) error {
 	dir := filepath.Join(s.binaryDir, p.Reference.String())
 	if err := os.MkdirAll(dir, 0700); err != nil {
@@ -340,8 +373,9 @@ func (s *State) extract(b *ui.Task, p *manifest.Package) error {
 		mirrors := make([]string, len(p.Mirrors))
 		copy(mirrors, p.Mirrors)
 		mirrors = append(mirrors, s.generateMirrors(p.Source)...)
-		path, etag, err = s.cache.Download(b, p.SHA256, p.Source, mirrors...)
+		path, etag, _, err = s.cache.Download(b, p.SHA256, p.Source, mirrors...)
 		p.ETag = etag
+
 		if err != nil {
 			return errors.WithStack(err)
 		}

@@ -320,6 +320,13 @@ func matchChannel(manifest *AnnotatedManifest, selector Selector) (collected Ref
 	return
 }
 
+// NewPackage Creates a qualified package object using a manifest, a reference and a specific platform.
+func NewPackage(manifest *AnnotatedManifest, platform2 platform.Platform, ref Reference) (*Package, error) {
+	config := Config{}
+	config.Platform = platform2
+	return newPackage(manifest, config, ExactSelector(ref))
+}
+
 func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (*Package, error) {
 	// If a version was not specified and the manifest defines a default, use it.
 	if !selector.IsFullyQualified() && manifest.Default != "" {
