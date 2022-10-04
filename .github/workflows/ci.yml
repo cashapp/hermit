@@ -77,7 +77,7 @@ jobs:
         run: sudo apt-get install zsh
       - name: Run Go Integration Tests
         run: ./bin/go test -tags integration -v ./integration
-      - name: Run Full Integration Tests
+      - name: Run Shellspec Integration Tests
         run: |
           export PATH=$PWD/build:$PATH
           cd it/full

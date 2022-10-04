@@ -13,7 +13,10 @@
 package integration_test
 
 import (
+	"bufio"
+	"fmt"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -24,16 +27,58 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/cashapp/hermit/envars"
+	"github.com/cashapp/hermit/errors"
 	"github.com/creack/pty"
 )
 
-var shells = []string{"bash", "zsh"}
+var shells = [][]string{
+	{"bash", "--norc", "--noprofile"},
+	{"zsh", "--no-rcs", "--no-globalrcs"},
+}
+
+// Functions that test scripts can use to communicate back to the test framework.
+const preamble = `
+set -euo pipefail
+
+hermit-send() {
+  echo "$@" 1>&3
+}
+
+assert() {
+  if ! test "$@"; then
+    hermit-send "error: assertion failed: $@"
+    exit 1
+  fi
+}
+
+# Run a shell command and emulate what the Hermit shell hooks would do.
+#
+# usage: with-prompt-hooks <cmd>
+#
+# Normally this is done by shell hooks, but because we're not running interactively this is not possible.
+with-prompt-hooks() {
+  "$@"
+  res=$?
+  # We need to reset the change timestamp, as file timestamps are at second resolution.
+  # Some IT updates could be lost without this
+  export HERMIT_BIN_CHANGE=0
+
+  if test -n "${PROMPT_COMMAND+_}"; then
+    eval "$PROMPT_COMMAND"
+  elif [ -n "${ZSH_VERSION-}" ]; then
+    update_hermit_env
+  fi
+
+  return $res
+}
+`
 
 func TestIntegration(t *testing.T) {
 	tests := []struct {
 		name         string
-		script       string
 		preparations prep
+		script       string
+		fails        bool // The script will exit with a non-zero exit status.
 		expectations exp
 	}{
 		{name: "UsingCustomHermit",
@@ -47,14 +92,133 @@ func TestIntegration(t *testing.T) {
 				hermit init --idea .
 			`,
 			expectations: exp{
-				filesExist("bin/hermit", ".idea/externalDependencies.xml",
+				filesExist(
+					"bin/hermit", ".idea/externalDependencies.xml",
 					"bin/activate-hermit", "bin/hermit.hcl"),
 				outputContains("Creating new Hermit environment")}},
-		{name: "HERMIT_ENV_IsSet",
+		{name: "HermitEnvarIsSet",
 			script: `
 				hermit init .
 				. bin/activate-hermit
-				test -n "$HERMIT_ENV"
+				assert -n "$HERMIT_ENV"
+			`},
+		{name: "CannotBeActivatedTwice",
+			script: `
+				hermit init .
+				. bin/activate-hermit
+				. bin/activate-hermit
+			`,
+			fails:        true,
+			expectations: exp{outputContains("This Hermit environment has already been activated. Skipping")}},
+		{name: "PackageEnvarsAreSetAutomatically",
+			preparations: prep{fixture("testenv1"), activate(".")},
+			script: `
+				assert -z "$(hermit env FOO)"
+				with-prompt-hooks hermit install testbin1
+				assert "${FOO:-}" = "bar"
+			`},
+		{name: "HermitEnvCommandSetsAutomatically",
+			preparations: prep{fixture("testenv1")},
+			script: `
+				hermit init .
+				. bin/activate-hermit
+				assert -z "$(hermit env FOO)"
+				with-prompt-hooks hermit env FOO bar
+				assert "${FOO:-}" = "bar"
+			`},
+		{name: "EnvEnvarsAreSetDuringActivation",
+			script: `
+				assert "${BAR:-}" = "waz"
+			`,
+			preparations: prep{fixture("testenv1"), activate(".")}},
+		{name: "InstallingPackageCreatesSymlinks",
+			preparations: prep{fixture("testenv1"), activate(".")},
+			script: `
+				assert ! -L bin/testbin1
+
+				hermit install testbin1-1.0.1
+				assert "$(readlink bin/testbin1)" = ".testbin1-1.0.1.pkg"
+				assert "$(readlink bin/.testbin1-1.0.1.pkg)" = "hermit"
+
+				hermit install testbin1-1.0.0
+				assert "$(readlink bin/testbin1)" = ".testbin1-1.0.0.pkg"
+				assert "$(readlink bin/.testbin1-1.0.0.pkg)" = "hermit"
+			`},
+		{name: "UninstallingRemovesSymlinks",
+			preparations: prep{fixture("testenv1"), activate(".")},
+			script: `
+				hermit install testbin1-1.0.1
+				assert "$(readlink bin/testbin1)" = ".testbin1-1.0.1.pkg"
+				hermit uninstall testbin1
+				assert ! -L bin/testbin1
+			`},
+		{name: "DowngradingPackageWorks",
+			preparations: prep{fixture("testenv1"), activate(".")},
+			script: `
+				hermit install testbin1-1.0.1
+				assert "$(testbin1)" = "testbin1 1.0.1"
+				hermit install testbin1-1.0.0
+				assert "$(testbin1)" = "testbin1 1.0.0"
+			`},
+		{name: "UpgradingPackageWorks",
+			preparations: prep{fixture("testenv1"), activate(".")},
+			script: `
+				hermit install testbin1-1.0.0
+				assert "$(testbin1)" = "testbin1 1.0.0"
+				hermit upgrade testbin1
+				assert "$(testbin1)" = "testbin1 1.0.1"
+			`,
+		},
+		{name: "InstallingPackageSetsEnvarsInShell",
+			preparations: prep{fixture("testenv1"), activate(".")},
+			script: `
+				with-prompt-hooks hermit install testbin1-1.0.0
+				assert "${TESTBIN1VERSION:-}" = "1.0.0"
+
+				with-prompt-hooks hermit install testbin1-1.0.1
+				assert "${TESTBIN1VERSION:-}" = "1.0.1"
+			`},
+		{name: "InstallingEnvPackagesIsaNoop",
+			preparations: prep{fixture("testenv1"), activate(".")},
+			script: `
+				hermit install
+			`},
+		{name: "DeactivatingRemovesHermitEnvars",
+			preparations: prep{fixture("testenv1"), activate(".")},
+			script: `
+				deactivate-hermit
+				assert -z "${HERMIT_ENV:-}"
+			`},
+		{name: "DeactivatingRestoresEnvars",
+			preparations: prep{fixture("testenv1")},
+			script: `
+				export BAR="foo"
+				. bin/activate-hermit
+				assert "${BAR:-}" = "waz"
+				deactivate-hermit
+				assert "${BAR:-}" = "foo"
+			`},
+		{name: "SwitchingEnvironmentsWorks",
+			preparations: prep{allFixtures("testenv1", "testenv2")},
+			script: `
+				. testenv1/bin/activate-hermit
+				assert "${HERMIT_ENV:-}" = "$PWD/testenv1"
+				. testenv2/bin/activate-hermit
+				assert "${HERMIT_ENV:-}" = "$PWD/testenv2"
+			`},
+		{name: "ExecuteFromAnotherEnvironmentWorks",
+			preparations: prep{allFixtures("testenv1", "testenv2")},
+			script: `
+				testenv2/bin/hermit install testbin1
+				. testenv1/bin/activate-hermit
+				assert "$(./testenv2/bin/testbin1)" = "testbin1 1.0.1"
+			`},
+		{name: "StubFromOtherEnvironmentHasItsOwnEnvars",
+			preparations: prep{allFixtures("testenv1", "testenv2")},
+			script: `
+				testenv2/bin/hermit install testbin1
+				. testenv1/bin/activate-hermit
+				assert "$(testenv2/bin/hermit env TESTENV2)" = "yes"
 			`},
 	}
 
@@ -66,27 +230,95 @@ func TestIntegration(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
+			t.Parallel() // This is much faster but if one test fails it seems to break the others. Not sure why.
 			for _, shell := range shells {
-				t.Run(shell, func(t *testing.T) {
-					dir := t.TempDir()
+				t.Run(shell[0], func(t *testing.T) {
+					stateDir := filepath.Join(t.TempDir(), "state")
+					// Ensure the state dir is writeable so it can be deleted.
+					t.Cleanup(func() {
+						_ = filepath.Walk(stateDir, func(path string, info fs.FileInfo, err error) error {
+							if info.IsDir() {
+								_ = os.Chmod(path, 0700)
+							} else {
+								_ = os.Chmod(path, 0600)
+							}
+							return nil
+						})
+					})
+					dir := filepath.Join(t.TempDir(), "root")
+					err := os.MkdirAll(dir, 0700)
+					assert.NoError(t, err)
+					testEnvars := make([]string, len(environ), len(environ)+1)
+					copy(testEnvars, environ)
+					testEnvars = append(testEnvars, "HERMIT_STATE_DIR="+stateDir)
+
+					prepScript := ""
 					for _, prep := range test.preparations {
-						prep(t, dir)
+						fragment := prep(t, dir)
+						if fragment != "" {
+							prepScript += fragment + "\n"
+						}
 					}
 
+					// FD 3 is used for the control protocol, allowing the test
+					// scripts to communicate with the test harness.
+					ctrlr, ctrlw, err := os.Pipe()
+					assert.NoError(t, err)
+					defer ctrlr.Close()
+					defer ctrlw.Close()
+
+					// Read lines of commands from FD 3 and send them to the control channel.
+					controlch := make(chan string, 128)
+					go func() {
+						buf := bufio.NewScanner(ctrlr)
+						for buf.Scan() {
+							controlch <- buf.Text()
+						}
+						close(controlch)
+					}()
+
 					output := &strings.Builder{}
-					cmd := exec.Command(shell, "-c", `set -euo pipefail;`+test.script)
+					var tee io.Writer = output
+					if debug {
+						tee = io.MultiWriter(output, os.Stderr)
+					}
+
+					script := preamble + "\n" + prepScript + "\n" + test.script
+					args := append(shell[1:], "-c", script)
+					cmd := exec.Command(shell[0], args...)
 					cmd.Dir = dir
-					cmd.Env = environ
+					cmd.Env = testEnvars
+					cmd.ExtraFiles = []*os.File{ctrlw}
+
+					// Start the test script.
 					f, err := pty.Start(cmd)
 					assert.NoError(t, err)
 					defer f.Close()
 
-					go io.Copy(output, f)
+					go io.Copy(tee, f)
 
 					err = cmd.Wait()
-					assert.NoError(t, err)
 
+					// Close the control FD and apply commands.
+					_ = ctrlw.Close()
+					for cmd := range controlch {
+						parts := strings.SplitN(cmd, ":", 2)
+						assert.Equal(t, 2, len(parts), "expected command to be in the form 'command:args'")
+						switch parts[0] {
+						case "error":
+							t.Log(output.String())
+							t.Fatal(parts[1])
+
+						default:
+							t.Log(output.String())
+							t.Fatalf("unknown command: %s", parts[0])
+						}
+					}
+					if test.fails {
+						assert.Error(t, err, "%s", output.String())
+					} else {
+						assert.NoError(t, err, "%s", output.String())
+					}
 					if debug {
 						t.Logf("Output:\n%s", output)
 					}
@@ -125,7 +357,7 @@ func buildAndInjectHermit(t *testing.T, environ []string) (outenviron []string) 
 func checkForShells(t *testing.T) {
 	t.Helper()
 	for _, shell := range shells {
-		_, err := exec.LookPath(shell)
+		_, err := exec.LookPath(shell[0])
 		assert.NoError(t, err)
 	}
 }
@@ -142,24 +374,29 @@ func buildEnviron(t *testing.T) (environ []string) {
 	} else {
 		environ = os.Environ()
 	}
+	environ = append(environ, "PS1=hermit-test> ")
+	environ = append(environ, "PROMPT=hermit-test> ")
 	return environ
 }
 
 // Preparation applied to the test directory before running the test.
-type preparation func(t *testing.T, dir string)
+//
+// Extra setup script fragments can be returned.
+type preparation func(t *testing.T, dir string) string
 type prep []preparation
 
 func addFile(name, content string) preparation {
-	return func(t *testing.T, dir string) {
+	return func(t *testing.T, dir string) string {
 		t.Helper()
 		err := ioutil.WriteFile(filepath.Join(dir, name), []byte(content), 0600)
 		assert.NoError(t, err)
+		return ""
 	}
 }
 
 // Copy a file from the testdata directory to the test directory.
 func copyFile(name string) preparation {
-	return func(t *testing.T, dir string) {
+	return func(t *testing.T, dir string) string {
 		t.Helper()
 		r, err := os.Open(filepath.Join("testdata", name))
 		assert.NoError(t, err)
@@ -169,6 +406,70 @@ func copyFile(name string) preparation {
 		defer w.Close()
 		_, err = io.Copy(w, r)
 		assert.NoError(t, err)
+		return ""
+	}
+}
+
+// Copy the specified fixture directory under testdata into the test directory root.
+func fixture(fixture string) preparation {
+	return fixtureToDir(fixture, ".")
+}
+
+// Activate the Hermit environment relative to the test directory.
+func activate(relDest string) preparation {
+	return func(t *testing.T, dir string) string {
+		return fmt.Sprintf(". %s/bin/activate-hermit", relDest)
+	}
+}
+
+// Copy the specified environment fixture into the test root and activate it.
+func activatedFixtureEnv(env string) preparation {
+	return func(t *testing.T, dir string) string {
+		fixture(env)(t, dir)
+		return ". bin/activate-hermit"
+	}
+}
+
+// Copy all the given fixtures to subdirectories of the test directory.
+func allFixtures(fixtures ...string) preparation {
+	return func(t *testing.T, dir string) string {
+		for _, f := range fixtures {
+			fixtureToDir(f, f)(t, dir)
+		}
+		return ""
+	}
+}
+
+// Recursively copy a directory from the testdata directory to the test directory.
+func fixtureToDir(relSource string, relDest string) preparation {
+	return func(t *testing.T, dir string) string {
+		source := filepath.Join("testdata", relSource)
+		err := filepath.Walk(source, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			dest := filepath.Join(dir, relDest, path[len(source):])
+			if info.IsDir() {
+				return os.MkdirAll(dest, 0700)
+			}
+			r, err := os.Open(path)
+			if err != nil {
+				return errors.Wrap(err, "failed to open source")
+			}
+			defer r.Close()
+			w, err := os.OpenFile(dest, os.O_CREATE|os.O_WRONLY, info.Mode())
+			if err != nil {
+				return errors.Wrap(err, "failed to create dest")
+			}
+			defer w.Close()
+			_, err = io.Copy(w, r)
+			if err != nil {
+				return errors.Wrap(err, "failed to copy")
+			}
+			return nil
+		})
+		assert.NoError(t, err)
+		return ""
 	}
 }
 
