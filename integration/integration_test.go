@@ -220,6 +220,18 @@ func TestIntegration(t *testing.T) {
 				. testenv1/bin/activate-hermit
 				assert "$(testenv2/bin/hermit env TESTENV2)" = "yes"
 			`},
+		{name: "InstallDirectScriptPackage",
+			preparations: prep{fixture("testenv2"), activate(".")},
+			script: `
+				hermit install testbin2
+				assert "$(testbin2)" = "testbin2 2.0.1"
+			`},
+		{name: "InstallNonExecutablePackage",
+			preparations: prep{fixture("testenv2"), activate(".")},
+			script: `
+				hermit install testbin3
+				assert "$(testbin3)" = "testbin3 3.0.1"
+			`},
 	}
 
 	checkForShells(t)
@@ -229,8 +241,9 @@ func TestIntegration(t *testing.T) {
 	debug := os.Getenv("DEBUG") != ""
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
-			t.Parallel() // This is much faster but if one test fails it seems to break the others. Not sure why.
+			t.Parallel()
 			for _, shell := range shells {
 				t.Run(shell[0], func(t *testing.T) {
 					stateDir := filepath.Join(t.TempDir(), "state")

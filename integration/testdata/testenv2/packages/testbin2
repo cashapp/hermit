@@ -1,0 +1,3 @@
+#!/bin/bash
+
+echo "testbin2 ${TESTBIN2VERSION}"
