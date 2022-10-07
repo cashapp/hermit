@@ -34,6 +34,12 @@ import (
 	"github.com/cashapp/hermit/util"
 )
 
+func init() {
+	mimetype.Extend(func(raw []byte, limit uint32) bool {
+		return strings.HasPrefix(string(raw), "#!/")
+	}, "text/x-shellscript", ".sh")
+}
+
 // Extract from "source" to package destination.
 //
 // "finalise" must be called to complete extraction of the package.
@@ -123,6 +129,10 @@ func Extract(b *ui.Task, source string, pkg *manifest.Package) (finalise func() 
 	defer task.Done()
 	r = io.NopCloser(io.TeeReader(r, task.ProgressWriter()))
 
+	if pkg.DontExtract {
+		return finalise, copyDirect(r, tmpDest, path.Base(pkg.Source))
+	}
+
 	// Archive is a single executable.
 	switch mime.String() {
 	case "application/zip":
@@ -132,7 +142,8 @@ func Extract(b *ui.Task, source string, pkg *manifest.Package) (finalise func() 
 		return finalise, extract7Zip(f, info.Size(), tmpDest, pkg.Strip)
 
 	case "application/x-mach-binary", "application/x-elf",
-		"application/x-executable", "application/x-sharedlib":
+		"application/x-executable", "application/x-sharedlib",
+		"text/x-shellscript":
 		return finalise, extractExecutable(r, tmpDest, path.Base(pkg.Source))
 
 	case "application/x-tar":
@@ -240,6 +251,18 @@ func extractExecutable(r io.Reader, dest, executableName string) error {
 	}
 
 	w, err := os.OpenFile(destExe, os.O_CREATE|os.O_WRONLY, 0700) // nolint: gosec
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer w.Close() // nolint: gosec
+	_, err = io.Copy(w, r)
+	return errors.WithStack(err)
+}
+
+// copyDirect just copies the archive to the destination with no changes
+func copyDirect(r io.Reader, dest, filename string) error {
+	destFile := filepath.Join(dest, filename)
+	w, err := os.OpenFile(destFile, os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		return errors.WithStack(err)
 	}

@@ -15,7 +15,7 @@ require (
 	github.com/avvmoto/buf-readerat v0.0.0-20171115124131-a17c8cb89270
 	github.com/blakesmith/ar v0.0.0-20190502131153-809d4375e1fb
 	github.com/creack/pty v1.1.18
-	github.com/gabriel-vasile/mimetype v1.4.0
+	github.com/gabriel-vasile/mimetype v1.4.1
 	github.com/gobwas/glob v0.2.3
 	github.com/gofrs/flock v0.8.1
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
@@ -31,8 +31,8 @@ require (
 	github.com/willdonnelly/passwd v0.0.0-20141013001024-7935dab3074c
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
 	golang.org/x/crypto v0.0.0-20220214200702-86341886e292
-	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd
-	golang.org/x/sys v0.0.0-20220209214540-3681064d5158
+	golang.org/x/net v0.0.0-20221004154528-8021a29435af
+	golang.org/x/sys v0.0.0-20220728004956-3c1f35247d10
 	howett.net/plist v1.0.0
 	mvdan.cc/sh v2.6.4+incompatible
 )
