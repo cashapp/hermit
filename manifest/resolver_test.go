@@ -290,9 +290,9 @@ func TestResolver_Resolve(t *testing.T) {
 			`,
 		},
 		reference: "test-1.0.0",
-		wantErr:   `5:4: invalid label "event": invalid event "invalid"`,
+		wantErr:   `5:4: failed to unmarshal block: invalid label "event": invalid event "invalid"`,
 		manifestErrors: map[string][]string{
-			"memory:///test.hcl": {`5:4: invalid label "event": invalid event "invalid"`},
+			"memory:///test.hcl": {`5:4: failed to unmarshal block: invalid label "event": invalid event "invalid"`},
 		},
 	}, {
 		name: "Local var interpolation",

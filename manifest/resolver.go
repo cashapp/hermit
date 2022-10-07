@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alecthomas/participle"
+	"github.com/alecthomas/participle/v2"
 	"github.com/gobwas/glob"
 	"github.com/qdm12/reprint"
 
