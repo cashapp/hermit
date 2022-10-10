@@ -99,6 +99,7 @@ func Main(config Config) {
 		config.HTTP = func(config HTTPTransportConfig) *http.Client {
 			transport := &http.Transport{
 				ResponseHeaderTimeout: config.ResponseHeaderTimeout,
+				Proxy:                 http.ProxyFromEnvironment,
 				DialContext: (&net.Dialer{
 					Timeout:   config.DialTimeout,
 					KeepAlive: config.KeepAlive,
