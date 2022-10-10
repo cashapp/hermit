@@ -15,7 +15,7 @@ require (
 	github.com/avvmoto/buf-readerat v0.0.0-20171115124131-a17c8cb89270
 	github.com/blakesmith/ar v0.0.0-20190502131153-809d4375e1fb
 	github.com/creack/pty v1.1.18
-	github.com/gabriel-vasile/mimetype v1.4.1
+	github.com/gabriel-vasile/mimetype v1.4.2-0.20220907190543-d9466a5f6b0e
 	github.com/gobwas/glob v0.2.3
 	github.com/gofrs/flock v0.8.1
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
