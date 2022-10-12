@@ -1,4 +1,6 @@
 #!/bin/bash
+#
+# THIS FILE IS GENERATED; DO NOT MODIFY
 
 set -eo pipefail
 
