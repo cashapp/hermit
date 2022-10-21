@@ -1,38 +1,56 @@
-{{ $source := ($.Page.Resources.ByType "image").GetMatch (printf "%s" (.Get "name")) }}
-{{ $customAlt := .Get "alt" }}
-{{ $customSize := .Get "size" }}
-{{ $lazyLoad := default (default true $.Site.Params.GeekdocImageLazyLoading) (.Get "lazy") }}
+{{- $source := ($.Page.Resources.ByType "image").GetMatch (printf "%s" (.Get "name")) }}
+{{- $customAlt := .Get "alt" }}
+{{- $customSize := .Get "size" | lower }}
+{{- $lazyLoad := default (default true $.Site.Params.GeekdocImageLazyLoading) (.Get "lazy") }}
 
-{{ with $source }}
-{{ $caption := default .Title $customAlt }}
+{{- with $source }}
+  {{- $caption := default .Title $customAlt }}
 
-{{ $tiny := (.Resize "320x").RelPermalink }}
-{{ $small := (.Resize "600x").RelPermalink }}
-{{ $medium := (.Resize "1200x").RelPermalink }}
-{{ $large := (.Resize "1800x").RelPermalink }}
+  {{- $origin := .Permalink }}
+  {{- $profile := (.Fill "180x180 Center").Permalink }}
+  {{- $tiny := (.Resize "320x").Permalink }}
+  {{- $small := (.Resize "600x").Permalink }}
+  {{- $medium := (.Resize "1200x").Permalink }}
+  {{- $large := (.Resize "1800x").Permalink }}
 
-{{ $size := dict "tiny" $tiny "small" $small "medium" $medium "large" $large }}
+  {{- $size := dict "origin" $origin "profile" $profile "tiny" $tiny "small" $small "medium" $medium "large" $large }}
 
-<div class="flex justify-center">
-<figure class="gdoc-markdown__figure">
-    <a class="gdoc-markdown__link--raw" href="{{ .RelPermalink }}">
+
+  <div class="flex justify-center">
+    <figure
+      class="gdoc-markdown__figure
+      {{- if eq $customSize "profile" }}{{ print " gdoc-post__figure--round" }}{{ end }}"
+    >
+      <a class="gdoc-markdown__link--raw" href="{{ .Permalink }}">
         <picture>
-            <source
-                {{ with $customSize }}
-                srcset="{{ index $size $customSize }}"
-                {{ else }}
-                srcset="{{ $size.small }} 600w,
-                        {{ $size.medium }} 1200w"
-                sizes="100vw"
-                {{ end }} />
-            <img
-                {{ if $lazyLoad }}loading="lazy"{{ end }}
-                src="{{ $size.large }}" alt="{{ $caption }}" />
+          <source
+            {{- with $customSize }}
+              srcset="{{ index $size $customSize }}"
+            {{- else }}
+              srcset="{{ $size.small }} 600w, {{ $size.medium }} 1200w" sizes="100vw"
+            {{- end }}
+          />
+          <img
+            {{- if $lazyLoad }}{{ print " loading=\"lazy\"" | safeHTMLAttr }}{{- end }}
+            {{- if eq $customSize "origin" }}
+              src="{{ $size.origin }}"
+            {{- else }}
+              src="{{ $size.large }}"
+            {{- end }}
+            alt="{{ $caption }}"
+          />
         </picture>
-    </a>
-    {{ with $caption }}
-    <figcaption>{{ . }}{{ with $source.Params.credits }} ({{ . | $.Page.RenderString }}){{ end }}</figcaption>
-    {{ end }}
-</figure>
-</div>
-{{ end }}
+      </a>
+      {{- if not (eq $customSize "profile") }}
+        {{- with $caption }}
+          <figcaption>
+            {{ . }}
+            {{- with $source.Params.credits }}
+              {{ printf " (%s)" . | $.Page.RenderString }}
+            {{- end }}
+          </figcaption>
+        {{- end }}
+      {{- end }}
+    </figure>
+  </div>
+{{- end }}
