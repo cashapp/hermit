@@ -13,4 +13,4 @@ Used by: [auto-version](../auto-version#blocks)
 | Attribute | Type | Description |
 |-----------|------|-------------|
 | `url` | `string` | URL to retrieve HTML from. |
-| `xpath` | `string` | XPath for selecting versions from HTML (see https://github.com/antchfx/htmlquery) - use version-pattern to extract substrings |
+| `xpath` | `string` | XPath for extracting versions from HTML (see https://github.com/antchfx/htmlquery) |
