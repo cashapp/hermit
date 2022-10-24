@@ -12,6 +12,16 @@ darwin {
 version "3.2.137" "3.2.140" {
   auto-version {
     github-release = "jenkins-x/jx"
+    version-pattern = "v(3\\.\\d+\\.\\d+)"
+    ignore-invalid-versions = true
+  }
+}
+
+version "5.1.233" {
+  auto-version {
+    github-release = "jenkins-x/jx"
+    version-pattern = "v(5\\.\\d+\\.\\d+)"
+    ignore-invalid-versions = true
   }
 }
 
