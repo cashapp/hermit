@@ -1,1 +1,4 @@
 /* You can add custom styles here. */
+table code {
+	white-space: nowrap;
+}
