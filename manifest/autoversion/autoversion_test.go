@@ -60,7 +60,7 @@ func TestAutoVersion(t *testing.T) {
 			assert.NoError(t, err)
 			tmpFile.Close()
 
-			ghClient := testGHAPI([]string{"v3.2.150"})
+			ghClient := testGHAPI([]string{"v3.2.150", "v5.1.234"})
 			var hClient *http.Client
 			httpInput := strings.ReplaceAll(input, ".input.hcl", ".http")
 			if _, err := os.Stat(httpInput); err == nil {
