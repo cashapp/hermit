@@ -181,6 +181,18 @@ func load(bundle fs.FS, name, filename string) *AnnotatedManifest {
 	return annotated
 }
 
+// LoadManifestBytes Utility function to parse bytes.
+func LoadManifestBytes(data []byte, annotated *AnnotatedManifest) (*AnnotatedManifest, error) {
+	manifest := &Manifest{}
+	err := hcl.Unmarshal(data, manifest)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	annotated.Manifest = manifest
+
+	return annotated, nil
+}
+
 // LoadManifestFile Utility function to just load a manifest file.
 func LoadManifestFile(dir fs.FS, name, filename string) (*AnnotatedManifest, error) {
 	annotated := &AnnotatedManifest{
@@ -193,14 +205,7 @@ func LoadManifestFile(dir fs.FS, name, filename string) (*AnnotatedManifest, err
 		return nil, errors.WithStack(err)
 	}
 
-	manifest := &Manifest{}
-	err = hcl.Unmarshal(data, manifest)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	annotated.Manifest = manifest
-
-	return annotated, nil
+	return LoadManifestBytes(data, annotated)
 }
 
 // Synthesise a "stable" channel and a channel for each major version.

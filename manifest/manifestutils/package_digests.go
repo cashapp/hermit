@@ -1,20 +1,24 @@
-package manifest
+package manifestutils
 
 import (
 	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/platform"
 	pstate "github.com/cashapp/hermit/state"
 	"github.com/cashapp/hermit/ui"
 )
 
 // PopulateDigests Add missing digests to the manifest file.
-func PopulateDigests(l *ui.UI, state *pstate.State, localManifest *AnnotatedManifest) error {
+func PopulateDigests(l *ui.UI, state *pstate.State, localManifest *manifest.AnnotatedManifest) error {
+	if len(localManifest.Manifest.Versions) != 0 && localManifest.Manifest.SHA256Sums == nil {
+		localManifest.Manifest.SHA256Sums = make(map[string]string)
+	}
 	l.Infof("Working on %s package", localManifest.Name)
 	for _, mc := range localManifest.Manifest.Versions {
-		ref := ParseReference(localManifest.Name + "-" + mc.Version[0])
+		ref := manifest.ParseReference(localManifest.Name + "-" + mc.Version[0])
 		for _, p := range platform.Core {
 
-			pkg, err := NewPackage(localManifest, p, ref)
+			pkg, err := manifest.NewPackage(localManifest, p, ref)
 			if err != nil {
 				l.Tracef("Continuing with the next platform tuple.  Current %s: %s", p.OS, p.Arch)
 				continue
@@ -36,10 +40,10 @@ func PopulateDigests(l *ui.UI, state *pstate.State, localManifest *AnnotatedMani
 	return nil
 }
 
-func getDigest(l *ui.UI, state *pstate.State, pkg *Package, ref Reference) (string, error) {
+func getDigest(l *ui.UI, state *pstate.State, pkg *manifest.Package, ref manifest.Reference) (string, error) {
 	task := l.Task(ref.String())
 
-	digest, err := pstate.CacheAndDigest(state, task, pkg)
+	digest, err := state.CacheAndDigest(task, pkg)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}

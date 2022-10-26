@@ -1,4 +1,4 @@
-package autoversion_test
+package autoversion
 
 import (
 	"io/fs"

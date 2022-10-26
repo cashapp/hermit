@@ -4,6 +4,11 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
+
+	"github.com/cashapp/hermit/manifest/manifestutils"
+	"github.com/cashapp/hermit/state"
+	"github.com/cashapp/hermit/ui"
 
 	"github.com/alecthomas/hcl"
 
@@ -27,7 +32,7 @@ type versionBlock struct {
 //
 // Auto-versioning configuration is defined in a "version > auto-version" block. If a new
 // version is found in the defined location then the version block's versions are updated.
-func AutoVersion(httpClient *http.Client, ghClient GitHubClient, path string) (latestVersion string, err error) {
+func AutoVersion(httpClient *http.Client, ghClient GitHubClient, path string, state *state.State, l *ui.UI) (latestVersion string, err error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return "", errors.WithStack(err)
@@ -80,6 +85,29 @@ blocks:
 
 	// Update the manifest and write it out to disk.
 	content, err = hcl.MarshalAST(ast)
+	var absolute string
+	absolute, err = filepath.Abs(path)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	dir := filepath.Dir(absolute)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	annotated := &hmanifest.AnnotatedManifest{
+		FS:   os.DirFS(dir),
+		Name: strings.Replace(filepath.Base(path), ".hcl", "", 1),
+		Path: absolute,
+	}
+
+	annotated, err = hmanifest.LoadManifestBytes(content, annotated)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	err = manifestutils.PopulateDigests(l, state, annotated)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
 	w, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".*")
 	if err != nil {
 		return "", errors.WithStack(err)

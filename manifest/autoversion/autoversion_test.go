@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cashapp/hermit/ui"
+
 	"github.com/alecthomas/assert/v2"
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/github"
@@ -68,8 +70,9 @@ func TestAutoVersion(t *testing.T) {
 					Transport: testHTTPClient{httpInput},
 				}
 			}
-
-			_, err = AutoVersion(hClient, ghClient, tmpFile.Name())
+			s := NewStateTestFixture(t)
+			l := ui.New(ui.LevelInfo, os.Stdout, os.Stderr, true, true)
+			_, err = AutoVersion(hClient, ghClient, tmpFile.Name(), s.State(), l)
 			assert.NoError(t, err)
 
 			actualContent, err := os.ReadFile(tmpFile.Name())
