@@ -10,11 +10,26 @@ import (
 
 // PopulateDigests Add missing digests to the manifest file.
 func PopulateDigests(l *ui.UI, state *pstate.State, localManifest *manifest.AnnotatedManifest) error {
+	return PopulateDigestsForVersion(l, state, localManifest, nil)
+}
+
+// PopulateDigestsForVersion Add digest values for a specific version.
+// We want to be able to use this in autoversion and manifest add-digests commands.
+// For autoversion we might have an old and stale version lying around which will fail to download and break the command.
+// To handle that case just calculate hashes for the new version.
+func PopulateDigestsForVersion(l *ui.UI, state *pstate.State, localManifest *manifest.AnnotatedManifest, v *manifest.VersionBlock) error {
 	if len(localManifest.Manifest.Versions) != 0 && localManifest.Manifest.SHA256Sums == nil {
 		localManifest.Manifest.SHA256Sums = make(map[string]string)
 	}
 	l.Infof("Working on %s package", localManifest.Name)
-	for _, mc := range localManifest.Manifest.Versions {
+
+	var versions []manifest.VersionBlock
+	if v == nil {
+		versions = localManifest.Manifest.Versions
+	} else {
+		versions = append(versions, *v)
+	}
+	for _, mc := range versions {
 		ref := manifest.ParseReference(localManifest.Name + "-" + mc.Version[0])
 		for _, p := range platform.Core {
 

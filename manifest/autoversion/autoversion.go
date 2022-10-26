@@ -104,7 +104,10 @@ blocks:
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
-	err = manifestutils.PopulateDigests(l, state, annotated)
+	version := hmanifest.VersionBlock{
+		Version: []string{latestVersion},
+	}
+	err = manifestutils.PopulateDigestsForVersion(l, state, annotated, &version)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}

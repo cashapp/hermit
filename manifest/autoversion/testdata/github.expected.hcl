@@ -18,14 +18,6 @@ version "3.2.137" "3.2.140" "3.2.150" {
   }
 }
 
-version "5.1.233" "5.1.234" {
-  auto-version {
-    github-release = "jenkins-x/jx"
-    version-pattern = "v(5\\.\\d+\\.\\d+)"
-    ignore-invalid-versions = true
-  }
-}
-
 channel "stable" {
   update = "24h"
   version = "3.*"
