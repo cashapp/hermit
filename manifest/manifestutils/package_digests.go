@@ -10,14 +10,15 @@ import (
 
 // PopulateDigests Add missing digests to the manifest file.
 func PopulateDigests(l *ui.UI, state *pstate.State, localManifest *manifest.AnnotatedManifest) error {
-	return PopulateDigestsForVersion(l, state, localManifest, nil)
+	_, _, err := PopulateDigestsForVersion(l, state, localManifest, nil)
+	return err
 }
 
 // PopulateDigestsForVersion Add digest values for a specific version.
 // We want to be able to use this in autoversion and manifest add-digests commands.
 // For autoversion we might have an old and stale version lying around which will fail to download and break the command.
 // To handle that case just calculate hashes for the new version.
-func PopulateDigestsForVersion(l *ui.UI, state *pstate.State, localManifest *manifest.AnnotatedManifest, v *manifest.VersionBlock) error {
+func PopulateDigestsForVersion(l *ui.UI, state *pstate.State, localManifest *manifest.AnnotatedManifest, v *manifest.VersionBlock) ([]string, []string, error) {
 	if len(localManifest.Manifest.Versions) != 0 && localManifest.Manifest.SHA256Sums == nil {
 		localManifest.Manifest.SHA256Sums = make(map[string]string)
 	}
@@ -29,8 +30,10 @@ func PopulateDigestsForVersion(l *ui.UI, state *pstate.State, localManifest *man
 	} else {
 		versions = append(versions, *v)
 	}
+	returnSource := make([]string, 0)
+	returnDigest := make([]string, 0)
 	for _, mc := range versions {
-		ref := manifest.ParseReference(localManifest.Name + "-" + mc.Version[0])
+		ref := manifest.ParseReference(localManifest.Name + "-" + mc.Version[len(mc.Version)-1])
 		for _, p := range platform.Core {
 
 			pkg, err := manifest.NewPackage(localManifest, p, ref)
@@ -47,12 +50,17 @@ func PopulateDigestsForVersion(l *ui.UI, state *pstate.State, localManifest *man
 			var digest string
 			digest, err = getDigest(l, state, pkg, ref)
 			if err != nil {
-				return errors.WithStack(err)
+				return nil, nil, errors.WithStack(err)
 			}
+
 			localManifest.Manifest.SHA256Sums[pkg.Source] = digest
+			if v != nil {
+				returnSource = append(returnSource, pkg.Source)
+				returnDigest = append(returnDigest, digest)
+			}
 		}
 	}
-	return nil
+	return returnSource, returnDigest, nil
 }
 
 func getDigest(l *ui.UI, state *pstate.State, pkg *manifest.Package, ref manifest.Reference) (string, error) {

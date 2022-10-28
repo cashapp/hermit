@@ -1,6 +1,7 @@
 package autoversion
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -85,6 +86,8 @@ blocks:
 
 	// Update the manifest and write it out to disk.
 	content, err = hcl.MarshalAST(ast)
+
+	// prepare for PopulateDigestsForVersion
 	var absolute string
 	absolute, err = filepath.Abs(path)
 	if err != nil {
@@ -107,10 +110,20 @@ blocks:
 	version := hmanifest.VersionBlock{
 		Version: []string{latestVersion},
 	}
-	err = manifestutils.PopulateDigestsForVersion(l, state, annotated, &version)
+	var s, d []string
+
+	s, d, err = manifestutils.PopulateDigestsForVersion(l, state, annotated, &version)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
+
+	err = populateDigestInAst(ast, s, d)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	content, err = hcl.MarshalAST(ast)
+
 	w, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".*")
 	if err != nil {
 		return "", errors.WithStack(err)
@@ -147,4 +160,58 @@ func parseVersionBlockFromManifest(ast *hcl.AST) ([]versionBlock, error) {
 		return nil, errors.WithStack(err)
 	}
 	return blocks, nil
+}
+
+// Helper function to generate a usable hcl.MapEntry
+func getMapEntry(source string, digest string) (*hcl.MapEntry, error) {
+	hclVal, err := hcl.ParseString(fmt.Sprintf("sha256sums = {\"%s\": \"%s\"}", source, digest))
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	// As the hcl is hardcoded above using hardcoded indexes is safe.
+	return hclVal.Entries[0].Attribute.Value.Map[0], nil
+}
+
+// add the digest values into the existing AST.
+func populateDigestInAst(ast *hcl.AST, source []string, digest []string) error {
+	found := false
+	// make sure the arguments are as expected
+	if source == nil || digest == nil || len(source) == 0 || len(source) != len(digest) {
+		return errors.New("Source and Digest arrays are not as expected")
+	}
+	// If the input manifest already has sha256sums
+	for _, v := range ast.Entries {
+		if v.Attribute != nil && v.Attribute.Key != "" {
+			if v.Attribute.Key == "sha256sums" {
+				for i, val := range source {
+					me, err := getMapEntry(val, digest[i])
+					if err != nil {
+						return errors.WithStack(err)
+					}
+					v.Attribute.Value.Map = append(v.Attribute.Value.Map, me)
+				}
+				found = true
+				break
+			}
+		}
+	}
+
+	// If the input manifest does not have sha256sums then make a new one.
+	if !found {
+		hclString := "sha256sums = {"
+		for i, val := range source {
+			hclString += fmt.Sprintf("\"%s\": \"%s\"", val, digest[i])
+			if i < len(source) {
+				hclString += ","
+			}
+		}
+		hclString += "}"
+		hclVal, err := hcl.ParseString(hclString)
+		if err != nil {
+			return errors.WithStack(err)
+
+		}
+		ast.Entries = append(ast.Entries, hclVal.Entries[0])
+	}
+	return nil
 }

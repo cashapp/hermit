@@ -71,7 +71,7 @@ func TestAutoVersion(t *testing.T) {
 				}
 			}
 			s := NewStateTestFixture(t)
-			l := ui.New(ui.LevelInfo, os.Stdout, os.Stderr, true, true)
+			l := ui.New(ui.LevelTrace, os.Stdout, os.Stderr, true, true)
 			_, err = AutoVersion(hClient, ghClient, tmpFile.Name(), s.State(), l)
 			assert.NoError(t, err)
 
