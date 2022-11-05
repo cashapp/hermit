@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -182,13 +183,13 @@ func load(bundle fs.FS, name, filename string) *AnnotatedManifest {
 }
 
 // LoadManifestFile Utility function to just load a manifest file.
-func LoadManifestFile(dir fs.FS, name, filename string) (*AnnotatedManifest, error) {
+func LoadManifestFile(dir fs.FS, path string) (*AnnotatedManifest, error) {
 	annotated := &AnnotatedManifest{
 		FS:   dir,
-		Name: name,
-		Path: fmt.Sprintf("%s/%s", dir, filename),
+		Name: strings.TrimSuffix(filepath.Base(path), ".hcl"),
+		Path: fmt.Sprintf("%s/%s", dir, path),
 	}
-	data, err := fs.ReadFile(dir, filename)
+	data, err := fs.ReadFile(dir, path)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

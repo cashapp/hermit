@@ -288,7 +288,7 @@ func (r *Resolver) ResolveVirtual(name string) (pkgs []*Package, err error) {
 // Resolve a package reference.
 //
 // Returns the highest version matching the given reference
-func (r *Resolver) Resolve(l *ui.UI, selector Selector) (pkg *Package, err error) {
+func (r *Resolver) Resolve(l *ui.UI, selector Selector) (*Package, error) {
 	manifest, err := r.loader.Load(l, selector.Name())
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -321,10 +321,8 @@ func matchChannel(manifest *AnnotatedManifest, selector Selector) (collected Ref
 	return
 }
 
-// NewPackage Creates a qualified package object using a manifest, a reference and a specific platform.
-func NewPackage(manifest *AnnotatedManifest, platform2 platform.Platform, ref Reference) (*Package, error) {
-	config := Config{}
-	config.Platform = platform2
+// Resolve a concrete [Package] reference for the given Config.
+func Resolve(manifest *AnnotatedManifest, config Config, ref Reference) (*Package, error) {
 	return newPackage(manifest, config, ExactSelector(ref))
 }
 
@@ -429,16 +427,12 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 
 	vars := map[string]string{}
 	layerEnvars := make([]envars.Envars, 0, len(layers))
-	sums := map[string]string{}
 	for _, layer := range layers {
 		if len(layer.Env) > 0 {
 			layerEnvars = append(layerEnvars, layer.Env)
 		}
 		for k, v := range layer.Vars {
 			vars[k] = v
-		}
-		for k, v := range layer.SHA256Sums {
-			sums[k] = v
 		}
 		if layer.Arch != "" {
 			p.Arch = layer.Arch
@@ -613,7 +607,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	for _, layer := range layers {
 		if layer.SHA256 != "" {
 			p.SHA256 = layer.SHA256
-		} else if sum, ok := sums[p.Source]; ok {
+		} else if sum, ok := manifest.SHA256Sums[p.Source]; ok {
 			p.SHA256 = sum
 		}
 	}
