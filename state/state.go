@@ -310,9 +310,7 @@ func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 }
 
 // CacheAndDigest Utility for Caching all platform artefacts.
-// If you run CacheAndUnpack on x86_64 mac for a manifest
-// with an entry for arm64 mac packages it does on extract that as
-// isExtracted returns true.
+//
 // This method will only cache the values and get a digest.
 func (s *State) CacheAndDigest(b *ui.Task, p *manifest.Package) (string, error) {
 	actualDigest := ""
@@ -325,18 +323,16 @@ func (s *State) CacheAndDigest(b *ui.Task, p *manifest.Package) (string, error) 
 		if err != nil {
 			return "", errors.WithStack(err)
 		}
-	} else {
+	} else if p.SHA256 != "" {
 		// If the manifest has SHA256 value then the package installation must have
 		// checked that. So just use it.
-		if p.SHA256 != "" {
-			actualDigest = p.SHA256
-		} else {
-			// if the artifact is cached then just calculate the digest.
-			path := s.cache.Path(p.SHA256, p.Source)
-			actualDigest, err = util.Sha256LocalFile(path)
-			if err != nil {
-				return "", errors.WithStack(err)
-			}
+		actualDigest = p.SHA256
+	} else {
+		// if the artifact is cached then just calculate the digest.
+		path := s.cache.Path(p.SHA256, p.Source)
+		actualDigest, err = util.Sha256LocalFile(path)
+		if err != nil {
+			return "", errors.WithStack(err)
 		}
 	}
 	return actualDigest, nil

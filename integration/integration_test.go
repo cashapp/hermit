@@ -45,7 +45,7 @@ hermit-send() {
 }
 
 assert() {
-  if ! test "$@"; then
+  if ! "$@"; then
     hermit-send "error: assertion failed: $@"
     exit 1
   fi
@@ -100,7 +100,7 @@ func TestIntegration(t *testing.T) {
 			script: `
 				hermit init .
 				. bin/activate-hermit
-				assert -n "$HERMIT_ENV"
+				assert test -n "$HERMIT_ENV"
 			`},
 		{name: "CannotBeActivatedTwice",
 			script: `
@@ -113,70 +113,70 @@ func TestIntegration(t *testing.T) {
 		{name: "PackageEnvarsAreSetAutomatically",
 			preparations: prep{fixture("testenv1"), activate(".")},
 			script: `
-				assert -z "$(hermit env FOO)"
+				assert test -z "$(hermit env FOO)"
 				with-prompt-hooks hermit install testbin1
-				assert "${FOO:-}" = "bar"
+				assert test "${FOO:-}" = "bar"
 			`},
 		{name: "HermitEnvCommandSetsAutomatically",
 			preparations: prep{fixture("testenv1")},
 			script: `
 				hermit init .
 				. bin/activate-hermit
-				assert -z "$(hermit env FOO)"
+				assert test -z "$(hermit env FOO)"
 				with-prompt-hooks hermit env FOO bar
-				assert "${FOO:-}" = "bar"
+				assert test "${FOO:-}" = "bar"
 			`},
 		{name: "EnvEnvarsAreSetDuringActivation",
 			script: `
-				assert "${BAR:-}" = "waz"
+				assert test "${BAR:-}" = "waz"
 			`,
 			preparations: prep{fixture("testenv1"), activate(".")}},
 		{name: "InstallingPackageCreatesSymlinks",
 			preparations: prep{fixture("testenv1"), activate(".")},
 			script: `
-				assert ! -L bin/testbin1
+				assert test ! -L bin/testbin1
 
 				hermit install testbin1-1.0.1
-				assert "$(readlink bin/testbin1)" = ".testbin1-1.0.1.pkg"
-				assert "$(readlink bin/.testbin1-1.0.1.pkg)" = "hermit"
+				assert test "$(readlink bin/testbin1)" = ".testbin1-1.0.1.pkg"
+				assert test "$(readlink bin/.testbin1-1.0.1.pkg)" = "hermit"
 
 				hermit install testbin1-1.0.0
-				assert "$(readlink bin/testbin1)" = ".testbin1-1.0.0.pkg"
-				assert "$(readlink bin/.testbin1-1.0.0.pkg)" = "hermit"
+				assert test "$(readlink bin/testbin1)" = ".testbin1-1.0.0.pkg"
+				assert test "$(readlink bin/.testbin1-1.0.0.pkg)" = "hermit"
 			`},
 		{name: "UninstallingRemovesSymlinks",
 			preparations: prep{fixture("testenv1"), activate(".")},
 			script: `
 				hermit install testbin1-1.0.1
-				assert "$(readlink bin/testbin1)" = ".testbin1-1.0.1.pkg"
+				assert test "$(readlink bin/testbin1)" = ".testbin1-1.0.1.pkg"
 				hermit uninstall testbin1
-				assert ! -L bin/testbin1
+				assert test ! -L bin/testbin1
 			`},
 		{name: "DowngradingPackageWorks",
 			preparations: prep{fixture("testenv1"), activate(".")},
 			script: `
 				hermit install testbin1-1.0.1
-				assert "$(testbin1)" = "testbin1 1.0.1"
+				assert test "$(testbin1)" = "testbin1 1.0.1"
 				hermit install testbin1-1.0.0
-				assert "$(testbin1)" = "testbin1 1.0.0"
+				assert test "$(testbin1)" = "testbin1 1.0.0"
 			`},
 		{name: "UpgradingPackageWorks",
 			preparations: prep{fixture("testenv1"), activate(".")},
 			script: `
 				hermit install testbin1-1.0.0
-				assert "$(testbin1)" = "testbin1 1.0.0"
+				assert test "$(testbin1)" = "testbin1 1.0.0"
 				hermit upgrade testbin1
-				assert "$(testbin1)" = "testbin1 1.0.1"
+				assert test "$(testbin1)" = "testbin1 1.0.1"
 			`,
 		},
 		{name: "InstallingPackageSetsEnvarsInShell",
 			preparations: prep{fixture("testenv1"), activate(".")},
 			script: `
 				with-prompt-hooks hermit install testbin1-1.0.0
-				assert "${TESTBIN1VERSION:-}" = "1.0.0"
+				assert test "${TESTBIN1VERSION:-}" = "1.0.0"
 
 				with-prompt-hooks hermit install testbin1-1.0.1
-				assert "${TESTBIN1VERSION:-}" = "1.0.1"
+				assert test "${TESTBIN1VERSION:-}" = "1.0.1"
 			`},
 		{name: "InstallingEnvPackagesIsaNoop",
 			preparations: prep{fixture("testenv1"), activate(".")},
@@ -187,50 +187,56 @@ func TestIntegration(t *testing.T) {
 			preparations: prep{fixture("testenv1"), activate(".")},
 			script: `
 				deactivate-hermit
-				assert -z "${HERMIT_ENV:-}"
+				assert test -z "${HERMIT_ENV:-}"
 			`},
 		{name: "DeactivatingRestoresEnvars",
 			preparations: prep{fixture("testenv1")},
 			script: `
 				export BAR="foo"
 				. bin/activate-hermit
-				assert "${BAR:-}" = "waz"
+				assert test "${BAR:-}" = "waz"
 				deactivate-hermit
-				assert "${BAR:-}" = "foo"
+				assert test "${BAR:-}" = "foo"
 			`},
 		{name: "SwitchingEnvironmentsWorks",
 			preparations: prep{allFixtures("testenv1", "testenv2")},
 			script: `
 				. testenv1/bin/activate-hermit
-				assert "${HERMIT_ENV:-}" = "$PWD/testenv1"
+				assert test "${HERMIT_ENV:-}" = "$PWD/testenv1"
 				. testenv2/bin/activate-hermit
-				assert "${HERMIT_ENV:-}" = "$PWD/testenv2"
+				assert test "${HERMIT_ENV:-}" = "$PWD/testenv2"
 			`},
 		{name: "ExecuteFromAnotherEnvironmentWorks",
 			preparations: prep{allFixtures("testenv1", "testenv2")},
 			script: `
 				testenv2/bin/hermit install testbin1
 				. testenv1/bin/activate-hermit
-				assert "$(./testenv2/bin/testbin1)" = "testbin1 1.0.1"
+				assert test "$(./testenv2/bin/testbin1)" = "testbin1 1.0.1"
 			`},
 		{name: "StubFromOtherEnvironmentHasItsOwnEnvars",
 			preparations: prep{allFixtures("testenv1", "testenv2")},
 			script: `
 				testenv2/bin/hermit install testbin1
 				. testenv1/bin/activate-hermit
-				assert "$(testenv2/bin/hermit env TESTENV2)" = "yes"
+				assert test "$(testenv2/bin/hermit env TESTENV2)" = "yes"
 			`},
 		{name: "InstallDirectScriptPackage",
 			preparations: prep{fixture("testenv2"), activate(".")},
 			script: `
 				hermit install testbin2
-				assert "$(testbin2)" = "testbin2 2.0.1"
+				assert test "$(testbin2)" = "testbin2 2.0.1"
 			`},
 		{name: "InstallNonExecutablePackage",
 			preparations: prep{fixture("testenv2"), activate(".")},
 			script: `
 				hermit install testbin3
-				assert "$(testbin3)" = "testbin3 3.0.1"
+				assert test "$(testbin3)" = "testbin3 3.0.1"
+			`},
+		{name: "AddDigests",
+			preparations: prep{fixture("testenv1"), activate(".")},
+			script: `
+			hermit manifest add-digests packages/testbin1.hcl
+			assert grep d4f8989a4a6bf56ccc768c094448aa5f42be3b9f0287adc2f4dfd2241f80d2c0 packages/testbin1.hcl 
 			`},
 	}
 
@@ -250,6 +256,9 @@ func TestIntegration(t *testing.T) {
 					// Ensure the state dir is writeable so it can be deleted.
 					t.Cleanup(func() {
 						_ = filepath.Walk(stateDir, func(path string, info fs.FileInfo, err error) error {
+							if err != nil {
+								return err
+							}
 							if info.IsDir() {
 								_ = os.Chmod(path, 0700)
 							} else {

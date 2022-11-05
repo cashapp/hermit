@@ -42,7 +42,6 @@ type Layer struct {
 	DontExtract bool              `hcl:"dont-extract,optional" help:"Don't extract the package source, just copy it into the installation directory."`
 	Mirrors     []string          `hcl:"mirrors,optional" help:"Mirrors to use if the primary source is unavailable."`
 	SHA256      string            `hcl:"sha256,optional" help:"SHA256 of source package for verification. When in conflict with SHA256 in sha256sums, this value takes precedence."`
-	SHA256Sums  map[string]string `hcl:"sha256sums,optional" help:"SHA256 checksums of source packages for verification."`
 	Darwin      []*Layer          `hcl:"darwin,block" help:"Darwin-specific configuration."`
 	Linux       []*Layer          `hcl:"linux,block" help:"Linux-specific configuration."`
 	Platform    []*PlatformBlock  `hcl:"platform,block" help:"Platform-specific configuration. <attr> is a set regexes that must all match against one of CPU, OS, etc.."`
@@ -147,12 +146,13 @@ func (c *ChannelBlock) layersWithReferences(os string, arch string, m *Manifest)
 // Manifest for a package.
 type Manifest struct {
 	Layer
-	Default     string         `hcl:"default,optional" help:"Default version or channel if not specified."`
-	Description string         `hcl:"description" help:"Human readable description of the package."`
-	Homepage    string         `hcl:"homepage,optional" help:"Home page."`
-	Repository  string         `hcl:"repository,optional" help:"Source Repository."`
-	Versions    []VersionBlock `hcl:"version,block" help:"Definition of and configuration for a specific version."`
-	Channels    []ChannelBlock `hcl:"channel,block" help:"Definition of and configuration for an auto-update channel."`
+	Default     string            `hcl:"default,optional" help:"Default version or channel if not specified."`
+	Description string            `hcl:"description" help:"Human readable description of the package."`
+	Homepage    string            `hcl:"homepage,optional" help:"Home page."`
+	Repository  string            `hcl:"repository,optional" help:"Source Repository."`
+	SHA256Sums  map[string]string `hcl:"sha256sums,optional" help:"SHA256 checksums of source packages for verification."`
+	Versions    []VersionBlock    `hcl:"version,block" help:"Definition of and configuration for a specific version."`
+	Channels    []ChannelBlock    `hcl:"channel,block" help:"Definition of and configuration for an auto-update channel."`
 }
 
 // Merge layers for the selected package reference, either from versions or channels.

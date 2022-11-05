@@ -106,3 +106,4 @@ issues:
     - 'bad syntax for struct tag pair'
     - 'should have.*comment'
     - 'uses unkeyed fields'
+    - 'G307'
