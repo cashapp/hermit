@@ -228,6 +228,12 @@ func (r *Resolver) Search(l ui.Logger, pattern string) (Packages, error) {
 		if !re.MatchString(manifest.Name) {
 			continue
 		}
+		if len(manifest.Errors) > 0 {
+			for _, err := range manifest.Errors {
+				l.Warnf("%s:%s", manifest.Path, err)
+			}
+			continue
+		}
 		for _, version := range manifest.Versions {
 			for _, vstr := range version.Version {
 				ref := Reference{Name: manifest.Name, Version: ParseVersion(vstr)}
@@ -265,6 +271,9 @@ func (r *Resolver) ResolveVirtual(name string) (pkgs []*Package, err error) {
 	}
 	var providers []*AnnotatedManifest
 	for _, manifest := range manifests {
+		if len(manifest.Errors) > 0 {
+			continue
+		}
 		for _, provides := range manifest.Provides {
 			if provides == name {
 				providers = append(providers, manifest)
