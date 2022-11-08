@@ -32,9 +32,12 @@ func gitHub(client GitHubClient, autoVersion *hmanifest.AutoVersionBlock) (strin
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
+	if len(versionRe.SubexpNames()) != 2 {
+		return "", errors.Errorf("%s: version pattern %s must have exactly one named capture group", autoVersion.GitHubRelease, autoVersion.VersionPattern)
+	}
 	for _, release := range releases {
 		groups := versionRe.FindStringSubmatch(release.TagName)
-		if groups != nil {
+		if len(groups) == 2 {
 			latestVersion := groups[1]
 			return latestVersion, nil
 		}
