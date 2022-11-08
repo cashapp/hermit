@@ -79,6 +79,7 @@ type Package struct {
 	Provides             []string
 	Env                  envars.Ops
 	Source               string
+	SHA256Source         string
 	DontExtract          bool // Don't extract the package, just download it.
 	Mirrors              []string
 	Root                 string
@@ -455,6 +456,9 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 		if layer.Source != "" {
 			p.Source = layer.Source
 		}
+		if layer.SHA256Source != "" {
+			p.SHA256Source = layer.SHA256Source
+		}
 		if layer.DontExtract {
 			p.DontExtract = layer.DontExtract
 		}
@@ -608,6 +612,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 		p.Provides[i] = expand(provides, false)
 	}
 	p.Source = expand(p.Source, false)
+	p.SHA256Source = expand(p.SHA256Source, false)
 	for i, mirror := range p.Mirrors {
 		p.Mirrors[i] = expand(mirror, false)
 	}

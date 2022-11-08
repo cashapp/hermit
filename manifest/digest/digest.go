@@ -3,11 +3,14 @@ package digest
 import (
 	"io"
 	"net/http"
+	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/alecthomas/hcl"
 	"github.com/cashapp/hermit/errors"
@@ -24,6 +27,8 @@ import (
 func UpdateDigests(l *ui.UI, client *http.Client, state *state.State, path string) error {
 	filename := filepath.Base(path)
 	name := strings.TrimSuffix(filename, ".hcl")
+	task := l.Task(name)
+	defer task.Done()
 	mani, err := manifest.LoadManifestFile(os.DirFS(filepath.Dir(path)), filename)
 	if err != nil {
 		return errors.Wrap(err, "failed to load manifest")
@@ -34,8 +39,16 @@ func UpdateDigests(l *ui.UI, client *http.Client, state *state.State, path strin
 		for _, platform := range platform.Core {
 			config := manifest.Config{Env: ".", State: "/tmp", Platform: platform}
 			pkg, err := manifest.Resolve(mani, config, ref)
+			if errors.Is(err, manifest.ErrNoSource) {
+				task.Warnf("No source provided for %s on %s", ref, platform)
+				continue
+			}
 			if err != nil {
 				return errors.WithStack(err)
+			}
+			// Skip git repos
+			if strings.Contains(pkg.Source, ".git#") || strings.HasSuffix(pkg.Source, ".git") {
+				continue
 			}
 			// Skip checksums for channels.
 			if pkg.Reference.Channel != "" {
@@ -57,32 +70,43 @@ func UpdateDigests(l *ui.UI, client *http.Client, state *state.State, path strin
 	}
 
 	if missing == 0 {
-		l.Infof("All packages have checksums!")
+		task.Infof("All packages have checksums!")
 		return nil
 	}
 
-	l.Infof("Updating %d checksums...", missing)
+	task.Infof("Updating %d checksums...", missing)
 
 	updated := []pkgAndDigest{}
 
 	// Compute missing checksums
 	for _, pkg := range pkgsBySource {
 		if pkg.pkg.SHA256 != "" {
-			l.Debugf("  %s %s (existing)", pkg.pkg.SHA256, pkg.pkg.Source)
+			task.Debugf("  %s %s (existing)", pkg.pkg.SHA256, pkg.pkg.Source)
 			continue
 		}
-		digest, err := computeDigest(l, client, state, pkg.pkg, pkg.ref)
+		digest, err := computeDigest(task, client, state, pkg.pkg)
 		if err != nil {
 			return errors.Wrapf(err, "failed to compute digest for %s/%s", pkg.ref.String(), pkg.platform)
 		}
-		l.Infof("  %s %s", digest, pkg.pkg.Source)
+		task.Infof("  %s %s", digest, pkg.pkg.Source)
 		updated = append(updated, pkgAndDigest{pkg.pkg.Reference, pkg.pkg.Source, digest})
+		if len(updated) > 10 {
+			err := snapshotDigests(path, updated)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			updated = []pkgAndDigest{}
+		}
 	}
 
 	if len(updated) == 0 {
 		return nil
 	}
 
+	return snapshotDigests(path, updated)
+}
+
+func snapshotDigests(path string, updated []pkgAndDigest) error {
 	// Update the HCL file with the new checksums
 	ast, err := loadAST(path)
 	if err != nil {
@@ -91,10 +115,10 @@ func UpdateDigests(l *ui.UI, client *http.Client, state *state.State, path strin
 
 	err = updateHCLSHA256Sums(ast, updated)
 	if err != nil {
-		return errors.Wrap(err, filename)
+		return errors.Wrap(err, path)
 	}
 
-	err = writeAST(path, ast, filename)
+	err = writeAST(path, ast, path)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -126,13 +150,9 @@ type pkgAndref struct {
 	platform platform.Platform
 }
 
-func computeDigest(l *ui.UI, client *http.Client, state *state.State, pkg *manifest.Package, ref manifest.Reference) (string, error) {
-	task := l.Task(ref.String())
-	defer task.Done()
-
+func computeDigest(task *ui.Task, client *http.Client, state *state.State, pkg *manifest.Package) (string, error) {
 	// As an optimisation we'll first try <source>.sha256.txt
-	if digest := tryGetSHA(client, pkg.Source+".sha256.txt"); digest != "" {
-		l.Debugf("  %s.sha256.txt => %s", pkg.Source, digest)
+	if digest := tryGetSHA(task, client, pkg); digest != "" {
 		return digest, nil
 	}
 
@@ -143,27 +163,58 @@ func computeDigest(l *ui.UI, client *http.Client, state *state.State, pkg *manif
 	return digest, nil
 }
 
-var digestRe = regexp.MustCompile(`^([A-Z0-9a-z]{64}).*`)
+var digestRe = regexp.MustCompile(`^([A-Z0-9a-z]{64})(?:\s+(.*))?`)
 
-func tryGetSHA(client *http.Client, url string) string {
-	req, err := http.NewRequest(http.MethodGet, url, &strings.Reader{}) //nolint: noctx
+var checksumCache sync.Map
+
+func tryGetSHA(task *ui.Task, client *http.Client, pkg *manifest.Package) string {
+	u := pkg.Source
+	dir := u[:strings.LastIndex(u, "/")]
+	variants := []string{u + ".sha256.txt", u + ".sha256", dir + "/checksums.txt", dir + "/sha256.txt", dir + "/SHA256SUMS"}
+	if pkg.SHA256Source != "" {
+		variants = []string{pkg.SHA256Source}
+	}
+	filename, err := url.PathUnescape(path.Base(u))
 	if err != nil {
-		return ""
+		filename = u
 	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return ""
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return ""
-	}
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return ""
-	}
-	if groups := digestRe.FindStringSubmatch(string(data)); groups != nil {
-		return groups[1]
+	for _, variant := range variants {
+		content, ok := checksumCache.Load(variant)
+		if !ok {
+			task.Tracef("Trying %s", variant)
+			req, err := http.NewRequest(http.MethodGet, variant, &strings.Reader{}) //nolint: noctx
+			if err != nil {
+				return ""
+			}
+			resp, err := client.Do(req)
+			if err != nil {
+				task.Tracef("Failed to fetch %s: %v", variant, err)
+				return ""
+			}
+			if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+				_ = resp.Body.Close()
+				task.Tracef("%s %s", variant, resp.Status)
+				continue
+			}
+			data, err := io.ReadAll(resp.Body)
+			_ = resp.Body.Close()
+			if err != nil {
+				task.Tracef("Failed to read %s: %v", variant, err)
+				continue
+			}
+			content = string(data)
+			checksumCache.Store(variant, content)
+		}
+		lines := strings.Split(strings.TrimSpace(content.(string)), "\n") // nolint
+		allowMissingFilename := len(lines) == 1
+		for _, line := range lines {
+			task.Tracef("%s: %s", variant, line)
+			groups := digestRe.FindStringSubmatch(line)
+			if len(groups) > 0 && (allowMissingFilename || strings.EqualFold(groups[2], filename)) {
+				task.Tracef("Short-circuit match %s", variant)
+				return groups[1]
+			}
+		}
 	}
 	return ""
 }
