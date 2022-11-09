@@ -27,7 +27,7 @@ func (a *activateCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, global
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	env, err := hermit.OpenEnv(realdir, sta, cache.GetSource, globalState.Env, defaultClient, nil)
+	env, err := hermit.OpenEnv(realdir, sta, cache.GetSource, globalState.Env, defaultClient, nil, config.RequireDigests)
 	if err != nil {
 		return errors.WithStack(err)
 	}

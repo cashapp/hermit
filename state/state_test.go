@@ -30,13 +30,13 @@ func TestCacheAndUnpackDownloadsOnlyWhenNeeded(t *testing.T) {
 	log, _ := ui.NewForTesting()
 	pkg := manifesttest.NewPkgBuilder(state.PkgDir()).WithSource(fixture.Server.URL).Result()
 
-	err := state.CacheAndUnpack(log.Task("test"), pkg, false)
+	err := state.CacheAndUnpack(log.Task("test"), pkg)
 	assert.NoError(t, err)
 	err = state.CleanCache(log.Task("test"))
 	assert.NoError(t, err)
 
 	// Check that removing the cache does not re-download the package if it is extracted
-	err = state.CacheAndUnpack(log.Task("test"), pkg, false)
+	err = state.CacheAndUnpack(log.Task("test"), pkg)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, calls)
 }
@@ -62,7 +62,7 @@ func TestCacheAndUnpackHooksRunOnMutablePackage(t *testing.T) {
 		WithSource(fixture.Server.URL).
 		Result()
 
-	err := state.CacheAndUnpack(log.Task("test"), pkg, false)
+	err := state.CacheAndUnpack(log.Task("test"), pkg)
 	assert.NoError(t, err)
 
 	_, err = os.Stat(filepath.Join(state.PkgDir(), "file_renamed"))
@@ -94,7 +94,7 @@ func TestCacheAndUnpackCreatesBinarySymlinks(t *testing.T) {
 		WithSource(fixture.Server.URL).
 		Result()
 
-	assert.NoError(t, state.CacheAndUnpack(log.Task("test"), pkg, false))
+	assert.NoError(t, state.CacheAndUnpack(log.Task("test"), pkg))
 	_, err := os.Stat(filepath.Join(state.BinaryDir(), pkg.Reference.String(), "darwin_exe"))
 	assert.NoError(t, err)
 	_, err = os.Stat(filepath.Join(state.BinaryDir(), pkg.Reference.String(), "linux_exe"))

@@ -239,18 +239,16 @@ func Main(config Config) {
 	configureLogging(cli, ctx.Command(), p)
 
 	config.State.LockTimeout = cli.getLockTimeout()
-	sta, err = state.Open(hermit.UserStateDir, config.State, cache)
+	sta, err = state.Open(hermit.UserStateDir, config.State, cache, config.RequireDigests)
 	if err != nil {
 		log.Fatalf("failed to open state: %s", err)
 	}
 
 	if isActivated {
-		env, err = hermit.OpenEnv(envPath, sta, cache.GetSource, cli.getGlobalState().Env, defaultHTTPClient, config.SHA256Sums)
+		env, err = hermit.OpenEnv(envPath, sta, cache.GetSource, cli.getGlobalState().Env, defaultHTTPClient, config.SHA256Sums, config.RequireDigests)
 		if err != nil {
 			log.Fatalf("failed to open environment: %s", err)
 		}
-		// set the environment value for further propagation.
-		env.RequireDigests = config.RequireDigests
 	}
 
 	packagePredictor := hermit.NewPackagePredictor(sta, env, p)

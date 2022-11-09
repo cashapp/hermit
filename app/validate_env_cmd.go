@@ -15,7 +15,7 @@ type validateEnvCmd struct {
 }
 
 func (v *validateEnvCmd) Run(l *ui.UI, state *state.State, cache *cache.Cache, config Config, httpClient *http.Client) error {
-	env, err := hermit.OpenEnv(v.Env, state, cache.GetSource, nil, httpClient, config.SHA256Sums)
+	env, err := hermit.OpenEnv(v.Env, state, cache.GetSource, nil, httpClient, config.SHA256Sums, config.RequireDigests)
 	if err != nil {
 		return errors.WithStack(err)
 	}

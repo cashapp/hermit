@@ -45,7 +45,7 @@ func (i *installCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
 			if err != nil {
 				return errors.WithStack(err)
 			}
-			err = state.CacheAndUnpack(task, pkg, env.RequireDigests)
+			err = state.CacheAndUnpack(task, pkg)
 			pkg.LogWarnings(l)
 			task.Done()
 			if err != nil {

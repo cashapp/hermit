@@ -109,7 +109,7 @@ type Env struct {
 	lazyResolver   *manifest.Resolver
 	lazySources    *sources.Sources
 	packageSource  cache.PackageSourceSelector
-	RequireDigests bool
+	requireDigests bool
 }
 
 //go:embed files/externalDependencies.xml
@@ -288,6 +288,7 @@ func OpenEnv(
 	ephemeral envars.Envars,
 	httpClient *http.Client,
 	scriptSums []string,
+	requireDigests bool,
 ) (*Env, error) {
 	binDir := filepath.Join(envDir, "bin")
 	configFile := filepath.Join(binDir, "hermit.hcl")
@@ -313,6 +314,7 @@ func OpenEnv(
 		ephemeralEnvars: envars.Infer(ephemeral.System()),
 		httpClient:      httpClient,
 		scriptSums:      scriptSums,
+		requireDigests:  requireDigests,
 	}, nil
 }
 
@@ -485,7 +487,7 @@ func (e *Env) Test(l *ui.UI, pkg *manifest.Package) error {
 	if err != nil {
 		return errors.Wrapf(err, "%s: invalid test shell fragment %q", pkg.String(), pkg.Test)
 	}
-	if err = e.state.CacheAndUnpack(task, pkg, e.RequireDigests); err != nil {
+	if err = e.state.CacheAndUnpack(task, pkg); err != nil {
 		return errors.WithStack(err)
 	}
 	bins, err := pkg.ResolveBinaries()
@@ -519,7 +521,7 @@ func (e *Env) Test(l *ui.UI, pkg *manifest.Package) error {
 // Unpack but do not install package.
 func (e *Env) Unpack(l *ui.Task, p *manifest.Package) error {
 	task := l.SubTask(p.Reference.String())
-	return e.state.CacheAndUnpack(task, p, e.RequireDigests)
+	return e.state.CacheAndUnpack(task, p)
 }
 
 // Install package. If a package with same name exists, uninstall it first.
@@ -613,7 +615,7 @@ func (e *Env) ensureRuntimeDepsPresent(l *ui.UI, p *manifest.Package) ([]*manife
 	}
 	result := make([]*manifest.Package, 0, len(deps))
 	for _, pkg := range deps {
-		if err := e.state.CacheAndUnpack(l.Task(p.Reference.String()), pkg, e.RequireDigests); err != nil {
+		if err := e.state.CacheAndUnpack(l.Task(p.Reference.String()), pkg); err != nil {
 			return nil, errors.WithStack(err)
 		}
 		result = append(result, pkg)
@@ -644,7 +646,7 @@ func (e *Env) install(l *ui.UI, p *manifest.Package) (*shell.Changes, error) {
 	log.Infof("Installing %s", p)
 	log.Debugf("From %s", p.Source)
 	log.Debugf("To %s", p.Dest)
-	err = e.state.CacheAndUnpack(task, p, e.RequireDigests)
+	err = e.state.CacheAndUnpack(task, p)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -666,7 +668,7 @@ func (e *Env) Upgrade(l *ui.UI, pkg *manifest.Package) (*shell.Changes, error) {
 	task := l.Task(pkg.Reference.String())
 
 	if pkg.Reference.IsChannel() {
-		err := e.state.UpgradeChannel(task, pkg, e.RequireDigests)
+		err := e.state.UpgradeChannel(task, pkg)
 		return nil, errors.WithStack(err)
 	}
 	return e.upgradeVersion(l, pkg)
@@ -713,7 +715,7 @@ func (e *Env) ResolveLink(l *ui.UI, executable string) (pkg *manifest.Package, b
 func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string, deps map[string]*manifest.Package) error {
 	b := l.Task(pkg.Reference.String())
 	timer := ui.LogElapsed(l, "exec")
-	err := e.state.CacheAndUnpack(l.Task(pkg.Reference.String()), pkg, e.RequireDigests)
+	err := e.state.CacheAndUnpack(l.Task(pkg.Reference.String()), pkg)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -721,7 +723,7 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 		if dep.Reference.Compare(pkg.Reference) == 0 {
 			continue
 		}
-		err := e.state.CacheAndUnpack(l.Task(dep.Reference.String()), dep, e.RequireDigests)
+		err := e.state.CacheAndUnpack(l.Task(dep.Reference.String()), dep)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -778,7 +780,7 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 
 func (e *Env) getPackageRuntimeEnvops(pkg *manifest.Package) (envars.Op, error) {
 	// If the package contains a Hermit env, add that to the PATH for runtime dependencies
-	pkgEnv, err := OpenEnv(pkg.Root, e.state, e.packageSource, nil, e.httpClient, e.scriptSums)
+	pkgEnv, err := OpenEnv(pkg.Root, e.state, e.packageSource, nil, e.httpClient, e.scriptSums, e.requireDigests)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -1065,7 +1067,7 @@ func (e *Env) EnsureChannelIsUpToDate(l *ui.UI, pkg *manifest.Package) error {
 		// No updates needed for this package
 		return nil
 	}
-	return errors.WithStack(e.state.UpgradeChannel(task, pkg, e.RequireDigests))
+	return errors.WithStack(e.state.UpgradeChannel(task, pkg))
 }
 
 // AddSource adds a new source bundle and refreshes the packages from it
@@ -1288,7 +1290,7 @@ func (e *Env) Update(l *ui.UI, force bool) error {
 		if pkg.Reference.IsChannel() {
 			log := l.Task(pkg.String())
 			if force || time.Since(pkg.UpdatedAt) > pkg.UpdateInterval {
-				if err := e.state.UpgradeChannel(log, pkg, e.RequireDigests); err != nil {
+				if err := e.state.UpgradeChannel(log, pkg); err != nil {
 					return errors.Wrap(err, pkg.String())
 				}
 			} else {

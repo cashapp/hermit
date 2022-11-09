@@ -69,7 +69,7 @@ func (f *StateTestFixture) State() *state.State {
 	assert.NoError(f.t, err)
 	sta, err := state.Open(root, state.Config{
 		Builtin: sources.NewBuiltInSource(vfs.InMemoryFS(nil)),
-	}, cache)
+	}, cache, false)
 	assert.NoError(f.t, err)
 	return sta
 }

@@ -29,7 +29,7 @@ func (e *execCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, env *hermi
 	}
 
 	// Pass config.SHA256Sums because OpenEnv uses the defaults cashapp/hermit; internal builds inject additional SHA256Sums.
-	env, err = hermit.OpenEnv(envDir, sta, cache.GetSource, globalState.Env, defaultHTTPClient, config.SHA256Sums)
+	env, err = hermit.OpenEnv(envDir, sta, cache.GetSource, globalState.Env, defaultHTTPClient, config.SHA256Sums, config.RequireDigests)
 	if err != nil {
 		return errors.WithStack(err)
 	}
