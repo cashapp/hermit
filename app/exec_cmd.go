@@ -70,8 +70,8 @@ func (e *execCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, env *hermi
 		return errors.WithStack(err)
 	}
 
-	// Collect dependencies we might have to install
-	// if they are not in the cache
+	// Collect dependencies we might have to install if they are not in the
+	// cache
 	deps := map[string]*manifest.Package{}
 	err = env.ResolveWithDeps(l, installed, manifest.ExactSelector(pkg.Reference), deps)
 	if err != nil {

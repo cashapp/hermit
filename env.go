@@ -1314,7 +1314,7 @@ func (e *Env) ResolveWithDeps(l *ui.UI, installed []manifest.Reference, selector
 			return nil
 		}
 	}
-	pkg, err := e.Resolve(l, selector, false)
+	pkg, err := e.Resolve(l, selector, true)
 	if err != nil {
 		return errors.WithStack(err)
 	}
