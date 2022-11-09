@@ -249,6 +249,8 @@ func Main(config Config) {
 		if err != nil {
 			log.Fatalf("failed to open environment: %s", err)
 		}
+		// set the environment value for further propagation.
+		env.RequireDigests = config.RequireDigests
 	}
 
 	packagePredictor := hermit.NewPackagePredictor(sta, env, p)
@@ -278,9 +280,6 @@ func Main(config Config) {
 		err = pprof.WriteHeapProfile(f)
 		fatalIfError(p, err)
 	}
-
-	// set the environment value for further propagation.
-	env.RequireDigests = config.RequireDigests
 
 	err = ctx.Run(env, p, sta, config, cli.getGlobalState(), ghClient, defaultHTTPClient, cache)
 	if err != nil && p.WillLog(ui.LevelDebug) {
