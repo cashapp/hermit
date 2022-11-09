@@ -39,7 +39,7 @@ func (s *updateCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		err = state.UpgradeChannel(l.Task(pkgRef), pkg)
+		err = state.UpgradeChannel(l.Task(pkgRef), pkg, env.RequireDigests)
 		if err != nil {
 			return errors.WithStack(err)
 		}

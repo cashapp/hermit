@@ -282,10 +282,14 @@ func (s *State) removeRecursive(b *ui.Task, dest string) error {
 
 // CacheAndUnpack downloads a package and extracts it if it is not present.
 // If the package has already been extracted, this is a no-op
-func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
+func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package, requireDigests bool) error {
 	// Check if the package is up-to-date, and if so, return before acquiring the lock
 	if (s.isExtracted(p) && s.areBinariesLinked(p)) || p.Source == "/" {
 		return nil
+	}
+
+	if requireDigests && p.SHA256 == "" {
+		return errors.Errorf("Package %s Needs to have a SHA256Sum in the config", p.Reference.Name)
 	}
 
 	lock, err := s.acquireLock(b)
@@ -366,6 +370,7 @@ func (s *State) extract(b *ui.Task, p *manifest.Package) error {
 	)
 
 	if !s.isCached(p) {
+
 		mirrors := make([]string, len(p.Mirrors))
 		copy(mirrors, p.Mirrors)
 		mirrors = append(mirrors, s.generateMirrors(p.Source)...)
@@ -463,7 +468,7 @@ func (s *State) CleanCache(b ui.Logger) error {
 // UpgradeChannel checks if the given binary has changed in its channel, and if so, downloads it.
 //
 // If the channel is upgraded this will return a clone of the updated manifest.
-func (s *State) UpgradeChannel(b *ui.Task, pkg *manifest.Package) error {
+func (s *State) UpgradeChannel(b *ui.Task, pkg *manifest.Package, requireDigests bool) error {
 	if !pkg.Reference.IsChannel() {
 		panic("UpgradeChannel can only be used with channel packages")
 	}
@@ -483,7 +488,7 @@ func (s *State) UpgradeChannel(b *ui.Task, pkg *manifest.Package) error {
 		if err := s.evictPackage(b, pkg); err != nil {
 			return errors.WithStack(err)
 		}
-		if err := s.CacheAndUnpack(b, pkg); err != nil {
+		if err := s.CacheAndUnpack(b, pkg, requireDigests); err != nil {
 			return errors.WithStack(err)
 		}
 		etag = pkg.ETag

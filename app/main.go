@@ -50,6 +50,8 @@ type Config struct {
 	PackageSourceSelector cache.PackageSourceSelector
 	// True if we're running in CI - disables progress bar.
 	CI bool
+	// True if you want hermit to check digests for every package.
+	RequireDigests bool
 }
 
 type loggingHTTPTransport struct {
