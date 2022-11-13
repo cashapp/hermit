@@ -37,7 +37,8 @@ Used by: [&lt;manifest>](../manifest#blocks)
 | `root` | `string?` | Override root for package. |
 | `runtime-dependencies` | `[string]?` | Packages used internally by this package, but not installed to the target environment |
 | `sha256` | `string?` | SHA256 of source package for verification. When in conflict with SHA256 in sha256sums, this value takes precedence. |
-| `source` | `string?` | URL for source package. Valid URLs are Git repositories (using .git[#&lt;tag&gt;] suffix), Local Files (using file:// prefix), and Remote Files (using http:// or https:// prefix) |
+| `sha256-source` | `string?` | URL for SHA256 checksum file for source package. |
+| `source` | `string?` | URL for source package. Valid URLs are Git repositories (using .git[#&lt;ref&gt;] suffix), Local Files (using file:// prefix), and Remote Files (using http:// or https:// prefix) |
 | `strip` | `number?` | Number of path prefix elements to strip. |
 | `test` | `string?` | Command that will test the package is operational. |
 | `vars` | `{string: string}?` | Set local variables used during manifest evaluation. |

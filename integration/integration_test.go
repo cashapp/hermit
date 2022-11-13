@@ -1,4 +1,4 @@
-// Package integration provides integration tests for Hermit.
+// Package integration_test provides integration tests for Hermit.
 //
 // Each test is run against the supported shells, in a temporary directory, with
 // a version of Hermit built from the current source.
@@ -13,11 +13,13 @@
 package integration_test
 
 import (
+	"archive/zip"
 	"bufio"
 	"fmt"
 	"io"
 	"io/fs"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -30,48 +32,6 @@ import (
 	"github.com/cashapp/hermit/errors"
 	"github.com/creack/pty"
 )
-
-var shells = [][]string{
-	{"bash", "--norc", "--noprofile"},
-	{"zsh", "--no-rcs", "--no-globalrcs"},
-}
-
-// Functions that test scripts can use to communicate back to the test framework.
-const preamble = `
-set -euo pipefail
-
-hermit-send() {
-  echo "$@" 1>&3
-}
-
-assert() {
-  if ! "$@"; then
-    hermit-send "error: assertion failed: $@"
-    exit 1
-  fi
-}
-
-# Run a shell command and emulate what the Hermit shell hooks would do.
-#
-# usage: with-prompt-hooks <cmd>
-#
-# Normally this is done by shell hooks, but because we're not running interactively this is not possible.
-with-prompt-hooks() {
-  "$@"
-  res=$?
-  # We need to reset the change timestamp, as file timestamps are at second resolution.
-  # Some IT updates could be lost without this
-  export HERMIT_BIN_CHANGE=0
-
-  if test -n "${PROMPT_COMMAND+_}"; then
-    eval "$PROMPT_COMMAND"
-  elif [ -n "${ZSH_VERSION-}" ]; then
-    update_hermit_env
-  fi
-
-  return $res
-}
-`
 
 func TestIntegration(t *testing.T) {
 	tests := []struct {
@@ -238,6 +198,13 @@ func TestIntegration(t *testing.T) {
 			hermit manifest add-digests packages/testbin1.hcl
 			assert grep d4f8989a4a6bf56ccc768c094448aa5f42be3b9f0287adc2f4dfd2241f80d2c0 packages/testbin1.hcl 
 			`},
+		// Test that git sources with a specific reference are handled correctly.
+		{name: "SourceWithRef",
+			preparations: prep{unzip("git-source.zip", "source.git"), serveDir("source.git")},
+			script: `
+			hermit init --sources="file://$PWD/source.git#c0551672d8d179b93615e9612deaa2c3cc4fe0b5"
+			assert fail ./bin/hermit info testbin1-1.0.1
+			`},
 	}
 
 	checkForShells(t)
@@ -353,6 +320,54 @@ func TestIntegration(t *testing.T) {
 		})
 	}
 }
+
+var shells = [][]string{
+	{"bash", "--norc", "--noprofile"},
+	{"zsh", "--no-rcs", "--no-globalrcs"},
+}
+
+// Functions that test scripts can use to communicate back to the test framework.
+const preamble = `
+set -euo pipefail
+
+hermit-send() {
+  echo "$@" 1>&3
+}
+
+assert() {
+  if [ "${1:-}" = "fail" ]; then
+    shift
+    if "$@"; then
+      hermit-send "error: assertion should have failed: $@"
+      exit 1
+    fi
+  elif ! "$@"; then
+    hermit-send "error: assertion failed: $@"
+    exit 1
+  fi
+}
+
+# Run a shell command and emulate what the Hermit shell hooks would do.
+#
+# usage: with-prompt-hooks <cmd>
+#
+# Normally this is done by shell hooks, but because we're not running interactively this is not possible.
+with-prompt-hooks() {
+  "$@"
+  res=$?
+  # We need to reset the change timestamp, as file timestamps are at second resolution.
+  # Some IT updates could be lost without this
+  export HERMIT_BIN_CHANGE=0
+
+  if test -n "${PROMPT_COMMAND+_}"; then
+    eval "$PROMPT_COMMAND"
+  elif [ -n "${ZSH_VERSION-}" ]; then
+    update_hermit_env
+  fi
+
+  return $res
+}
+`
 
 // Build Hermit from source.
 func buildAndInjectHermit(t *testing.T, environ []string) (outenviron []string) {
@@ -525,5 +540,82 @@ func outputContains(text string) expectation {
 	return func(t *testing.T, dir, output string) {
 		t.Helper()
 		assert.Contains(t, output, text, "%s", output)
+	}
+}
+
+// Unzip zipFile relative to testdata, into the test directory at dest.
+func unzip(zipFile, dest string) preparation {
+	return func(t *testing.T, dir string) string {
+		t.Helper()
+		r, err := zip.OpenReader(filepath.Join("testdata", zipFile))
+		assert.NoError(t, err)
+		defer r.Close()
+		for _, f := range r.File {
+			path := filepath.Join(dir, dest, f.Name)
+			if f.FileInfo().IsDir() {
+				err = os.MkdirAll(path, f.Mode())
+				continue
+			}
+
+			rc, err := f.Open()
+			assert.NoError(t, err)
+			err = os.MkdirAll(filepath.Dir(path), 0700)
+			assert.NoError(t, err)
+			w, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, f.Mode())
+			assert.NoError(t, err)
+			_, err = io.Copy(w, rc)
+			err = w.Close()
+			assert.NoError(t, err)
+			err = rc.Close()
+			assert.NoError(t, err)
+		}
+		return ""
+	}
+}
+
+// Serve a directory on 127.0.0.1:8999
+func serveDir(httpRoot string) preparation {
+	return func(t *testing.T, dir string) string {
+		srv := &http.Server{
+			Addr:    "127.0.0.1:8999",
+			Handler: http.FileServer(http.Dir(filepath.Join(dir, httpRoot))),
+		}
+		go func() { _ = srv.ListenAndServe() }()
+		t.Cleanup(func() { _ = srv.Close() })
+		return ""
+	}
+}
+
+// Serve the given zip file on 127.0.0.1:8999
+func serveZip(zipFile string) preparation {
+	return func(t *testing.T, dir string) string {
+		t.Helper()
+		zr, err := zip.OpenReader(zipFile)
+		assert.NoError(t, err)
+		files := map[string]*zip.File{}
+		for _, file := range zr.File {
+			files[file.Name] = file
+		}
+		srv := &http.Server{
+			Addr: "127.0.0.1:8999",
+			Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				path := strings.TrimPrefix(r.URL.Path, "/")
+				file, ok := files[path]
+				if !ok {
+					http.NotFound(w, r)
+					return
+				}
+				w.Header().Add("Content-Type", "application/octet-stream")
+				w.Header().Add("Content-Size", fmt.Sprintf("%d", file.UncompressedSize64))
+				rc, err := file.Open()
+				assert.NoError(t, err)
+				defer rc.Close()
+				_, err = io.Copy(w, rc)
+				assert.NoError(t, err)
+			}),
+		}
+		go func() { _ = srv.ListenAndServe() }()
+		t.Cleanup(func() { _ = srv.Close() })
+		return ""
 	}
 }

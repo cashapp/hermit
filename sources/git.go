@@ -95,7 +95,8 @@ func syncGit(b *ui.Task, dir, source, finalDest string, runner util.CommandRunne
 		return errors.WithStack(err)
 	}
 	defer os.RemoveAll(dest)
-	if err = runner.RunInDir(b, dest, "git", "clone", "--depth=1", source, dest); err != nil {
+	_, err = util.GitClone(b, runner, source, dest)
+	if err != nil {
 		return errors.WithStack(err)
 	}
 	_ = os.RemoveAll(finalDest)
@@ -103,6 +104,5 @@ func syncGit(b *ui.Task, dir, source, finalDest string, runner util.CommandRunne
 	if err = os.Rename(dest, finalDest); err != nil && !os.IsExist(err) { // Prevent races.
 		return errors.WithStack(err)
 	}
-
 	return nil
 }

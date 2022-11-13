@@ -16,10 +16,20 @@ import (
 type CommandRunner interface {
 	// RunInDir runs a command in the given directory.
 	RunInDir(log *ui.Task, dir string, args ...string) error
+	// CaptureInDir runs a command in the given dir, returning combined stdout and stderr.
+	CaptureInDir(log ui.Logger, dir string, args ...string) ([]byte, error)
 }
 
 // RealCommandRunner actually calls command
 type RealCommandRunner struct{}
+
+var _ CommandRunner = &RealCommandRunner{}
+
+// CaptureInDir implements CommandRunner
+func (*RealCommandRunner) CaptureInDir(log ui.Logger, dir string, args ...string) ([]byte, error) {
+	data, err := CaptureInDir(log, dir, args...)
+	return data, errors.WithStack(err)
+}
 
 func (g *RealCommandRunner) RunInDir(task *ui.Task, dir string, commands ...string) error { // nolint: golint
 	return errors.WithStack(RunInDir(task, dir, commands...))
