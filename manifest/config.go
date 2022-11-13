@@ -38,7 +38,7 @@ type Layer struct {
 	Test         *string           `hcl:"test,optional" help:"Command that will test the package is operational."`
 	Env          envars.Envars     `hcl:"env,optional" help:"Environment variables to export."`
 	Vars         map[string]string `hcl:"vars,optional" help:"Set local variables used during manifest evaluation."`
-	Source       string            `hcl:"source,optional" help:"URL for source package. Valid URLs are Git repositories (using .git[#<tag>] suffix), Local Files (using file:// prefix), and Remote Files (using http:// or https:// prefix)"`
+	Source       string            `hcl:"source,optional" help:"URL for source package. Valid URLs are Git repositories (using .git[#<ref>] suffix), Local Files (using file:// prefix), and Remote Files (using http:// or https:// prefix)"`
 	DontExtract  bool              `hcl:"dont-extract,optional" help:"Don't extract the package source, just copy it into the installation directory."`
 	Mirrors      []string          `hcl:"mirrors,optional" help:"Mirrors to use if the primary source is unavailable."`
 	SHA256       string            `hcl:"sha256,optional" help:"SHA256 of source package for verification. When in conflict with SHA256 in sha256sums, this value takes precedence."`

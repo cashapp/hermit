@@ -23,27 +23,15 @@ func (s *gitSource) OpenLocal(c *Cache, checksum string) (*os.File, error) {
 func (s *gitSource) Download(b *ui.Task, cache *Cache, checksum string) (string, string, string, error) {
 	base := BasePath(checksum, s.URL)
 	checkoutDir := filepath.Join(cache.root, base)
-	repo, tag := parseGitURL(s.URL)
-	args := []string{"git", "clone", "--depth=1", repo, checkoutDir}
-	if tag != "" {
-		args = append(args, "--branch="+tag)
-	}
-	err := util.RunInDir(b, cache.root, args...)
+	etag, err := util.GitClone(b, &util.RealCommandRunner{}, s.URL, checkoutDir)
 	if err != nil {
-		return "", "", "", errors.WithStack(err)
+		return "", "", "", errors.Wrap(err, s.URL)
 	}
-
-	bts, err := util.CaptureInDir(b, checkoutDir, "git", "rev-parse", "HEAD")
-	if err != nil {
-		return "", "", "", errors.WithStack(err)
-	}
-	etag := strings.Trim(string(bts), "\n")
-
 	return filepath.Join(cache.root, base), etag, "", nil
 }
 
 func (s *gitSource) ETag(b *ui.Task) (etag string, err error) {
-	repo, tag := parseGitURL(s.URL)
+	repo, tag := util.ParseGitURL(s.URL)
 	if tag == "" {
 		tag = "HEAD"
 	}
@@ -61,7 +49,7 @@ func (s *gitSource) ETag(b *ui.Task) (etag string, err error) {
 }
 
 func (s *gitSource) Validate() error {
-	repo, tag := parseGitURL(s.URL)
+	repo, tag := util.ParseGitURL(s.URL)
 	if tag == "" {
 		tag = "HEAD"
 	}
@@ -71,13 +59,4 @@ func (s *gitSource) Validate() error {
 		return errors.Wrapf(err, "error getting remote HEAD: %s", string(out))
 	}
 	return nil
-}
-
-func parseGitURL(source string) (repo, tag string) {
-	parts := strings.SplitN(source, "#", 2)
-	repo = parts[0]
-	if len(parts) > 1 {
-		tag = parts[1]
-	}
-	return
 }

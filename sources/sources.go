@@ -1,13 +1,14 @@
 package sources
 
 import (
-	"github.com/cashapp/hermit/util"
 	"io/fs"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/cashapp/hermit/util"
 
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/ui"
@@ -90,7 +91,7 @@ func getSource(b *ui.UI, source, dir, env string) (Source, error) {
 	task := b.Task(source)
 	defer task.Done()
 
-	if strings.HasSuffix(source, ".git") {
+	if strings.HasSuffix(source, ".git") || strings.Contains(source, ".git#") {
 		return NewGitSource(source, dir, &util.RealCommandRunner{}), nil
 	}
 

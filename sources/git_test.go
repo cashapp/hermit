@@ -8,10 +8,17 @@ import (
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/ui"
+	"github.com/cashapp/hermit/util"
 )
 
 type FailingGit struct {
 	err error
+}
+
+var _ util.CommandRunner = &FailingGit{}
+
+func (f *FailingGit) CaptureInDir(log ui.Logger, dir string, args ...string) ([]byte, error) {
+	return nil, f.err
 }
 
 func (f *FailingGit) RunInDir(_ *ui.Task, _ string, _ ...string) error {
