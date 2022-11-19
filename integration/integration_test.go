@@ -238,6 +238,14 @@ func TestIntegration(t *testing.T) {
 			hermit manifest add-digests packages/testbin1.hcl
 			assert grep d4f8989a4a6bf56ccc768c094448aa5f42be3b9f0287adc2f4dfd2241f80d2c0 packages/testbin1.hcl 
 			`},
+		{name: "UpgradeTriggersInstallHook",
+			preparations: prep{fixture("testenv1"), activate(".")},
+			script: `
+			hermit install testbin1-1.0.0
+			hermit upgrade testbin1
+			`,
+			expectations: exp{outputContains("testbin1-1.0.0 hook"), outputContains("testbin1-1.0.1 hook")},
+		},
 	}
 
 	checkForShells(t)
