@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/cashapp/hermit"
@@ -42,13 +43,23 @@ func (g *upgradeCmd) Run(l *ui.UI, env *hermit.Env) error {
 	}
 
 	changes := shell.NewChanges(envars.Parse(os.Environ()))
-
+	w := l.WriterAt(ui.LevelInfo)
 	// upgrade packages
 	for _, pkg := range packages {
-		c, err := env.Upgrade(l, pkg)
+		c, upgraded, err := env.Upgrade(l, pkg)
+		if err != nil {
+			return errors.WithStack(err)
+		} else if upgraded == nil {
+			continue
+		}
+		messages, err := env.TriggerForPackage(l, manifest.EventInstall, upgraded)
 		if err != nil {
 			return errors.WithStack(err)
 		}
+		for _, message := range messages {
+			fmt.Fprintln(w, message)
+		}
+		upgraded.LogWarnings(l)
 		changes = changes.Merge(c)
 	}
 

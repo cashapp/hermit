@@ -661,12 +661,14 @@ func (e *Env) install(l *ui.UI, p *manifest.Package) (*shell.Changes, error) {
 }
 
 // Upgrade package.
-func (e *Env) Upgrade(l *ui.UI, pkg *manifest.Package) (*shell.Changes, error) {
+//
+// If an upgrade does not occur, returns all nils.
+func (e *Env) Upgrade(l *ui.UI, pkg *manifest.Package) (*shell.Changes, *manifest.Package, error) {
 	task := l.Task(pkg.Reference.String())
 
 	if pkg.Reference.IsChannel() {
 		err := e.state.UpgradeChannel(task, pkg)
-		return nil, errors.WithStack(err)
+		return nil, nil, errors.WithStack(err)
 	}
 	return e.upgradeVersion(l, pkg)
 }
@@ -1090,34 +1092,33 @@ func (e *Env) BinDir() string {
 // upgradeVersion upgrades the package to its latest version.
 //
 // If the package is already at its latest version, this is a no-op.
-func (e *Env) upgradeVersion(l *ui.UI, pkg *manifest.Package) (*shell.Changes, error) {
+func (e *Env) upgradeVersion(l *ui.UI, pkg *manifest.Package) (*shell.Changes, *manifest.Package, error) {
 	resolver, err := e.resolver(l)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, nil, errors.WithStack(err)
 	}
 	// Get the latest version of the package
 	resolved, err := resolver.Resolve(l, manifest.PrefixSelector(pkg.Reference.Major()))
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, nil, errors.WithStack(err)
 	}
 	if err := resolved.EnsureSupported(); err != nil {
-		return nil, errors.Wrapf(err, "upgrade failed")
+		return nil, nil, errors.Wrapf(err, "upgrade failed")
 	}
 	if !resolved.Reference.Version.Match(pkg.Reference.Version) {
 		l.Task(pkg.Reference.Name).SubTask("upgrade").Infof("Upgrading %s to %s", pkg, resolved)
 		uc, err := e.uninstall(l.Task(pkg.Reference.String()), pkg)
 		if err != nil {
-			return nil, errors.WithStack(err)
+			return nil, nil, errors.WithStack(err)
 		}
 		ic, err := e.install(l, resolved)
 		if err != nil {
-			return nil, errors.WithStack(err)
+			return nil, nil, errors.WithStack(err)
 		}
 		// Update the package.
-		*pkg = *resolved
-		return uc.Merge(ic), nil
+		return uc.Merge(ic), resolved, nil
 	}
-	return shell.NewChanges(envars.Parse(os.Environ())), nil
+	return nil, nil, nil
 }
 
 func (e *Env) readPackageState(pkg *manifest.Package) {
