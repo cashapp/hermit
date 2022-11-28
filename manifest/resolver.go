@@ -226,7 +226,7 @@ func (r *Resolver) Search(l ui.Logger, pattern string) (Packages, error) {
 		return nil, errors.WithStack(err)
 	}
 	for _, manifest := range manifests {
-		if !re.MatchString(manifest.Name) {
+		if !re.MatchString(manifest.Name) && !re.MatchString(manifest.Description) && !re.MatchString(manifest.Homepage) {
 			continue
 		}
 		if len(manifest.Errors) > 0 {

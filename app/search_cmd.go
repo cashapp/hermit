@@ -78,6 +78,8 @@ func (s *searchCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
 	pattern := s.Pattern
 	if s.Exact {
 		pattern = "^" + regexp.QuoteMeta(pattern) + "$"
+	} else {
+		pattern = "(?i)" + pattern
 	}
 	if env != nil {
 		err = env.Update(l, false)
