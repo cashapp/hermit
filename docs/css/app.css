@@ -1,0 +1,82 @@
+:root, [data-md-color-scheme="default"] {
+  --md-primary-fg-color: #00D64F;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #15c13e;
+  --md-default-bg-color: #121212;
+  --md-code-bg-color: hsla(var(--md-hue),25%,25%,1);
+}
+
+@font-face {
+    font-family: cash-market;
+    src: url("https://cash-f.squarecdn.com/static/fonts/cash-market/v2/CashMarket-Regular.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal
+}
+
+@font-face {
+    font-family: cash-market;
+    src: url("https://cash-f.squarecdn.com/static/fonts/cash-market/v2/CashMarket-Medium.woff2") format("woff2");
+    font-weight: 500;
+    font-style: normal
+}
+
+@font-face {
+    font-family: cash-market;
+    src: url("https://cash-f.squarecdn.com/static/fonts/cash-market/v2/CashMarket-Bold.woff2") format("woff2");
+    font-weight: 700;
+    font-style: normal
+}
+
+/* Use Cash fonts. */
+body, input {
+  font-family: cash-market,"Helvetica Neue",helvetica,sans-serif;
+}
+
+/* The material theme uses lighter weights for h1-h4 by default. Use bolder weights instead. */
+.md-typeset h1, .md-typeset h2, .md-typeset h3, .md-typeset h4 {
+  line-height: normal;
+  font-weight: bold;
+}
+
+/* The material theme uses a lighter colour for h1 by default. Use the fg colour instead. */
+.md-typeset h1 {
+  color: var(--md-default-fg-color);
+}
+
+/* Make links really look like links. They need to be bolded because the accent colour isn't
+   very readable with a lighter weight on white. */
+.md-typeset a {
+  text-decoration: underline;
+  font-weight: bold;
+}
+
+/* Remove highlights from search results. */
+.md-typeset mark {
+  background-color: transparent;
+}
+
+/* Header links need to be bolded to be readable. */
+.md-header__title {
+  font-weight: bold;
+}
+.md-tabs__link {
+  font-weight: bold;
+}
+
+button.dl {
+  font-weight: 300;
+  font-size: 25px;
+  line-height: 40px;
+  padding: 3px 10px;
+  display: inline-block;
+  border-radius: 6px;
+  margin: 5px 0;
+  width: auto;
+}
+
+.logo {
+  text-align: center;
+  margin-top: 150px;
+}
