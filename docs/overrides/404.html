@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+
+{% block htmltitle %}
+  <title>404 - {{ config.site_name }}</title>
+{% endblock %}
+
+
+{% block content %}
+  The page you are looking for has either moved or does not exist.
+
+  <br /><br />
+  Please help us fix this by
+  <a href="{{config.repo_url}}/issues">opening an issue</a> or
+  <a href="{{config.repo_url}}#contributing">adding a fix directly</a>
+
+{% endblock %}
+
