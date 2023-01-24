@@ -1,7 +1,6 @@
-+++
-title = "auto-version > html"
-weight = 402
-+++
+---
+title: "auto-version > html"
+---
 
 Extract version information from a HTML URL using XPath.
 

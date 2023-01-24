@@ -1,7 +1,6 @@
-+++
-title = "Configuration"
-weight = 106
-+++
+---
+title:  "Configuration"
+---
 
 Each Hermit environment contains a `bin/hermit.hcl` file that can be used to
 customise that Hermit environment.

@@ -1,7 +1,6 @@
-+++
-title = "version <version>"
-weight = 406
-+++
+---
+title: "version <version>"
+---
 
 Definition of and configuration for a specific version.
 

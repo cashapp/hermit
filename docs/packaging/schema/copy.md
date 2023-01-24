@@ -1,7 +1,6 @@
-+++
-title = "on > copy"
-weight = 409
-+++
+---
+title: "on > copy"
+---
 
 A file to copy when the event is triggered.
 

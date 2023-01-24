@@ -1,7 +1,6 @@
-+++
-title = "channel <name>"
-weight = 405
-+++
+---
+title: "channel <name>"
+---
 
 Definition of and configuration for an auto-update channel.
 

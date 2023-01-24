@@ -1,7 +1,6 @@
-+++
-title = "Environment variables"
-weight = 102
-+++
+---
+title: "Environment variables"
+---
 
 When a Hermit environment is active, environment variables will be set by
 [Hermit](#hermit) itself, the [command-line](#command-line), the
@@ -15,13 +14,13 @@ it uses a bunch of variables internally, two you can rely on to always be
 present in an active environment are:
 
 | Name | Description |
-|-----------|------|-------------|
+|-----------|------|
 | `HERMIT_ENV` | Path to the active Hermit environment. |
 | `HERMIT_BIN` | Path to the active Hermit environment `bin` directory. |
 
 An empty environment might look something like the following:
 
-```text
+```shell
 project🐚~/project$ hermit env
 HERMIT_BIN=/home/user/project/bin
 HERMIT_ENV=/home/user/project
@@ -40,7 +39,7 @@ directly editing the configuration file.
 
 For example, to set `GOBIN` to a `build` directory within the environment:
 
-```text
+```shell
 project🐚~/project$ hermit env GOBIN '${HERMIT_ENV}/build'
 project🐚~/project$ hermit env       
 GOBIN=/home/user/project/build
@@ -52,7 +51,7 @@ project🐚~/project$ echo $GOBIN
 
 The `bin/hermit.hcl` file will contain:
 
-```hcl
+```terraform
 # Extra environment variables.
 env = {
   "GOBIN": "${HERMIT_ENV}/build",
@@ -61,7 +60,7 @@ env = {
 
 Use the `hermit env` command to view and set per-environment variables:
 
-```text
+```shell
 Usage: hermit env [<name>] [<value>]
 
 Manage environment variables.
@@ -90,26 +89,25 @@ Flags:
 ```
 
 
-{{< hint warning >}}
+!!! warning
+    Take care to _only_ use single quotes (`'`) when setting values so that the shell
+      doesn't interpolate environment variables before Hermit. ie. **Do not do this**:
 
-Take care to _only_ use single quotes (`'`) when setting values so that the shell
-doesn't interpolate environment variables before Hermit. ie. **Do not do this**:
+    ```shell
+      project🐚~/project$ hermit env GOBIN "${HERMIT_ENV}/build"
+    ```
 
-```text
-project🐚~/project$ hermit env GOBIN "${HERMIT_ENV}/build"
-```
+    as it will result in this `bin/hermit.hcl`:
 
-as it will result in this `bin/hermit.hcl`:
+    ```hcl
+    # Extra environment variables.
+    env = {
+      "GOBIN": "/home/user/project/build",
+    }
+    ```
 
-```hcl
-# Extra environment variables.
-env = {
-  "GOBIN": "/home/user/project/build",
-}
-```
+    This will of course work fine for the local user, but will fail tragically for anyone else.
 
-This will of course work fine for the local user, but will fail tragically for anyone else.
-{{< /hint >}}
 
 ## Installed Packages
 
@@ -117,7 +115,7 @@ Packages may export environment variables for convenience or in order to
 operate correctly. For example, the `go` package sets the `GOROOT` to the
 location of the installed Go SDK:
 
-```text
+```shell
 project🐚~/project$ hermit install go
 project🐚~/project$ hermit env
 GOROOT=/home/user/.cache/hermit/pkg/go-1.16

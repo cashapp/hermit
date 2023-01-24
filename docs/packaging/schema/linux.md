@@ -1,7 +1,6 @@
-+++
-title = "linux"
-weight = 404
-+++
+---
+title: "linux"
+---
 
 Linux-specific configuration.
 

@@ -1,8 +1,2 @@
-+++
-title = "Usage"
-weight = 100
-+++
-
+# Usage
 This documentation describes how to use Hermit within your own projects.
-
-{{< toc-tree >}}

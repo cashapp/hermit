@@ -1,9 +1,6 @@
-+++
-title = "FAQ"
-weight = 200
-+++
-
-{{< toc >}}
+---
+title: "FAQ"
+---
 
 ## Which Shells Does Hermit work with?
 

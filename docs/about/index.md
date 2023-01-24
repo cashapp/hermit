@@ -1,7 +1,9 @@
-+++
-title = "About"
-weight = 0
-+++
+---
+hide:
+  - navigation
+  - toc
+---
+# About
 
 Hermit was created at [CashApp (Square)](https://cash.app) by
 [Alec Thomas](https://github.com/alecthomas) and

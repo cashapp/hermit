@@ -1,7 +1,6 @@
-+++
-title = "Continuous Integration"
-weight = 108
-+++
+---
+title: "Continuous Integration"
+---
 
 Generally, using Hermit in CI is similar to using it locally - activate
 your environment via `. ./bin/activate-hermit`, add `<repo>/bin` to your

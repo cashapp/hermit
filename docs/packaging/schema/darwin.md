@@ -1,7 +1,6 @@
-+++
-title = "darwin"
-weight = 403
-+++
+---
+title: "darwin"
+---
 
 Darwin-specific configuration.
 

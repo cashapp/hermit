@@ -1,7 +1,6 @@
-+++
-title = "Package management"
-weight = 103
-+++
+---
+title: "Package management"
+---
 
 This document describes how packages within a Hermit environment can be found,
 installed, and managed. [Packages are defined](../../packaging/reference) in
@@ -17,7 +16,7 @@ system to ensure you have the most up to date manifests. Similarly,
 Hermit will periodically update itself and packages installed by channel.
 You can force this by running:
 
-```text
+```shell
 project🐚~/project$ hermit update
 ```
 
@@ -26,7 +25,7 @@ project🐚~/project$ hermit update
 Search for packages with the `search` command, optionally passing a substring
 to match within the package name or description:
 
-```text
+```shell
 project🐚~/project$ hermit search rust
 rust (@nightly, 1.51.0)
   A language empowering everyone to build reliable and efficient software.
@@ -62,13 +61,13 @@ Packages can be selected in one of three ways:
 To install the latest stable version of `protoc` and the `nightly` channel of
 `rust`:
 
-```text
+```shell
 project🐚~/project$ hermit install rust@nightly protoc
 ```
 
 At this point if you `ls bin` you will see something like the following:
 
-```text
+```shell
 project🐚~/project$ ls bin
 README.hermit.md  clippy-driver@    rust-analyzer@    rustc@
 activate-hermit*  hermit*           rust-demangler@   rustdoc@
@@ -81,7 +80,7 @@ cargo-miri@       protoc@           rust-lldb@
 
 To list packages installed in the active environment:
 
-```text
+```shell
 project🐚~/project$ hermit list
 protoc (3.14.0)
   protoc is a compiler for protocol buffers definitions files.
@@ -93,7 +92,7 @@ rust (@nightly)
 
 You can obtain more detailed package information with `hermit info <package>`, eg.
 
-```text
+```shell
 project🐚~/project$ hermit info rust
 hermit info rust@nightly
 Name: rust
@@ -112,7 +111,7 @@ For package channels or versions that adhere to semantic versioning, Hermit
 will automatically upgrade to the latest minor version using the
 `hermit upgrade` command:
 
-```text
+```shell
 project🐚~/project$ hermit upgrade rust
 project🐚~/project$ rustc --version
 rustc 1.51.0 (2fd73fabe 2021-03-23)
@@ -123,7 +122,7 @@ rustc 1.51.0 (2fd73fabe 2021-03-23)
 To downgrade or switch to a specific version, use `hermit install` to
 explicitly specify the version. eg.
 
-```text
+```shell
 project🐚~/project$ hermit install rust-1.50.0
 project🐚~/project$ rustc --version
 rustc 1.50.0 (940f2a77 2021-01-02)
@@ -133,7 +132,7 @@ rustc 1.50.0 (940f2a77 2021-01-02)
 
 Use `hermit uninstall`:
 
-```text
+```shell
 project🐚~/project$ hermit uninstall rust
 ```
 

@@ -1,7 +1,6 @@
-+++
-title = "Renovate"
-weight = 110
-+++
+---
+title: "Renovate"
+---
 
 [Renovate](https://docs.renovatebot.com/) is an open source dependency update tools. It supports the followings:
 
@@ -16,7 +15,7 @@ Package update with Renovate ensures updates are done explicitly to the code rep
 
 To start using Renovate for Hermit package updates, you will need to add `hermit` to the [`enabledManagers`](https://docs.renovatebot.com/configuration-options/#enabledmanagers) option in the Renovate repository config.
 
-```json5
+```json
 {
   enabledManagers: ["hermit"]
 }

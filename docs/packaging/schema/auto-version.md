@@ -1,7 +1,6 @@
-+++
-title = "version > auto-version"
-weight = 415
-+++
+---
+title: "version > auto-version"
+---
 
 Automatically update versions.
 

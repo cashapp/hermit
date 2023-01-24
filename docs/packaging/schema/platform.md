@@ -1,7 +1,6 @@
-+++
-title = "platform <attr>"
-weight = 414
-+++
+---
+title: "platform <attr>"
+---
 
 Platform-specific configuration. &lt;attr&gt; is a set regexes that must all match against one of CPU, OS, etc..
 

@@ -1,11 +1,8 @@
-+++
-title = "Recipes / Patterns"
-weight = 104
-+++
+---
+title: "Recipes / Patterns"
+---
 
 Patterns for solving common problems.
-
-{{< toc >}}
 
 ## Pin to a major or minor version
 
@@ -16,7 +13,7 @@ potentially including breaking changes, Hermit will use that as the version.
 To solve this problem Hermit also creates channels for each `(major)` and `
 (major, minor)` version tuple. For example:
 
-```text
+```shell
 $ hermit search -s '^go$' | grep 'go@[0-9]'
 go@1
 go@1.13
@@ -29,7 +26,7 @@ go@1.17
 In Go's case, a minor (1.17 -> 1.18) version bump can be a bit rocky, so we
 might want to pin to the current stable minor version:
 
-```text
+```shell
 $ hermit install go@1.17
 ```
 
@@ -50,7 +47,7 @@ the scripts are updated.
 
 Hermit can solve this problem nicely with its support for git cloned packages:
 
-```hcl
+```terraform
 description = "Our common scripts"
 binaries = ["*.sh"]
 
@@ -81,7 +78,7 @@ echo "$(dirname $0)"
 
 Then expose this as a binary in the Hermit package:
 
-```hcl
+```terraform
 description = "My script lib"
 binaries = ["my-script-lib-prefix"]
 

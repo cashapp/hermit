@@ -1,7 +1,6 @@
-+++
-title = "on > rename"
-weight = 412
-+++
+---
+title: "on > rename"
+---
 
 Rename a file.
 

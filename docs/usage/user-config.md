@@ -1,9 +1,12 @@
-+++
-title = "User Configuration"
-weight = 107
-+++
+---
+title: "User Configuration"
+---
 
 User's can override certain global behaviours of Hermit by creating a
 `~/.hermit.hcl` file adhering to the following schema:
 
-{{< include file="usage/user-config-schema.hcl" language="hcl" >}}
+
+```tf title="user-config-schema.hcl"
+--8<-- "docs/usage/user-config-schema.hcl"
+```
+

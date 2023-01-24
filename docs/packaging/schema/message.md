@@ -1,7 +1,6 @@
-+++
-title = "on > message"
-weight = 411
-+++
+---
+title: "on > message"
+---
 
 Display a message to the user.
 

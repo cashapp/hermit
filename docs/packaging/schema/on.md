@@ -1,7 +1,6 @@
-+++
-title = "on <event>"
-weight = 407
-+++
+---
+title: "on <event>"
+---
 
 Triggers to run on lifecycle events.
 

@@ -1,8 +1,7 @@
-+++
-title = "Tutorial"
-description = "A tutorial working through how to create a package for jq."
-weight = 301
-+++
+---
+title: "Tutorial"
+summary:  "A tutorial working through how to create a package for jq."
+---
 
 For this tutorial we're going to package up [jq](https://stedolan.github.io/jq), 
 a supremely useful tool for filtering and transforming JSON.
@@ -19,16 +18,16 @@ many more examples.
 
 ## Clone and Activate the Manifest Repository
 
-```text
+```shell
 git clone https://github.com/cashapp/hermit-packages
 cd hermit-packages
 . ./bin/activate-hermit
 ```
 
-{{< hint ok >}}
-The Hermit manifest repository is itself a Hermit environment configured to
-use itself as the source of packages. This makes testing very convenient.
-{{< /hint >}}
+!!! hint
+    The Hermit manifest repository is itself a Hermit environment configured to
+    use itself as the source of packages. This makes testing very convenient.
+
 
 ## Find the Releases
 
@@ -42,25 +41,23 @@ Create an empty `jq.hcl` file in the `hermit-packages` directory. The first
 thing you'll want is a description, for which typically just copy the project
 description from their site or GitHub repository:
 
-```hcl
+```terraform
 description = "jq is like sed for JSON data - you can use it to slice and filter and map and transform structured data with the same ease that sed, awk, grep and friends let you play with text."
 ```
 
-{{< hint ok >}}
-The `hermit` CLI includes a best-effort command to create a stub manifest.
+!!! hint
+    The `hermit` CLI includes a best-effort command to create a stub manifest.
 
-```text
-hermit manifest create https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64`
-```
+    ```shell
+    hermit manifest create https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64`
+    ```
 
-Currently there a few limitations:
+    Currently there a few limitations:
 
-1. It only works for binaries in GitHub releases.
-2. The download link must include `${os}` and either `${arch}` or `${xarch}`.
+    1. It only works for binaries in GitHub releases.
+    2. The download link must include `${os}` and either `${arch}` or `${xarch}`.
 
-Hopefully these limitations will be removed over time.
-
-{{< /hint >}}
+    Hopefully these limitations will be removed over time.
 
 ## Add a Version
 
@@ -68,7 +65,7 @@ Hopefully these limitations will be removed over time.
 are available for download and are specified as blocks. We'll start with an
 empty one for `jq-1.6`:
 
-```hcl
+```terraform
 version "1.6" {}
 ```
 
@@ -82,7 +79,7 @@ Looking at the links we can see that there are downloads for Linux and OSX:
 So we'll add blocks for the respective operating systems ([`linux`](../schema/linux) and [`darwin`](../schema/darwin)) and populate the
 `source` attribute, which tells Hermit where to download packages from:
 
-```hcl
+```terraform
 version "1.6" {
   linux {
     source = "https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64"
@@ -102,7 +99,7 @@ OS blocks out to the top level and use Hermit's
 [variable interpolation](../reference/#variable-interpolation)
 support to substitute the `${version}` variable:
 
-```hcl
+```terraform
 description = "jq is like sed for JSON data - you can use it to slice and filter and map and transform structured data with the same ease that sed, awk, grep and friends let you play with text."
 linux {
   source = "https://github.com/stedolan/jq/releases/download/jq-${version}/jq-linux64"
@@ -127,7 +124,7 @@ binaries to the canonical `jq`. To solve this we're going to need to use a
 [trigger](../schema/on) to apply an action when unpacking, specifically the 
 [rename](../schema/rename) action.
 
-```hcl
+```terraform
 linux {
   source = "https://github.com/stedolan/jq/releases/download/jq-${version}/jq-linux64"
   on unpack {
@@ -145,7 +142,7 @@ darwin {
 
 And tell Hermit which binaries to link when installed:
 
-```hcl
+```terraform
 binaries = ["jq"]
 ```
 
@@ -159,7 +156,7 @@ Hermit packages can include a `testing` attribute which is a command to run to
 test whether the package is functioning. This will typically just be
 something like:
 
-```hcl
+```terraform
 test = "jq --version"
 ```
 
@@ -167,7 +164,7 @@ The Hermit packages CI will run these tests periodically.
 
 To test your package run:
 
-```text
+```shell
 $ hermit test jq --trace
 debug:jq-1.6:exec: /Users/user/Library/Caches/hermit/pkg/jq-1.6/jq --version
 debug: jq-1.6
@@ -177,7 +174,7 @@ debug: jq-1.6
 
 And we're done.
 
-```hcl
+```terraform
 description = "jq is like sed for JSON data - you can use it to slice and filter and map and transform structured data with the same ease that sed, awk, grep and friends let you play with text."
 binaries = ["jq"]
 test = "jq --version"
@@ -204,7 +201,7 @@ version "1.6" {}
 As mentioned above, `hermit-packages` is also a Hermit environment. Now we
 have our manifest we can attempt to install it with:
 
-```text
+```shell
 $ hermit install jq
 $ jq --version
 jq-1.6

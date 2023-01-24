@@ -1,15 +1,14 @@
-+++
-title = "Editor / IDE Integration"
-weight = 105
-+++
+---
+title: "Editor / IDE Integration"
+---
 
 ## JetBrains - IntelliJ, GoLand
 
-{{< hint "warning" >}}
-Due to the way JetBrains IDE plugin APIs are designed, specific support for
-each language has to be built into the plugin. Currently, only the JDK and Go
-are supported.
-{{< /hint >}}
+!!! warning
+	Due to the way JetBrains IDE plugin APIs are designed, specific support for
+	each language has to be built into the plugin. Currently, only the JDK and Go
+	are supported.
+
 
 To install the plugin, search for the "Hermit" plugin from the Plugin Marketplace in the IDE `Preferences > Plugin` view, and install it.
 
@@ -50,7 +49,7 @@ explicitly. In this case you can use `hermit env` to dump a machine-readable
 list of the environment variables Hermit manages. This can then be configured
 in your IDE.
 
-{{< hint "warning" >}}
-Note that if you add/remove packages from your Hermit environment you will
-need to reconfigure your IDE to pick up any changes to environment variable.
-{{< /hint >}}
+!!! warning
+	Note that if you add/remove packages from your Hermit environment you will
+	need to reconfigure your IDE to pick up any changes to environment variable.
+

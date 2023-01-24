@@ -1,7 +1,6 @@
-+++
-title = "Updating"
-weight = 109
-+++
+---
+title: "Updating"
+---
 
 Hermit is designed in such a way that it and its package manifests are
 always on the latest version. To that end, Hermit will check for and upgrade

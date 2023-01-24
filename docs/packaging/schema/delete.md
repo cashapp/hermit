@@ -1,7 +1,6 @@
-+++
-title = "on > delete"
-weight = 410
-+++
+---
+title: "on > delete"
+---
 
 Delete files.
 

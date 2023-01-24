@@ -1,7 +1,6 @@
-+++
-title = "<manifest>.hcl"
-weight = 401
-+++
+---
+title: "<manifest>.hcl"
+---
 
 Each Hermit package manifest is a nested structure containing OS/architecture-specific configuration.
 

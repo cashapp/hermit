@@ -1,7 +1,9 @@
-+++
-title = "Supported SDKs"
-weight = 50
-+++
+---
+hide:
+  - navigation
+  - toc
+---
+# Supported SDKs
 
 As of early 2021 Hermit has support for the following language SDKs.
 

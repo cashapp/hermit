@@ -1,7 +1,6 @@
-+++
-title = "Reference"
-weight = 302
-+++
+---
+title: "Reference"
+---
 
 ## Update Policy
 
@@ -26,7 +25,7 @@ Refer to the [schema documentation](../schema) for details.
 
 Here's an example manifest for Rust:
 
-```hcl
+```terraform
 description = "A language empowering everyone to build reliable and efficient software."
 binaries = ["bin/*"]
 strip = 2
