@@ -33,7 +33,7 @@ If you've ever had to add something like the following to your project's README.
 
 ## Example
 
-<div id="hermit-demo" style="z-index: 1; position: relative; max-width: 80%;"></div>
+<div id="hermit-demo" style="z-index: 1; position: relative; max-width: 60%;"></div>
 <script>
   window.onload = function(){
     AsciinemaPlayer.create('static/screencasts/using.cast', document.getElementById('hermit-demo'),{autoplay: true});

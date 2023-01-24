@@ -1,5 +1,7 @@
 ---
 title: "FAQ"
+hide:
+  - navigation
 ---
 
 ## Which Shells Does Hermit work with?
