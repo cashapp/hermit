@@ -1,0 +1,162 @@
+site_name: Hermit
+site_description: Documentation for the Cash's Hermit
+# site_url: "https://cash-dev-guide.squarecloudservices.com"
+repo_url: https://github.com/damien/hermit
+repo_name: "damien/hermit"
+edit_uri: "edit/master/docs"
+strict: false
+#test
+####################################################################################################
+# Glad you're here. Some house rules:
+# - The top-level tabs should stay lean. If you're adding more, get someone to peer review.
+# - Maintain alphabetical ordering. Each top-level section has the following in this order:
+#   - A welcome page
+#   - Second-level sections
+#   - Standalone pages
+# - Feel free to add a page to multiple top-level sections, if it's appropriate, but please try to keep a maximum of 3 levels.
+# - If you are moving a page's URL (i.e. its location in the repo), add a redirect. There's a long
+#   list of redirects below.
+# - Suffix external links in nav with ↗.
+####################################################################################################
+nav:
+  - Home:
+    - index.md
+  - About:
+    - about/index.md
+  - Supported SDKs:
+      - sdks/index.md
+  - Usage:
+    - usage/index.md
+    - Get Started: usage/get-started.md
+    - usage/ci.md
+    - usage/config.md
+    - usage/envars.md
+    - usage/ide.md
+    - usage/management.md
+    - usage/recipes.md
+    - usage/renovate.md
+    - usage/shell.md
+    - usage/updates.md
+    - usage/user-config.md
+  - FAQ:
+    - faq/index.md
+  - Packaging:
+    - packaging/index.md
+    - packaging/private.md
+    - packaging/reference.md
+    - packaging/tutorial.md
+    - Schema:
+      - packaging/schema/index.md
+      - packaging/schema/auto-version.md
+      - packaging/schema/channel.md
+      - packaging/schema/chmod.md
+      - packaging/schema/copy.md
+      - packaging/schema/darwin.md
+      - packaging/schema/delete.md
+      - packaging/schema/html.md
+      - packaging/schema/linux.md
+      - packaging/schema/manifest.md
+      - packaging/schema/message.md
+      - packaging/schema/on.md
+      - packaging/schema/platform.md
+      - packaging/schema/rename.md
+      - packaging/schema/run.md
+      - packaging/schema/version.md
+
+theme:
+  name: material
+  favicon:  img/logo.svg
+  logo: img/logo.svg
+  features:
+    - search.highlight
+    - search.suggest
+    - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - navigation.expand
+    - content.tabs.link
+    - navigation.indexes
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      accent: green
+      toggle:
+        icon: material/eye-outline
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      accent: green
+      toggle:
+        icon: material/eye
+        name: Switch to light mode
+  custom_dir: overrides
+  static_templates:
+    - 404.html
+extra_css:
+  - "css/app.css"
+  - "css/asciinema-player.css"
+extra_javascript:
+  - "js/all-pages.js"
+  - "js/asciinema-player.min.js"
+extra:
+  repo_icon: github
+  search:
+    tokenizer: '[\s\-\.]+'
+    prebuild_index: true
+  analytics:
+    provider: google
+    property: "UA-163700149-1"
+markdown_extensions:
+  admonition:
+  attr_list:
+  codehilite:
+    guess_lang: false
+  def_list:
+  footnotes:
+  md_in_html:
+  meta:
+  pymdownx.betterem:
+    smart_enable: all
+  pymdownx.caret:
+  pymdownx.inlinehilite:
+  pymdownx.magiclink:
+    repo_url_shortener: true
+    repo_url_shorthand: true
+    social_url_shorthand: true
+    social_url_shortener: true
+    user: squareup
+    normalize_issue_symbols: true
+  pymdownx.smartsymbols:
+  pymdownx.superfences:
+    custom_fences:
+      - name: mermaid
+        class: mermaid
+        format: !!python/name:mermaid2.fence_mermaid
+  pymdownx.details:
+  pymdownx.critic:
+  pymdownx.tabbed:
+    alternate_style: true
+  pymdownx.emoji:
+    emoji_index: !!python/name:materialx.emoji.twemoji
+    emoji_generator: !!python/name:materialx.emoji.to_svg
+  smarty:
+  tables:
+  pymdownx.snippets:
+  pymdownx.tasklist:
+    clickable_checkbox: true
+    custom_checkbox: true
+  toc:
+    permalink: true
+plugins:
+  include-markdown:
+  search:
+    lang: en
+  mermaid2:
+    # Right now the "default stable" version is 8.8.0 which is lacking several features,
+    # so explicitly pick a newer version
+    version: 8.13.3
+    arguments:
+      theme: "dark"
+  redirects:
+    redirect_maps:
