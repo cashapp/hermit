@@ -1,7 +1,5 @@
 on:
   push:
-#    paths:
-#      - 'docs/**'
     branches:
       - master
 name: Docs
@@ -13,13 +11,13 @@ jobs:
         uses: actions/checkout@master
         with:
           submodules: true
-      - uses: actions/setup-python@v4
-        with:
-          python-version: 3.x8
-      - uses: actions/cache@v2
-        with:
-          key: ${{ github.ref }}
-          path: .cache
+      - name: Init Hermit
+        run: |
+          ./bin/hermit env -r >> $GITHUB_ENV
+          . ./bin/activate-hermit
+          python -mvenv .venv
+          . .venv/bin/activate
+          echo PATH=$PATH >> $GITHUB_ENV
       - name: Generate Schema Docs
         run: |
           make -C docs schema
