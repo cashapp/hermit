@@ -13,11 +13,19 @@ jobs:
         uses: actions/checkout@master
         with:
           submodules: true
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.x8
+      - uses: actions/cache@v2
+        with:
+          key: ${{ github.ref }}
+          path: .cache
       - name: Generate Schema Docs
         run: |
           make -C docs schema
+      - name: Setup mkdocs
+        working-directory: ./docs
+        run: pip install -r requirements.txt
       - name: Publish Site
-        uses: chabad360/hugo-gh-pages@master
-        with:
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
-          siteDir: /github/workspace/docs
+        working-directory: ./docs
+        run: mkdocs gh-deploy --force

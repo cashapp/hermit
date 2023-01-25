@@ -8,5 +8,6 @@ build: schema
 
 .PHONY: schema
 schema:
-	(cd .. && ./bin/go run ./cmd/gendocs ./docs/content/packaging/schema/)
-	go run ../cmd/hermit dump-user-config-schema | sed 's,//,#,g' > ./content/usage/user-config-schema.hcl
+	(cd .. && ./bin/go run ./cmd/gendocs ./docs/docs/packaging/schema/)
+	go run ../cmd/hermit dump-user-config-schema | sed 's,//,#,g' > docs/usage/user-config-schema.hcl
+	
