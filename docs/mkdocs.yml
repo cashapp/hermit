@@ -1,8 +1,8 @@
 site_name: Hermit
 site_description: Documentation for the Cash's Hermit
 # site_url: "https://cash-dev-guide.squarecloudservices.com"
-repo_url: https://github.com/damien/hermit
-repo_name: "damien/hermit"
+repo_url: https://github.com/cashapp/hermit
+repo_name: "cashapp/hermit"
 edit_uri: "edit/master/docs"
 strict: false
 #test
