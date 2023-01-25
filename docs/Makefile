@@ -1,10 +1,6 @@
 .PHONY: dev
 dev: schema
-	../bin/hugo server -D
-
-.PHONY: build
-build: schema
-	../bin/hugo
+	mkdocs serve
 
 .PHONY: schema
 schema:
