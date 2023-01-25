@@ -1,5 +1,5 @@
 ---
-title: "on <event>"
+title: "on &lt;event&gt;"
 ---
 
 Triggers to run on lifecycle events.

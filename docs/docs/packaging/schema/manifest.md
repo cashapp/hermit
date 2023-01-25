@@ -1,5 +1,5 @@
 ---
-title: "<manifest>.hcl"
+title: "&lt;manifest>.hcl"
 ---
 
 Each Hermit package manifest is a nested structure containing OS/architecture-specific configuration.

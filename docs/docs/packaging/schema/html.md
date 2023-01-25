@@ -1,5 +1,5 @@
 ---
-title: "auto-version > html"
+title: "auto-version &gt; html"
 ---
 
 Extract version information from a HTML URL using XPath.

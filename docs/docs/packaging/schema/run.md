@@ -1,5 +1,5 @@
 ---
-title: "on > run"
+title: "on &gt; run"
 ---
 
 A command to run when the event is triggered.

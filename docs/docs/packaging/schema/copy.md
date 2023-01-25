@@ -1,5 +1,5 @@
 ---
-title: "on > copy"
+title: "on &gt; copy"
 ---
 
 A file to copy when the event is triggered.

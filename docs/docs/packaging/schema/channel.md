@@ -1,5 +1,5 @@
 ---
-title: "channel <name>"
+title: "channel &lt;name&gt;"
 ---
 
 Definition of and configuration for an auto-update channel.

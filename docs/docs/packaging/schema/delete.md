@@ -1,5 +1,5 @@
 ---
-title: "on > delete"
+title: "on &gt; delete"
 ---
 
 Delete files.

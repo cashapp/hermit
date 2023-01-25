@@ -53,13 +53,14 @@ func main() {
 	ctx.FatalIfErrorf(err)
 	defer w.Close()
 	fmt.Fprintf(w, `---
-title: "<manifest>.hcl"
+title: "&lt;manifest>.hcl"
 ---
 
 Each Hermit package manifest is a nested structure containing OS/architecture-specific configuration.
 
 `)
 	err = writeEntries(w, schema.Entries)
+	ctx.FatalIfErrorf(err)
 	for block, refs := range backrefs {
 		backrefs[block] = dedupeBackrefs(refs)
 	}
@@ -104,7 +105,7 @@ title: %q
 
 %s
 
-`, title, html.EscapeString(strings.Join(block.Comments, "\n")))
+`, html.EscapeString(title), html.EscapeString(strings.Join(block.Comments, "\n")))
 	if len(backrefs) > 0 && (len(backrefs) > 1 || backrefs[0] != block.Name) {
 		seen := map[string]bool{block.Name: true}
 		fmt.Fprintf(w, "Used by:")

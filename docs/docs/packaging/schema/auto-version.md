@@ -1,5 +1,5 @@
 ---
-title: "version > auto-version"
+title: "version &gt; auto-version"
 ---
 
 Automatically update versions.

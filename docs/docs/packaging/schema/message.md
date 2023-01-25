@@ -1,5 +1,5 @@
 ---
-title: "on > message"
+title: "on &gt; message"
 ---
 
 Display a message to the user.

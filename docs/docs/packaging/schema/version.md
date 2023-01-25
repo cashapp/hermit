@@ -1,5 +1,5 @@
 ---
-title: "version <version>"
+title: "version &lt;version&gt;"
 ---
 
 Definition of and configuration for a specific version.
