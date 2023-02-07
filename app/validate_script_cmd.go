@@ -47,7 +47,7 @@ var (
 			"type", "typeset", "ulimit", "umask", "unalias", "unset", "until",
 			"wait", "while",
 			// Other
-			"bash", "mktemp",
+			"bash", "mktemp", "EOF", "yes",
 		}
 		out := make(map[string]bool, len(cmds))
 		for _, cmd := range cmds {
@@ -137,6 +137,46 @@ type issue struct {
 	message string
 }
 
+// Recursively collect function declarations - this is probably not 100% accurate due to nested functions
+func collectFuncDecl(parser *syntax.Parser, node syntax.Node, localFunctions map[string]bool) (collectErr error) {
+	syntax.Walk(node, func(node syntax.Node) bool {
+		switch node := node.(type) {
+		case *syntax.FuncDecl:
+			localFunctions[node.Name.Value] = true
+
+		case *syntax.CallExpr:
+			if len(node.Args) != 2 {
+				break
+			}
+			cmd := node.Args[0].Lit()
+			if cmd == "." || cmd == "source" {
+				path := node.Args[1].Lit()
+				r, err := os.Open(path)
+				if err != nil {
+					if os.IsNotExist(err) {
+						break
+					}
+					collectErr = errors.Wrapf(err, "could not open %q", path)
+					return false
+				}
+				defer r.Close() // nolint
+				ast, err := parser.Parse(r, path)
+				if err != nil {
+					collectErr = errors.Wrapf(err, "failed to parse %q", path)
+					return false
+				}
+				err = collectFuncDecl(parser, ast, localFunctions)
+				if err != nil {
+					collectErr = err
+					return false
+				}
+			}
+		}
+		return true
+	})
+	return collectErr
+}
+
 func check(parser *syntax.Parser, validCommands map[string]bool, allow map[string]bool, path string) ([]issue, error) {
 	var issues []issue
 	r, err := os.Open(path)
@@ -150,13 +190,10 @@ func check(parser *syntax.Parser, validCommands map[string]bool, allow map[strin
 	}
 	localFunctions := map[string]bool{}
 
-	// Collection forward declarations - this is probably not 100% accurate due to nested functions
-	syntax.Walk(ast, func(node syntax.Node) bool {
-		if node, ok := node.(*syntax.FuncDecl); ok {
-			localFunctions[node.Name.Value] = true
-		}
-		return true
-	})
+	if err := collectFuncDecl(parser, ast, localFunctions); err != nil {
+		return nil, err
+	}
+
 	cmds := map[string]syntax.Pos{}
 	syntax.Walk(ast, func(node syntax.Node) bool {
 		switch node := node.(type) {
