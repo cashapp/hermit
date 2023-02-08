@@ -69,7 +69,7 @@ func TestAutoVersion(t *testing.T) {
 				}
 			}
 
-			_, err = AutoVersion(hClient, ghClient, tmpFile.Name())
+			_, err = AutoVersion(nil, hClient, ghClient, nil, tmpFile.Name(), false)
 			assert.NoError(t, err)
 
 			actualContent, err := os.ReadFile(tmpFile.Name())

@@ -1,6 +1,9 @@
 package autoversion
 
 import (
+	"github.com/cashapp/hermit/manifest/digest"
+	"github.com/cashapp/hermit/state"
+	"github.com/cashapp/hermit/ui"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -27,7 +30,14 @@ type versionBlock struct {
 //
 // Auto-versioning configuration is defined in a "version > auto-version" block. If a new
 // version is found in the defined location then the version block's versions are updated.
-func AutoVersion(httpClient *http.Client, ghClient GitHubClient, path string) (latestVersion string, err error) {
+func AutoVersion(
+	l *ui.UI,
+	httpClient *http.Client,
+	ghClient GitHubClient,
+	state *state.State,
+	path string,
+	updateDigests bool,
+) (latestVersion string, err error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return "", errors.WithStack(err)
@@ -90,7 +100,18 @@ blocks:
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
-	return latestVersion, errors.WithStack(os.Rename(w.Name(), path))
+
+	if updateDigests {
+		if err := digest.UpdateDigests(l, httpClient, state, w.Name()); err != nil {
+			return "", errors.WithStack(err)
+		}
+	}
+
+	if err := os.Rename(w.Name(), path); err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	return latestVersion, nil
 }
 
 // Parse the auto-version block from a manifest, if any.
