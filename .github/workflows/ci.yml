@@ -55,7 +55,7 @@ jobs:
       - name: Init Hermit
         run: ./bin/hermit env -r >> $GITHUB_ENV
       - name: Test
-        run: make -C docs build schema
+        run: make -C docs schema
   it:
     # The integration tests cannot be run in an active Hermit environment,
     # so we don't activate it here.

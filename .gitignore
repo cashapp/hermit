@@ -4,7 +4,6 @@ testdata/env
 build
 pkgs
 registry
-bin/hermit.hcl
 .idea/
 .DS_Store
 .gradle/
