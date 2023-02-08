@@ -1,9 +1,6 @@
 package autoversion
 
 import (
-	"github.com/cashapp/hermit/manifest/digest"
-	"github.com/cashapp/hermit/state"
-	"github.com/cashapp/hermit/ui"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -13,6 +10,9 @@ import (
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/github"
 	hmanifest "github.com/cashapp/hermit/manifest"
+	"github.com/cashapp/hermit/manifest/digest"
+	"github.com/cashapp/hermit/state"
+	"github.com/cashapp/hermit/ui"
 )
 
 // GitHubClient is the GitHub API subset that we need for auto-versioning.
