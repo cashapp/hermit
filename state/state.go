@@ -136,12 +136,12 @@ func validateAndCompileAutoMirrors(config Config) ([]precompiledAutoMirror, erro
 }
 
 // Resolve package reference without an active environment.
-func (s *State) Resolve(l *ui.UI, mathcer manifest.Selector) (*manifest.Package, error) {
+func (s *State) Resolve(l *ui.UI, matcher manifest.Selector) (*manifest.Package, error) {
 	resolver, err := s.resolver(l)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return resolver.Resolve(l, mathcer)
+	return resolver.Resolve(l, matcher)
 }
 
 // Search for packages without an active environment.
