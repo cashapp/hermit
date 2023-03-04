@@ -351,6 +351,11 @@ func (s *State) linkBinaries(p *manifest.Package) error {
 
 	for _, bin := range bins {
 		to := filepath.Join(dir, filepath.Base(bin))
+
+		if dest, err := os.Readlink(to); err == nil && dest == bin {
+			continue
+		}
+
 		if err := os.Symlink(bin, to); err != nil {
 			return errors.WithStack(err)
 		}
@@ -407,8 +412,13 @@ func (s *State) isExtracted(p *manifest.Package) bool {
 }
 
 func (s *State) areBinariesLinked(p *manifest.Package) bool {
-	_, err := os.Stat(filepath.Join(s.binaryDir, p.Reference.String()))
-	return err == nil
+	for _, bin := range p.Binaries {
+		if _, err := os.Stat(filepath.Join(s.binaryDir, p.Reference.String(), bin)); err != nil {
+			return false
+		}
+	}
+
+	return true
 }
 
 // CleanPackages removes all extracted packages
