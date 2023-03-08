@@ -47,6 +47,8 @@ type Trigger struct {
 	Rename  []*RenameAction  `hcl:"rename,block" help:"Rename a file."`
 	Delete  []*DeleteAction  `hcl:"delete,block" help:"Delete files."`
 	Message []*MessageAction `hcl:"message,block" help:"Display a message to the user."`
+	Mkdir   []*MkdirAction   `hcl:"mkdir,block" help:"Create a directory and any missing parents."`
+	Symlink []*SymlinkAction `hcl:"symlink,block" help:"Create a symbolic link."`
 }
 
 // Ordered list of actions.
@@ -68,6 +70,12 @@ func (a *Trigger) Ordered() []Action {
 		out = append(out, action)
 	}
 	for _, action := range a.Message {
+		out = append(out, action)
+	}
+	for _, action := range a.Mkdir {
+		out = append(out, action)
+	}
+	for _, action := range a.Symlink {
 		out = append(out, action)
 	}
 	sort.Slice(out, func(i, j int) bool {

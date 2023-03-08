@@ -49,19 +49,21 @@ nav:
       - packaging/schema/index.md
       - packaging/schema/auto-version.md
       - packaging/schema/channel.md
-      - packaging/schema/chmod.md
-      - packaging/schema/copy.md
       - packaging/schema/darwin.md
-      - packaging/schema/delete.md
       - packaging/schema/html.md
       - packaging/schema/linux.md
       - packaging/schema/manifest.md
-      - packaging/schema/message.md
-      - packaging/schema/on.md
       - packaging/schema/platform.md
+      - packaging/schema/version.md
+      - packaging/schema/on.md
+      - packaging/schema/chmod.md
+      - packaging/schema/copy.md
+      - packaging/schema/delete.md
+      - packaging/schema/message.md
+      - packaging/schema/mkdir.md
       - packaging/schema/rename.md
       - packaging/schema/run.md
-      - packaging/schema/version.md
+      - packaging/schema/symlink.md
 
 theme:
   name: material

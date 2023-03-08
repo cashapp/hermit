@@ -679,8 +679,15 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 			case *MessageAction:
 				action.Text = expand(action.Text, false)
 
+			case *SymlinkAction:
+				action.From = expand(action.From, false)
+				action.To = expand(action.To, false)
+
+			case *MkdirAction:
+				action.Dir = expand(action.Dir, false)
+
 			default:
-				panic("??")
+				panic(fmt.Sprintf("unsupported action %T", action))
 			}
 		}
 	}
