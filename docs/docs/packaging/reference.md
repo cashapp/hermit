@@ -133,6 +133,8 @@ be applied when certain events occur in the package lifecycle. Supported events 
 |---------------|-------------|
 | `unpack`      | Triggered when a package is unpacked into the Hermit cache. |
 | `install`     | Triggered when a package is installed into an environment. |
+| `uninstall`   | Triggered when a package is uninstalled from an environment. |
 | `activate`    | Triggered when the environment the package is installed in is activated. |
+| `exec`        | Triggered whenever a binary in the package is executed. <br>**NOTE:** This trigger will run for _every_ execution and can negatively impact performance. |
 
 More triggers may be added in the future.
