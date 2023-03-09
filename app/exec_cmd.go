@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -64,6 +65,16 @@ func (e *execCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, env *hermi
 	}
 	if err := pkg.EnsureSupported(); err != nil {
 		return errors.Wrapf(err, "execution failed")
+	}
+
+	// Run any pre-execution triggers.
+	messages, err := env.TriggerForPackage(l, manifest.EventExec, pkg)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	w := l.WriterAt(ui.LevelInfo)
+	for _, message := range messages {
+		fmt.Fprintln(w, message)
 	}
 	installed, err := env.ListInstalledReferences()
 	if err != nil {

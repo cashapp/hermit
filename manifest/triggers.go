@@ -25,6 +25,7 @@ const (
 	EventUnpack    Event = "unpack"
 	EventInstall   Event = "install"
 	EventUninstall Event = "uninstall"
+	EventExec      Event = "exec" // Triggered when a binary in a package is executed.
 	// Environment specific events
 	EventEnvActivate Event = "activate"
 )
@@ -35,6 +36,7 @@ var eventMap = map[Event]bool{
 	EventInstall:     true,
 	EventUninstall:   true,
 	EventEnvActivate: true,
+	EventExec:        true,
 }
 
 // A Trigger applied when a lifecycle event occurs.

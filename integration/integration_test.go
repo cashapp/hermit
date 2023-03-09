@@ -252,6 +252,7 @@ func TestIntegration(t *testing.T) {
 			hermit install testbin1
 			testbin1
 			testbin2
+			assert test -d exec-hook-triggered
 			`,
 			expectations: exp{outputContains("testbin1 1.0.1")},
 		},
