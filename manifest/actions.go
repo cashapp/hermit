@@ -58,7 +58,12 @@ type DeleteAction struct {
 }
 
 func (d *DeleteAction) position() hcl.Position { return d.Pos }
-func (d *DeleteAction) String() string         { return fmt.Sprintf("rm %s", strings.Join(d.Files, " ")) }
+func (d *DeleteAction) String() string {
+	if d.Recursive {
+		return fmt.Sprintf("rm -r %s", strings.Join(d.Files, " "))
+	}
+	return fmt.Sprintf("rm %s", strings.Join(d.Files, " "))
+}
 func (d *DeleteAction) Apply(*Package) error { // nolint
 	for _, file := range d.Files {
 		if d.Recursive {
@@ -159,4 +164,44 @@ func (c *CopyAction) Apply(p *Package) error { // nolint
 		}
 	}
 	return os.Chmod(c.To, mode)
+}
+
+// MkdirAction is an action for creating a directory.
+type MkdirAction struct {
+	Pos hcl.Position `hcl:"-"`
+
+	Dir  string      `hcl:"dir" help:"The absolute directory to create."`
+	Mode os.FileMode `hcl:"mode,optional" help:"File mode of directory."`
+}
+
+func (m *MkdirAction) position() hcl.Position { return m.Pos }
+func (m *MkdirAction) String() string {
+	mode := m.Mode
+	if mode == 0 {
+		mode = 0755
+	}
+	return fmt.Sprintf("mkdir -m %04o -p %s", mode, shell.Quote(m.Dir))
+}
+func (m *MkdirAction) Apply(*Package) error { // nolint
+	mode := m.Mode
+	if mode == 0 {
+		mode = 0750
+	}
+	return os.MkdirAll(m.Dir, mode)
+}
+
+// SymlinkAction is an action for creating symlinks.
+type SymlinkAction struct {
+	Pos hcl.Position `hcl:"-"`
+
+	From string `hcl:"from" help:"The absolute source file to symlink from."`
+	To   string `hcl:"to" help:"The absolute destination to symlink to."`
+}
+
+func (s *SymlinkAction) position() hcl.Position { return s.Pos }
+func (s *SymlinkAction) String() string {
+	return fmt.Sprintf("ln -sf %s %s", shell.Quote(s.From), shell.Quote(s.To))
+}
+func (s *SymlinkAction) Apply(*Package) error { // nolint
+	return os.Symlink(s.From, s.To)
 }

@@ -246,6 +246,15 @@ func TestIntegration(t *testing.T) {
 			`,
 			expectations: exp{outputContains("testbin1-1.0.0 hook"), outputContains("testbin1-1.0.1 hook")},
 		},
+		{name: "SymlinkAndMkdirActionsWork",
+			preparations: prep{fixture("testenv3"), activate(".")},
+			script: `
+			hermit install testbin1
+			testbin1
+			testbin2
+			`,
+			expectations: exp{outputContains("testbin1 1.0.1")},
+		},
 	}
 
 	checkForShells(t)

@@ -15,5 +15,7 @@ Used by: [channel](../channel#blocks) [darwin](../darwin#blocks) [linux](../linu
 | [`copy { … }`](../copy) | A file to copy when the event is triggered. |
 | [`delete { … }`](../delete) | Delete files. |
 | [`message { … }`](../message) | Display a message to the user. |
+| [`mkdir { … }`](../mkdir) | Create a directory and any missing parents. |
 | [`rename { … }`](../rename) | Rename a file. |
 | [`run { … }`](../run) | A command to run when the event is triggered. |
+| [`symlink { … }`](../symlink) | Create a symbolic link. |

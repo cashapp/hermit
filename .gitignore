@@ -1,4 +1,5 @@
 .henv
+.venv
 /docs/.hugo_build.lock
 testdata/env
 build
