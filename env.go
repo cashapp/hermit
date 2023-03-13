@@ -747,7 +747,7 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	ops := e.allEnvarOpsForPackages(runtimeDeps, installed...)
+	ops := e.allEnvarOpsForPackages(runtimeDeps, pkg, installed...)
 	packageHermitBin, err := e.getPackageRuntimeEnvops(pkg)
 	if err != nil {
 		return errors.WithStack(err)
@@ -978,7 +978,7 @@ func (e *Env) EnvOps(l *ui.UI) (envars.Ops, error) {
 	if err != nil {
 		return nil, err
 	}
-	return e.allEnvarOpsForPackages(nil, pkgs...), nil
+	return e.allEnvarOpsForPackages(nil, nil, pkgs...), nil
 }
 
 // SetEnv sets an extra environment variable.
@@ -1203,11 +1203,17 @@ func (e *Env) pkgLink(pkg *manifest.Package) string {
 }
 
 // Returns combined system + Hermit + package environment variables, fully expanded.
-func (e *Env) allEnvarOpsForPackages(runtimeDeps []*manifest.Package, pkgs ...*manifest.Package) envars.Ops {
+// If a targetPkg is specified, the runtime dependencies and target package environment
+// variables are applied on top all the rest of package environment variables, so that
+// they take precedence.
+func (e *Env) allEnvarOpsForPackages(runtimeDeps []*manifest.Package, targetPkg *manifest.Package, allPkgs ...*manifest.Package) envars.Ops {
 	var ops envars.Ops
 	ops = append(ops, e.hermitEnvarOps()...)
-	ops = append(ops, e.hermitRuntimeDepOps(runtimeDeps)...)
-	ops = append(ops, e.envarsForPackages(pkgs...)...)
+	ops = append(ops, e.envarsForPackages(allPkgs...)...)
+	if targetPkg != nil {
+		ops = append(ops, e.hermitRuntimeDepOps(runtimeDeps)...)
+		ops = append(ops, e.envarsForPackages(targetPkg)...)
+	}
 	ops = append(ops, e.localEnvarOps()...)
 	ops = append(ops, e.ephemeralEnvars...)
 	return ops
