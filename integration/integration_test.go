@@ -256,6 +256,15 @@ func TestIntegration(t *testing.T) {
 			`,
 			expectations: exp{outputContains("testbin1 1.0.1")},
 		},
+		{name: "RuntimeDepsEnvOverridesUnrelatedPackageEnv",
+			preparations: prep{fixture("testenv4"), activate(".")},
+			script: `
+			hermit install testbin1
+			hermit install testbin2
+			hermit install other
+			assert test "$(testbin1.sh)" = "FOO=runtimefoo"
+			assert test "$(testbin2.sh)" = "BAR=hermitbar"
+			`},
 	}
 
 	checkForShells(t)
