@@ -23,6 +23,8 @@ type envCmd struct {
 	Unset             bool   `xor:"action" short:"u" help:"Unset the specified environment variable."`
 	Name              string `arg:"" optional:"" help:"Name of the environment variable."`
 	Value             string `arg:"" optional:"" help:"Value to set the variable to."`
+
+	HermitBin string `help:"The location of the hermit binary." env:"HERMIT_ROOT_BIN" default:"$HOME/bin/hermit"`
 }
 
 func (e *envCmd) Help() string {
@@ -53,7 +55,7 @@ func (e *envCmd) Run(l *ui.UI, env *hermit.Env) error {
 	}
 
 	if e.Activate || e.Deactivate || e.Ops || e.DeactivateFromOps != "" {
-		sh, err := shell.Detect()
+		sh, err := shell.Detect(e.HermitBin)
 		if err != nil {
 			return errors.WithStack(err)
 		}

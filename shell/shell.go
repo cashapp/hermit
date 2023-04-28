@@ -41,9 +41,9 @@ type Shell interface {
 }
 
 var (
-	shells = map[string]Shell{
-		"zsh":  &Zsh{},
-		"bash": &Bash{},
+	shells = map[string]func(string) Shell{
+		"zsh":  NewZsh,
+		"bash": NewBash,
 	}
 )
 
@@ -85,7 +85,7 @@ func PrintHooks(shell Shell, sha256sums []string) error {
 }
 
 // Detect the user's shell.
-func Detect() (Shell, error) {
+func Detect(hermitBin string) (Shell, error) {
 	// First look for shell in parent processes.
 	pid := os.Getppid()
 	for {
@@ -96,7 +96,7 @@ func Detect() (Shell, error) {
 		name := filepath.Base(process.Executable())
 		shell, ok := shells[name]
 		if ok {
-			return shell, nil
+			return shell(hermitBin), nil
 		}
 		pid = process.PPid()
 		if pid == 0 {
@@ -122,7 +122,7 @@ func Detect() (Shell, error) {
 	}
 	shell, ok := shells[filepath.Base(entry.Shell)]
 	if ok {
-		return shell, nil
+		return shell(hermitBin), nil
 	}
 	return nil, errors.Errorf("unsupported shell %q :(", entry.Shell)
 }

@@ -1,6 +1,8 @@
 package shell
 
 import (
+	"bytes"
+	"fmt"
 	"io"
 	"path/filepath"
 
@@ -9,17 +11,24 @@ import (
 )
 
 var bashShellHooks = `
-if test -n "${PROMPT_COMMAND+_}"; then 
+if test -n "${PROMPT_COMMAND+_}"; then
   PROMPT_COMMAND="change_hermit_env; $PROMPT_COMMAND"
 else
   PROMPT_COMMAND="change_hermit_env"
 fi
 
-complete -o nospace -C "$HOME/bin/hermit" hermit
+complete -o nospace -C "%s" hermit
 `
 
 // Bash represent the Bash shell
-type Bash struct{ posixMixin }
+type Bash struct {
+	posixMixin
+	Bin string
+}
+
+func NewBash(bin string) Shell {
+	return &Bash{Bin: bin}
+}
 
 var _ Shell = &Bash{}
 
@@ -39,10 +48,21 @@ func (sh *Bash) ActivationHooksInstallation() (path, script string, err error) {
 	if err != nil {
 		return "", "", errors.WithStack(err)
 	}
-	fileName := filepath.Join(home, ".bashrc")
-	return fileName, `eval "$(test -x $HOME/bin/hermit && $HOME/bin/hermit shell-hooks --print --bash)"`, nil
+
+	return filepath.Join(home, ".bashrc"),
+		fmt.Sprintf(`eval "$(test -x %[1]s && %[1]s shell-hooks --print --bash --hermit-bin %[1]s)"`, sh.Bin),
+		nil
 }
 
 func (sh *Bash) ActivationHooksCode() (script string, err error) { // nolint: golint
-	return commonHooks + bashShellHooks, nil
+	var buf bytes.Buffer
+	if err := commonHooks(&buf, sh.Bin); err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	if _, err := fmt.Fprintf(&buf, bashShellHooks, sh.Bin); err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	return buf.String(), nil
 }
