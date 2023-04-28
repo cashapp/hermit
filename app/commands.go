@@ -23,6 +23,7 @@ type cliInterface interface {
 	getLevel() ui.Level
 	getGlobalState() GlobalState
 	getLockTimeout() time.Duration
+	getHermitBin() string
 }
 
 type cliBase struct {
@@ -34,6 +35,7 @@ type cliBase struct {
 	Quiet       bool             `help:"Disable logging and progress UI, except fatal errors." env:"HERMIT_QUIET" short:"q"`
 	Level       ui.Level         `help:"Set minimum log level (${enum})." env:"HERMIT_LOG" default:"auto" enum:"auto,trace,debug,info,warn,error,fatal"`
 	LockTimeout time.Duration    `help:"Timeout for waiting on the lock" default:"30s" env:"HERMIT_LOCK_TIMEOUT"`
+	HermitBin   string           `help:"The location of the hermit binary." env:"HERMIT_ROOT_BIN" default:"$HOME/bin/hermit"`
 	GlobalState
 
 	Init       initCmd       `cmd:"" help:"Initialise an environment (idempotent)." group:"env"`
@@ -63,6 +65,7 @@ func (u *cliBase) getQuiet() bool                { return u.Quiet }
 func (u *cliBase) getLevel() ui.Level            { return ui.AutoLevel(u.Level) }
 func (u *cliBase) getGlobalState() GlobalState   { return u.GlobalState }
 func (u *cliBase) getLockTimeout() time.Duration { return u.LockTimeout }
+func (u *cliBase) getHermitBin() string          { return u.HermitBin }
 
 // CLI structure.
 type unactivated struct {

@@ -20,11 +20,9 @@ type activateCmd struct {
 	Dir         string `arg:"" help:"Directory of environment to activate (${default})" default:"${env}"`
 	Prompt      string `enum:"env,short,none" default:"env" help:"Include hermit environment, just icon or nothing in shell prompt"`
 	ShortPrompt bool   `help:"Use a minimal prompt in active environments." hidden:""`
-
-	HermitBin string `help:"The location of the hermit binary." env:"HERMIT_ROOT_BIN" default:"$HOME/bin/hermit"`
 }
 
-func (a *activateCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, globalState GlobalState, config Config, defaultClient *http.Client) error {
+func (a *activateCmd) Run(cli cliInterface, l *ui.UI, cache *cache.Cache, sta *state.State, globalState GlobalState, config Config, defaultClient *http.Client) error {
 	realdir, err := resolveActivationDir(a.Dir)
 	if err != nil {
 		return errors.WithStack(err)
@@ -51,7 +49,7 @@ func (a *activateCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, global
 	for _, pkg := range pkgs {
 		pkg.LogWarnings(l)
 	}
-	sh, err := shell.Detect(a.HermitBin)
+	sh, err := shell.Detect(cli.getHermitBin())
 	if err != nil {
 		return errors.WithStack(err)
 	}

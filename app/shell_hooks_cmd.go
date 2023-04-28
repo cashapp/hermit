@@ -7,24 +7,25 @@ import (
 )
 
 type shellHooksCmd struct {
-	Zsh       bool   `xor:"shell" help:"Update Zsh hooks."`
-	Bash      bool   `xor:"shell" help:"Update Bash hooks."`
-	HermitBin string `help:"The location of the hermit binary." env:"HERMIT_ROOT_BIN" default:"$HOME/bin/hermit"`
-	Print     bool   `help:"Prints out the hook configuration code" hidden:"" `
+	Zsh   bool `xor:"shell" help:"Update Zsh hooks."`
+	Bash  bool `xor:"shell" help:"Update Bash hooks."`
+	Print bool `help:"Prints out the hook configuration code" hidden:"" `
 }
 
-func (s *shellHooksCmd) Run(l *ui.UI, config Config) error {
+func (s *shellHooksCmd) Run(cli cliInterface, l *ui.UI, config Config) error {
 	var (
 		sh  shell.Shell
 		err error
+
+		bin = cli.getHermitBin()
 	)
 
 	if s.Bash {
-		sh = &shell.Bash{Bin: s.HermitBin}
+		sh = &shell.Bash{Bin: bin}
 	} else if s.Zsh {
-		sh = &shell.Zsh{Bin: s.HermitBin}
+		sh = &shell.Zsh{Bin: bin}
 	} else {
-		sh, err = shell.Detect(s.HermitBin)
+		sh, err = shell.Detect(bin)
 		if err != nil {
 			return errors.WithStack(err)
 		}
