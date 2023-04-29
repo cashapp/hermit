@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 
 	"github.com/cashapp/hermit/errors"
-	"github.com/cashapp/hermit/internal/system"
 )
 
 var zshShellHooks = `
@@ -14,7 +13,7 @@ precmd_functions+=(change_hermit_env)
 # shellcheck disable=SC2154
 if [[ -n ${_comps+x} ]]; then
   autoload -U +X bashcompinit && bashcompinit
-  complete -o nospace -C "$HOME/bin/hermit" hermit
+	complete -o nospace -C "${HERMIT_ROOT_BIN:-"$HOME/bin/hermit"}" hermit
 fi
 `
 
@@ -35,12 +34,7 @@ func (sh *Zsh) ActivationScript(w io.Writer, config ActivationConfig) error { //
 }
 
 func (sh *Zsh) ActivationHooksInstallation() (path, script string, err error) { // nolint: golint
-	home, err := system.UserHomeDir()
-	if err != nil {
-		return "", "", errors.WithStack(err)
-	}
-	fileName := filepath.Join(home, ".zshrc")
-	return fileName, `eval "$(test -x $HOME/bin/hermit && $HOME/bin/hermit shell-hooks --print --zsh)"`, nil
+	return activationHooksInstallation(".zshrc", "zsh")
 }
 
 func (sh *Zsh) ActivationHooksCode() (script string, err error) { // nolint: golint
