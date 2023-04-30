@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 
 	"github.com/cashapp/hermit/errors"
-	"github.com/cashapp/hermit/internal/system"
 )
 
 var bashShellHooks = `
@@ -15,7 +14,7 @@ else
   PROMPT_COMMAND="change_hermit_env"
 fi
 
-complete -o nospace -C "$HOME/bin/hermit" hermit
+complete -o nospace -C "${HERMIT_ROOT_BIN:-"$HOME/bin/hermit"}" hermit
 `
 
 // Bash represent the Bash shell
@@ -35,12 +34,7 @@ func (sh *Bash) ActivationScript(w io.Writer, config ActivationConfig) error { /
 }
 
 func (sh *Bash) ActivationHooksInstallation() (path, script string, err error) { // nolint: golint
-	home, err := system.UserHomeDir()
-	if err != nil {
-		return "", "", errors.WithStack(err)
-	}
-	fileName := filepath.Join(home, ".bashrc")
-	return fileName, `eval "$(test -x $HOME/bin/hermit && $HOME/bin/hermit shell-hooks --print --bash)"`, nil
+	return activationHooksInstallation(".bashrc", "bash")
 }
 
 func (sh *Bash) ActivationHooksCode() (script string, err error) { // nolint: golint
