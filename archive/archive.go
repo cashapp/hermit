@@ -421,6 +421,11 @@ func extractZipFile(zf *zip.File, destFile string) error {
 		return errors.WithStack(os.Symlink(symlinkPath, destFile))
 	}
 
+	err = os.MkdirAll(filepath.Dir(destFile), 0700)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
 	w, err := os.OpenFile(destFile, os.O_CREATE|os.O_WRONLY, zf.Mode()&^0077)
 	if err != nil {
 		return errors.WithStack(err)
