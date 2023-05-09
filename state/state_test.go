@@ -77,6 +77,45 @@ func TestCacheAndUnpackHooksRunOnMutablePackage(t *testing.T) {
 	assert.Equal(t, os.FileMode(0500), info.Mode()&0777, info.Mode().String())
 }
 
+func TestLinksMissingBinaries(t *testing.T) {
+	fixture := NewStateTestFixture(t).
+		WithHTTPHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			fr, err := os.Open("../archive/testdata/archive.tar.gz")
+			assert.NoError(t, err)
+			defer fr.Close() // nolint
+			_, err = io.Copy(w, fr)
+			assert.NoError(t, err)
+		}))
+	defer fixture.Clean()
+	state := fixture.State()
+
+	log, _ := ui.NewForTesting()
+	pkg := manifesttest.NewPkgBuilder(state.PkgDir()).
+		WithBinaries("darwin_exe").
+		WithSource(fixture.Server.URL).Result()
+
+	err := state.CacheAndUnpack(log.Task("test"), pkg)
+	assert.NoError(t, err)
+
+	_, err = os.Stat(filepath.Join(state.BinaryDir(), pkg.Reference.String(), "darwin_exe"))
+	assert.NoError(t, err)
+
+	_, err = os.Stat(filepath.Join(state.BinaryDir(), pkg.Reference.String(), "linux_exe"))
+	assert.Error(t, err, "linux_exe should not exist")
+
+	pkg = manifesttest.NewPkgBuilder(state.PkgDir()).
+		WithSource(fixture.Server.URL).Result()
+
+	err = state.CacheAndUnpack(log.Task("test"), pkg)
+	assert.NoError(t, err)
+
+	_, err = os.Stat(filepath.Join(state.BinaryDir(), pkg.Reference.String(), "darwin_exe"))
+	assert.NoError(t, err)
+
+	_, err = os.Stat(filepath.Join(state.BinaryDir(), pkg.Reference.String(), "linux_exe"))
+	assert.NoError(t, err)
+}
+
 func TestCacheAndUnpackCreatesBinarySymlinks(t *testing.T) {
 	fixture := NewStateTestFixture(t).
 		WithHTTPHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
