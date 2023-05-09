@@ -12,9 +12,9 @@ jobs:
         with:
           submodules: true
       - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Init Python Virtual Environment
         run: |
-          ./bin/hermit env -r >> $GITHUB_ENV
-          . ./bin/activate-hermit
           python -mvenv .venv
           . .venv/bin/activate
           echo PATH=$PATH >> $GITHUB_ENV
