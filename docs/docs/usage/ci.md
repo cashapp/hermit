@@ -12,7 +12,7 @@ Using Hermit in GitHub Actions is straightforward. Just add the following step t
 
 ```yaml
       - name: Init Hermit
-        run: ./bin/hermit env --raw >> $GITHUB_ENV
+        uses: cashapp/activate-hermit@v1
 ```
 
 eg.
@@ -32,7 +32,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Init Hermit
-        run: ./bin/hermit env -r >> $GITHUB_ENV
+        uses: cashapp/activate-hermit@v1
       - name: Test
         run: go test ./...
 ```
