@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -417,10 +416,8 @@ func TestEnv_EphemeralVariableSubstitutionOverride(t *testing.T) {
 
 func opsContains[T any](t *testing.T, slice []T, needle T) {
 	t.Helper()
-	for _, el := range slice {
-		if reflect.DeepEqual(el, needle) {
-			return
-		}
+	if envars.OpsContains(slice, needle) {
+		return
 	}
 	t.Fatalf("%v does not contain %v", slice, needle)
 }

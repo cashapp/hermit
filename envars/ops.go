@@ -39,9 +39,15 @@ func (e Envars) System() []string {
 //
 // Envars are not modified.
 func (e Envars) Apply(envRoot string, ops Ops) *Transform {
+	existingOps := Ops{}
+	if rawExistingOps, err := UnmarshalOps([]byte(e["HERMIT_ENV_OPS"])); err == nil {
+		existingOps = rawExistingOps
+	}
 	transform := transform(envRoot, e)
 	for _, op := range ops {
-		op.Apply(transform)
+		if !OpsContains(existingOps, op) {
+			op.Apply(transform)
+		}
 	}
 	return transform
 }
@@ -387,6 +393,15 @@ func makeRevertKey(transform *Transform, op Op) string {
 		hash.Write(zero)
 	}
 	return fmt.Sprintf("_HERMIT_OLD_%s_%X", op.Envar(), hash.Sum(nil))
+}
+
+func OpsContains[T any](slice []T, needle T) bool {
+	for _, el := range slice {
+		if reflect.DeepEqual(el, needle) {
+			return true
+		}
+	}
+	return false
 }
 
 // transform returns a Transform with e as the base.

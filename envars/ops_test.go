@@ -118,6 +118,18 @@ func TestIssue47(t *testing.T) {
 	assert.Equal(t, original, reverted)
 }
 
+func TestSkipEnvarReapply(t *testing.T) {
+	original := Envars{
+		"PATH":           "/bin:/usr/bin",
+		"HERMIT_ENV_OPS": "[{\"p\":{\"n\":\"PATH\",\"v\":\"/usr/bin\"}}]",
+	}
+	ops := Ops{
+		&Prepend{Name: "PATH", Value: "/usr/bin"},
+	}
+	actual := original.Apply("/home/user/project", ops).Combined()
+	assert.Equal(t, original, actual)
+}
+
 func TestEncodeDecodeOps(t *testing.T) {
 	actual := Ops{
 		&Append{"APPEND", "${APPEND}:text"},
