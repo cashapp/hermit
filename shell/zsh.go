@@ -33,8 +33,8 @@ func (sh *Zsh) ActivationScript(w io.Writer, config ActivationConfig) error { //
 	return errors.WithStack(err)
 }
 
-func (sh *Zsh) ActivationHooksInstallation() (path, script string, err error) { // nolint: golint
-	return activationHooksInstallation(".zshrc", "zsh")
+func (sh *Zsh) ActivationHooksInstallation(hermitExecPath string) (path, script string, err error) { // nolint: golint
+	return activationHooksInstallation(".zshrc", "zsh", hermitExecPath)
 }
 
 func (sh *Zsh) ActivationHooksCode() (script string, err error) { // nolint: golint

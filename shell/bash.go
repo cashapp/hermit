@@ -33,8 +33,8 @@ func (sh *Bash) ActivationScript(w io.Writer, config ActivationConfig) error { /
 	return errors.WithStack(err)
 }
 
-func (sh *Bash) ActivationHooksInstallation() (path, script string, err error) { // nolint: golint
-	return activationHooksInstallation(".bashrc", "bash")
+func (sh *Bash) ActivationHooksInstallation(hermitExecPath string) (path, script string, err error) { // nolint: golint
+	return activationHooksInstallation(".bashrc", "bash", hermitExecPath)
 }
 
 func (sh *Bash) ActivationHooksCode() (script string, err error) { // nolint: golint

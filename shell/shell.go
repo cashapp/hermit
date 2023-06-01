@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"os/user"
 	"path/filepath"
+	"strings"
 
 	"github.com/mitchellh/go-ps"
 	"github.com/willdonnelly/passwd"
@@ -27,7 +29,7 @@ type ActivationConfig struct {
 type Shell interface {
 	Name() string
 	// ActivationHooksInstallation returns the path and shell fragment for injecting activation code to the shell initialisation.
-	ActivationHooksInstallation() (path, script string, err error)
+	ActivationHooksInstallation(hermitExecPath string) (path, script string, err error)
 	// ActivationHooksCode returns the shell fragment for activation/deactivation hooks
 	ActivationHooksCode() (script string, err error)
 	// ActivationScript for this shell.
@@ -52,7 +54,18 @@ func InstallHooks(l *ui.UI, shell Shell) error {
 	if shell == nil {
 		return nil
 	}
-	fileName, script, err := shell.ActivationHooksInstallation()
+
+	var hermitExecPath string
+	hermitExec := exec.Command("which", "hermit")
+	out, err := hermitExec.Output()
+	if err != nil {
+		fmt.Println("could not run command (which): ", err)
+		hermitExecPath = "$HOME/bin/hermit"
+	} else {
+		fmt.Sprintln(string(out))
+		hermitExecPath = strings.TrimSuffix(string(out), "\n")
+	}
+	fileName, script, err := shell.ActivationHooksInstallation(hermitExecPath)
 	if err != nil {
 		return errors.WithStack(err)
 	}
