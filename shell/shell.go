@@ -60,6 +60,8 @@ func InstallHooks(l *ui.UI, shell Shell) error {
 	out, err := hermitExec.Output()
 	if err != nil {
 		fmt.Println("could not run command (which): ", err)
+		return errors.WithStack(err)
+	} else if !strings.Contains(string(out), "homebrew") {
 		hermitExecPath = "$HOME/bin/hermit"
 	} else {
 		fmt.Sprintln(string(out))
