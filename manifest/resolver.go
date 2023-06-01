@@ -393,7 +393,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 			return nil, errors.Wrapf(ErrUnknownPackage, "%s: no channel %s found in channels (%s) or versions (%s)",
 				manifest.Path, selector, strings.Join(knownChannels, ", "), strings.Join(knownVersions, ", "))
 		}
-		return nil, errors.Wrapf(ErrUnknownPackage, "%s: no version %s found in versions (%s) or channels (%s)",
+		return nil, errors.Wrapf(ErrUnknownPackage, "%s: no version %s found in versions (%s) or channels (%s), try \"hermit update\"",
 			manifest.Path, selector, strings.Join(knownVersions, ", "), strings.Join(knownChannels, ", "))
 	}
 
