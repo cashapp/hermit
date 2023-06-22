@@ -1,5 +1,5 @@
 <a href="https://www.vecteezy.com/vector-art/292320-hermit-crab-on-white-background" title="Hermit Crab by Vecteezy">
-<img align="right" width="100" height="100" src="./docs/docs/static/images/hermit.svg" alt="Hermit">
+<img align="right" width="100" height="100" src="./docs/docs/img/logo.svg" alt="Hermit">
 </a>
 
 # Hermit - uniform tooling for Linux and Mac
