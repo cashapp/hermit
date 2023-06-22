@@ -1,5 +1,5 @@
 <a href="https://www.vecteezy.com/vector-art/292320-hermit-crab-on-white-background" title="Hermit Crab by Vecteezy">
-<img align="right" width="100" height="100" src="./docs/static/images/logo.svg" alt="Hermit">
+<img align="right" width="100" height="100" src="./docs/docs/static/images/hermit.svg" alt="Hermit">
 </a>
 
 # Hermit - uniform tooling for Linux and Mac
@@ -9,7 +9,7 @@ Hermit installs tools for software projects in self-contained, isolated sets, so
 
 See https://cashapp.github.io/hermit for full documentation.
 
-![hermit intro screen cast](docs/static/screencasts/using.svg)
+![hermit intro screen cast](docs/docs/static/screencasts/using.svg)
 
 ---
 
