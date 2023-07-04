@@ -788,9 +788,9 @@ func (e *Env) systemEnvOverrideOps(ops envars.Ops) envars.Ops {
 	changed := system.Apply(e.Root(), ops).Changed(false)
 
 	var overrides envars.Ops
-	for envar := range changed {
-		if v, ok := system[envar]; ok {
-			overrides = append(overrides, &envars.Force{Name: envar, Value: v})
+	for envar, v_new := range changed {
+		if v_system, ok := system[envar]; ok && v_new != v_system {
+			overrides = append(overrides, &envars.Force{Name: envar, Value: v_system})
 		}
 	}
 
