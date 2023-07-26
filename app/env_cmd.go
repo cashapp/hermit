@@ -18,6 +18,7 @@ type envCmd struct {
 	Activate          bool   `xor:"action" help:"Print the commands needed to set the environment to the activated state."`
 	Deactivate        bool   `xor:"action" help:"Print the commands needed to reset the environment to the deactivated state."`
 	DeactivateFromOps string `xor:"action" placeholder:"OPS" help:"Decodes the operations, and prints the shell commands to to reset the environment to the deactivated state."`
+	Shell             string `short:"s" help:"Shell type."`
 	Inherit           bool   `short:"i" help:"Inherit variables from parent environment."`
 	Names             bool   `short:"n" help:"Show only names."`
 	Unset             bool   `xor:"action" short:"u" help:"Unset the specified environment variable."`
@@ -53,7 +54,7 @@ func (e *envCmd) Run(l *ui.UI, env *hermit.Env) error {
 	}
 
 	if e.Activate || e.Deactivate || e.Ops || e.DeactivateFromOps != "" {
-		sh, err := shell.Detect()
+		sh, err := e.resolveShell()
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -114,4 +115,11 @@ func (e *envCmd) Run(l *ui.UI, env *hermit.Env) error {
 		}
 	}
 	return nil
+}
+
+func (e *envCmd) resolveShell() (shell.Shell, error) {
+	if e.Shell != "" {
+		return shell.Resolve(e.Shell)
+	}
+	return shell.Detect()
 }

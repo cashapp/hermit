@@ -84,6 +84,14 @@ func PrintHooks(shell Shell, sha256sums []string) error {
 	return nil
 }
 
+func Resolve(name string) (Shell, error) {
+	shell, ok := shells[name]
+	if !ok {
+		return nil, errors.Errorf("unknown shell type: %q", name)
+	}
+	return shell, nil
+}
+
 // Detect the user's shell.
 func Detect() (Shell, error) {
 	// First look for shell in parent processes.
