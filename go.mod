@@ -8,7 +8,7 @@ require (
 	github.com/alecthomas/colour v0.1.0
 	github.com/alecthomas/hcl v0.5.4
 	github.com/alecthomas/kong v0.5.0
-	github.com/alecthomas/participle v0.7.1
+	github.com/alecthomas/participle/v2 v2.0.0-beta.5
 	github.com/alecthomas/repr v0.1.0
 	github.com/antchfx/htmlquery v1.2.4
 	github.com/antchfx/xpath v1.2.0
@@ -39,7 +39,6 @@ require (
 
 require (
 	github.com/DataDog/zstd v1.5.0 // indirect
-	github.com/alecthomas/participle/v2 v2.0.0-beta.5 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect

@@ -19,7 +19,7 @@ const (
 
 func installationScript(shell string) string {
 	return fmt.Sprintf(
-		`HERMIT_ROOT_BIN="${HERMIT_ROOT_BIN:-"$HOME/bin/hermit"}" `+
+		`HERMIT_ROOT_BIN="${HERMIT_ROOT_BIN:-"$HOME/bin/hermit"}"`+"\n"+
 			`eval "$(test -x $HERMIT_ROOT_BIN && $HERMIT_ROOT_BIN shell-hooks --print --%s)"`,
 		shell,
 	)
