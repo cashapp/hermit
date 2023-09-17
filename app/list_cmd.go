@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/colour"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 
 	"github.com/cashapp/hermit"
 	"github.com/cashapp/hermit/errors"
@@ -128,7 +128,7 @@ func listPackagesInCLI(pkgs manifest.Packages, option *listPackageOption) {
 	byName, names := groupPackages(pkgs)
 	sortSliceWithPrefix(names, option.Prefix)
 
-	w, _, _ := terminal.GetSize(0)
+	w, _, _ := term.GetSize(0)
 	if w == -1 {
 		w = 80
 	}
