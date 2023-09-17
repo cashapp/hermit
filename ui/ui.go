@@ -26,7 +26,7 @@ import (
 	"strings"
 	"syscall"
 
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 
 	"github.com/cashapp/hermit/errors"
 )
@@ -314,7 +314,7 @@ func (w *UI) operationState() uint64 {
 func (w *UI) updateWidth() {
 	w.lock.Lock()
 	var err error
-	w.width, _, err = terminal.GetSize(int(w.tty.Fd()))
+	w.width, _, err = term.GetSize(int(w.tty.Fd()))
 	if err != nil || w.width < 20 { // Assume it's borked.
 		w.width = 80
 	}
