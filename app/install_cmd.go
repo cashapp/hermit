@@ -54,16 +54,24 @@ func (i *installCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
 		}
 		return nil
 	}
+
+	var toBeInstalledSelectors []manifest.GlobSelector
+
 	// Check that we are not installing an already existing package
 	for _, selector := range selectors {
 		for _, ref := range installed {
 			if selector.Matches(ref) {
-				return errors.Errorf("%s cannot be installed as %s is already installed", selector, ref)
+				l.Infof("skipping installation of %s as it is already installed", selector)
+
+				continue
 			}
 		}
+
+		toBeInstalledSelectors = append(toBeInstalledSelectors, selector)
 	}
-	for i, search := range selectors {
-		err := env.ResolveWithDeps(l, installed, selectors[i], pkgs)
+
+	for i, search := range toBeInstalledSelectors {
+		err := env.ResolveWithDeps(l, installed, toBeInstalledSelectors[i], pkgs)
 		if err != nil {
 			return errors.Wrap(err, search.String())
 		}
