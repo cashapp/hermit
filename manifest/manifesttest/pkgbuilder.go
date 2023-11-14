@@ -97,7 +97,7 @@ func (b PkgBuilder) WithFile(src, dst string, fs fs.FS) PkgBuilder {
 	b.result.Files = append(b.result.Files, &manifest.ResolvedFileRef{
 		FS:       fs,
 		FromPath: src,
-		ToPAth:   dst,
+		ToPath:   dst,
 	})
 	return b
 }

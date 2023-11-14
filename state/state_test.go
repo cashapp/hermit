@@ -104,6 +104,7 @@ func TestLinksMissingBinaries(t *testing.T) {
 	assert.Error(t, err, "linux_exe should not exist")
 
 	pkg = manifesttest.NewPkgBuilder(state.PkgDir()).
+		WithBinaries("darwin_exe", "linux_exe").
 		WithSource(fixture.Server.URL).Result()
 
 	err = state.CacheAndUnpack(log.Task("test"), pkg)
