@@ -62,7 +62,7 @@ func (p Packages) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
 type ResolvedFileRef struct {
 	FS       fs.FS
 	FromPath string
-	ToPAth   string
+	ToPath   string
 }
 
 // Package resolved from a manifest.
@@ -814,7 +814,7 @@ func resolveFiles(manifest *AnnotatedManifest, pkg *Package, files map[string]st
 		pkg.Files = append(pkg.Files, &ResolvedFileRef{
 			FromPath: k,
 			FS:       manifest.FS,
-			ToPAth:   v,
+			ToPath:   v,
 		})
 	}
 	return nil

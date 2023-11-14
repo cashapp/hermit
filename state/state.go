@@ -281,10 +281,16 @@ func (s *State) removeRecursive(b *ui.Task, dest string) error {
 }
 
 // CacheAndUnpack downloads a package and extracts it if it is not present.
+//
 // If the package has already been extracted, this is a no-op
 func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 	// Check if the package is up-to-date, and if so, return before acquiring the lock
-	if (s.isExtracted(p) && s.areBinariesLinked(p)) || p.Source == "/" {
+	isExtracted := s.isExtracted(p)
+	var areBinariesLinked bool
+	if isExtracted {
+		areBinariesLinked = s.areBinariesLinked(p)
+	}
+	if (isExtracted && areBinariesLinked) || p.Source == "/" {
 		return nil
 	}
 
@@ -294,13 +300,13 @@ func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 	}
 	defer lock.Release(b)
 
-	if !s.isExtracted(p) {
+	if !isExtracted {
 		if err := s.extract(b, p); err != nil {
 			return errors.WithStack(err)
 		}
 	}
 
-	if !s.areBinariesLinked(p) {
+	if !areBinariesLinked {
 		if err := s.linkBinaries(p); err != nil {
 			return errors.WithStack(err)
 		}
@@ -390,7 +396,7 @@ func (s *State) extract(b *ui.Task, p *manifest.Package) error {
 	}
 	// Copy manifest referred files
 	for _, file := range p.Files {
-		err = vfs.CopyFile(file.FS, file.FromPath, file.ToPAth)
+		err = vfs.CopyFile(file.FS, file.FromPath, file.ToPath)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -412,12 +418,16 @@ func (s *State) isExtracted(p *manifest.Package) bool {
 }
 
 func (s *State) areBinariesLinked(p *manifest.Package) bool {
-	for _, bin := range p.Binaries {
-		if _, err := os.Stat(filepath.Join(s.binaryDir, p.Reference.String(), bin)); err != nil {
+	binaries, err := p.ResolveBinaries()
+	if err != nil {
+		return false
+	}
+	for _, bin := range binaries {
+		linkPath := filepath.Join(s.binaryDir, p.Reference.String(), filepath.Base(bin))
+		if _, err := os.Stat(linkPath); err != nil {
 			return false
 		}
 	}
-
 	return true
 }
 
