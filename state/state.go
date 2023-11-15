@@ -284,13 +284,10 @@ func (s *State) removeRecursive(b *ui.Task, dest string) error {
 //
 // If the package has already been extracted, this is a no-op
 func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
-	// Check if the package is up-to-date, and if so, return before acquiring the lock
-	isExtracted := s.isExtracted(p)
-	var areBinariesLinked bool
-	if isExtracted {
-		areBinariesLinked = s.areBinariesLinked(p)
-	}
-	if (isExtracted && areBinariesLinked) || p.Source == "/" {
+	// Double-checked locking. We check without the lock first, and then check
+	// again after acquiring the lock.
+
+	if (s.isExtracted(p) && s.areBinariesLinked(p)) || p.Source == "/" {
 		return nil
 	}
 
@@ -300,13 +297,13 @@ func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 	}
 	defer lock.Release(b)
 
-	if !isExtracted {
+	if !s.isExtracted(p) {
 		if err := s.extract(b, p); err != nil {
 			return errors.WithStack(err)
 		}
 	}
 
-	if !areBinariesLinked {
+	if !s.areBinariesLinked(p) {
 		if err := s.linkBinaries(p); err != nil {
 			return errors.WithStack(err)
 		}
