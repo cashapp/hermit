@@ -343,6 +343,11 @@ func (s *State) CacheAndDigest(b *ui.Task, p *manifest.Package) (string, error) 
 
 func (s *State) linkBinaries(p *manifest.Package) error {
 	dir := filepath.Join(s.binaryDir, p.Reference.String())
+	// clean up the binaryDir before
+	if err := os.RemoveAll(dir); err != nil {
+		return errors.WithStack(err)
+	}
+
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return errors.WithStack(err)
 	}
@@ -422,6 +427,15 @@ func (s *State) areBinariesLinked(p *manifest.Package) bool {
 	for _, bin := range binaries {
 		linkPath := filepath.Join(s.binaryDir, p.Reference.String(), filepath.Base(bin))
 		if _, err := os.Stat(linkPath); err != nil {
+			return false
+		}
+		// also checks the link destination matches the binary path.
+		ld, err := os.Readlink(linkPath)
+		if err != nil {
+			return false
+		}
+
+		if bin != ld {
 			return false
 		}
 	}
