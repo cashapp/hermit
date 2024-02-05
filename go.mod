@@ -10,6 +10,7 @@ require (
 	github.com/alecthomas/kong v0.5.0
 	github.com/alecthomas/participle/v2 v2.0.0-beta.5
 	github.com/alecthomas/repr v0.1.0
+	github.com/andybalholm/cascadia v1.3.2
 	github.com/antchfx/htmlquery v1.2.4
 	github.com/antchfx/xpath v1.2.0
 	github.com/avvmoto/buf-readerat v0.0.0-20171115124131-a17c8cb89270
@@ -30,9 +31,9 @@ require (
 	github.com/willabides/kongplete v0.3.0
 	github.com/willdonnelly/passwd v0.0.0-20141013001024-7935dab3074c
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
-	golang.org/x/net v0.0.0-20221004154528-8021a29435af
-	golang.org/x/sys v0.0.0-20220728004956-3c1f35247d10
-	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
+	golang.org/x/net v0.9.0
+	golang.org/x/sys v0.7.0
+	golang.org/x/term v0.7.0
 	howett.net/plist v1.0.0
 	mvdan.cc/sh v2.6.4+incompatible
 )
@@ -51,6 +52,6 @@ require (
 	github.com/saracen/solidblock v0.0.0-20190426153529-45df20abab6f // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	golang.org/x/crypto v0.0.0-20220214200702-86341886e292 // indirect
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/text v0.9.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 )

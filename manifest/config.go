@@ -99,7 +99,8 @@ type AutoVersionBlock struct {
 // HTMLAutoVersionBlock defines how version numbers can be extracted from HTML.
 type HTMLAutoVersionBlock struct {
 	URL   string `hcl:"url" help:"URL to retrieve HTML from."`
-	XPath string `hcl:"xpath" help:"XPath for selecting versions from HTML (see https://github.com/antchfx/htmlquery) - use version-pattern to extract substrings"`
+	XPath string `hcl:"xpath,optional" help:"XPath for selecting versions from HTML (see https://github.com/antchfx/htmlquery) - use version-pattern to extract substrings"`
+	CSS   string `hcl:"css,optional" help:"CSS selector for selecting versions from HTML (see https://github.com/andybalholm/cascadia). Only one of xpath or css can be specified."`
 }
 
 // PlatformBlock matches a set of attributes describing a platform (eg. CPU, OS, etc.)
