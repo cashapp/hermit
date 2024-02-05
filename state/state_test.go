@@ -140,3 +140,41 @@ func TestCacheAndUnpackCreatesBinarySymlinks(t *testing.T) {
 	_, err = os.Stat(filepath.Join(state.BinaryDir(), pkg.Reference.String(), "linux_exe"))
 	assert.NoError(t, err)
 }
+
+func TestUpdateSymlinks(t *testing.T) {
+	fixture := NewStateTestFixture(t).
+		WithHTTPHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			fr, err := os.Open("../archive/testdata/archive.tar.gz")
+			assert.NoError(t, err)
+			defer fr.Close() // nolint
+			_, err = io.Copy(w, fr)
+			assert.NoError(t, err)
+		}))
+	defer fixture.Clean()
+	state := fixture.State()
+	log, _ := ui.NewForTesting()
+	pkgDir := state.PkgDir()
+	pkg := manifesttest.NewPkgBuilder(pkgDir).
+		WithSource(fixture.Server.URL).
+		WithName("test").
+		Result()
+	assert.NoError(t, state.CacheAndUnpack(log.Task("test"), pkg))
+	newPkg := manifesttest.NewPkgBuilder(pkgDir + "-new").
+		WithSource(fixture.Server.URL).
+		WithName("test").
+		Result()
+
+	// unpack and make new links
+	assert.NoError(t, state.CacheAndUnpack(log.Task("test"), newPkg))
+
+	darwinExec := filepath.Join(state.BinaryDir(), newPkg.Reference.String(), "darwin_exe")
+	linuxExec := filepath.Join(state.BinaryDir(), newPkg.Reference.String(), "linux_exe")
+	darwinLink, err := os.Readlink(darwinExec)
+	assert.NoError(t, err)
+	assert.Equal(t, filepath.Join(newPkg.Dest, "darwin_exe"), darwinLink)
+
+	linuxLink, err := os.Readlink(linuxExec)
+	assert.NoError(t, err)
+	assert.Equal(t, filepath.Join(newPkg.Dest, "linux_exe"), linuxLink)
+
+}
