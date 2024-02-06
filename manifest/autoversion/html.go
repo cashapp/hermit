@@ -65,8 +65,12 @@ func htmlAutoVersion(client *http.Client, autoVersion *manifest.AutoVersionBlock
 		}
 		versions = append(versions, manifest.ParseVersion(groups[1]))
 	}
-
 	sort.Sort(versions)
+
+	if len(versions) == 0 {
+		return "", errors.Errorf("no versions matched on %s", url)
+	}
+
 	return versions[len(versions)-1].String(), nil
 }
 
