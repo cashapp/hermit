@@ -1,0 +1,2299 @@
+<!doctype html>
+<html lang=en>
+<head>
+    <meta charset=utf-8>
+    <title>Download ⚡
+    Zig Programming Language</title>
+    <meta name=viewport content="width=device-width,initial-scale=1">
+    <meta name=color-scheme content="light dark">
+    <link rel=icon href=/favicon.png>
+    <link rel=icon href=/favicon.svg>
+    <link type=text/css rel=stylesheet href=https://ziglang.org/css/style.css>
+    <link type=text/css rel=stylesheet href=https://ziglang.org/css/navigation.min.ff0bf132242ede0a66e67ac92b609f3e16cbc95c59dea6eab00ec39ceab0dc30.css>
+</head>
+<body>
+    <div class=container>
+        <a href=/>
+            <span id=header-image></span>
+        </a>
+    </div>
+    <nav id=mobile-navbar class="nav container">
+        <span style=overflow:hidden;max-width:80%;display:inline-block;vertical-align:bottom>Download</span>
+        <label for=mobile-toggle id=hamburger>
+            <svg style="width:2em;height:2em" viewBox="0 0 24 24">
+                <path fill="currentcolor" d="M3 6H21V8H3V6m0 5H21v2H3V11m0 5H21v2H3V16z"/>
+            </svg>
+        </label>
+    </nav>
+    <div id=mobile-subnav>
+        <input type=checkbox name=mobile-toggle id=mobile-toggle>
+        <div id=menu>
+            <a href=/download/ class=navbar-item>Download</a>
+            <a href=/learn/ class=navbar-item>Learn</a>
+            <a href=/news/ class=navbar-item>News</a>
+            <a href=https://github.com/ziglang/zig class="navbar-item external-link external-link-light">Source Code</a>
+            <a href=https://github.com/ziglang/zig/wiki/Community class="navbar-item external-link external-link-light">Join a Community</a>
+            <a href=/zsf/ class=navbar-item>ZSF</a>
+        </div>
+    </div>
+    <nav id=navbar class=nav>
+        <div class=container style=display:flex;justify-content:space-between>
+            <div>
+                <a href=/download/ class=navbar-item>Download</a>
+                <a href=/learn/ class=navbar-item>Learn</a>
+                <a href=/news/ class=navbar-item>News</a>
+                <a href=/zsf/ class=navbar-item>Zig Software Foundation</a>
+                <a href=https://github.com/ziglang/zig class="navbar-item external-link external-link-light">Source Code</a>
+                <a href=https://github.com/ziglang/zig/wiki/Community class="navbar-item external-link external-link-light">Join a Community</a>
+            </div>
+        </div>
+    </nav>
+    <style type=text/css>
+    .fundraiser {
+        color: #fff;
+        background-color: #7521ae;
+        padding: 40px 10px;
+        margin:0
+    }
+
+    .fundraiser-heading {
+        text-align: center;
+        font-size: 2em;
+        padding-bottom:.3em
+    }
+
+    .fundraiser a {
+        color: #cbcbff;
+        text-decoration:underline
+    }
+
+    #bar-bg {
+        background-color: #fff;
+        width:15em
+    }
+
+    #bar-fg {
+        background-color: green;
+        height: 1.3em;
+        overflow: visible;
+        white-space:nowrap
+    }
+
+    #every-donate-btn-nav {
+        float: left;
+        padding:0 2em
+    }
+
+    #amt-raised {
+        padding-left:.2em
+    }
+
+    .progress {
+        background-color: #f7a41d;
+        width: 15em;
+        color: #000;
+        padding: 1em;
+        font-size: 1.3em;
+        float:left
+    }
+
+    .progress .time {
+        font-size:1.4em
+    }
+
+    .showtime img {
+        height: 7em;
+        border:1px solid #fff
+    }
+
+    @media (prefers-color-scheme: dark) {
+        .fundraiser {
+            color: #000;
+            background-color:#fff
+        }
+
+        .fundraiser strong {
+            color:#000
+        }
+
+        .fundraiser a {
+            color: #352891
+        }
+    }
+    </style>
+    <div class=fundraiser>
+        <div class=fundraiser-heading>
+            <strong>ZSF Needs Money!</strong>
+            <a href=/news/2024-financials/#2024-financial-report-and-fundraiser>Announcing Our 2024 Fundraiser</a>
+        </div>
+        <div class=container>
+            <div class=progress>
+                <div class=time>
+                    <span id=days-remaining>...</span>
+                     Days Remaining
+                </div>
+                <div id=bar-bg>
+                    <div id=bar-fg style=width:0%>
+                        <span id=amt-raised>loading...</span>
+                         per month raised
+                    </div>
+                </div>
+                <div style=font-size:.6em>Goal: Pay 1 contributor for 20 hours/week</div>
+                <script>
+                function updateSupporters() {
+                    let ms_diff = (new Date("Feb 18 2024")) - (new Date());
+                    let day_diff = Math.ceil(ms_diff / 1000 / 60 / 60 / 24);
+                    document.getElementById("days-remaining").textContent = day_diff;
+                    let sponsor_amt = 3802;
+                    let sponsor_goal = 5200;
+                    let percent = Math.min((sponsor_amt / sponsor_goal), 1)
+                    document.getElementById("bar-fg").style.width = (percent * 100) + "%";
+                    document.getElementById("amt-raised").textContent = "$" + sponsor_amt + "/" + sponsor_goal;
+                }
+                setInterval(updateSupporters, 60 * 1000);
+                updateSupporters();
+                </script>
+            </div>
+            <div id=every-donate-btn-nav>
+                <img src=https://ziglang.org/img/Ziggy_6.svg style=height:7em>
+                <a href="https://www.every.org/zig-software-foundation-inc?utm_campaign=2024_financials#/donate">Donate</a>
+                <script async defer src="https://embeds.every.org/0.4/button.js?explicit=1" id=every-donate-btn-js-nav></script>
+                <script>
+                function createWidgetNav() {
+                    everyDotOrgDonateButton.createButton({
+                        selector: "#every-donate-btn-nav",
+                        nonprofitSlug: "zig-software-foundation-inc",
+                        fundraiserSlug: "help-zig-stay-indepe",
+                        fontSize: "32px",
+                        label: "Sponsor"
+                    });
+                    everyDotOrgDonateButton.createWidget({
+                        selector: "#every-donate-btn-nav",
+                        nonprofitSlug: "zig-software-foundation-inc",
+                        fundraiserSlug: "help-zig-stay-indepe",
+                        defaultDonationAmount: 10,
+                        defaultFrequency: 'monthly'
+                    });
+                    let style = document.createElement('style');
+                    style.innerHTML = '#donation-input { color: black; } #privateNote { color: black }';
+                    document.getElementById("shadow-wrapper").shadowRoot.appendChild(style);
+                }
+                if (window.everyDotOrgDonateButton) {
+                    createWidgetNav();
+                } else {
+                    document.getElementById("every-donate-btn-js-nav").addEventListener("load", createWidgetNav);
+                }
+                </script>
+            </div>
+            <div class=showtime>
+                <a href=https://zig.show/episodes/36/>
+                    <img src=/img/showtime-roadmap-2024.png alt="Zig Showtime Episode: Roadmap 2024 - Andrew Kelley">
+                </a>
+            </div>
+            <div style=clear:both>&nbsp;</div>
+        </div>
+    </div>
+    <div class=nav-spacer></div>
+    <div id=content role=main>
+        <div class=container>
+            <h1>Releases</h1>
+            <p>
+                You can also 
+                <a href=https://github.com/ziglang/zig/wiki/Install-Zig-from-a-Package-Manager>install Zig from a package manager</a>
+                .
+            </p>
+            <p>
+                There is a 
+                <a href=https://ziglang.org/download/index.json>JSON version of this page</a>
+                .
+            </p>
+            <p>
+                Files are signed with 
+                <a href=https://jedisct1.github.io/minisign/>minisign</a>
+                 using this public key:
+            </p>
+            <pre>
+                <code>RWSGOq2NVecA2UPNdBUZykf1CCb147pkmdtYxgb3Ti+JO/wCYvhbAb/U</code>
+            </pre>
+            <div>
+                <h2 id=release-master>master</h2>
+                <ul>
+                    <li>2024-02-05</li>
+                    <li>
+                        <a href=https://ziglang.org/documentation/master/>Language Reference</a>
+                    </li>
+                    <li>
+                        <a href=https://ziglang.org/documentation/master/std/>Standard Library Documentation</a>
+                         (experimental)
+                    </li>
+                </ul>
+                <table>
+                    <col width=10%>
+                    <col width=10%>
+                    <col width=40%>
+                    <col width=10%>
+                    <thead>
+                        <tr>
+                            <th>OS</th>
+                            <th>Arch</th>
+                            <th>Filename</th>
+                            <th>Signature</th>
+                            <th>Size</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th style=text-align:center colspan=2 rowspan=2>Source</th>
+                            <td>
+                                <a href=https://ziglang.org/builds/zig-0.12.0-dev.2589+eaa6218f0.tar.xz>zig-0.12.0-dev.2589+eaa6218f0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/builds/zig-0.12.0-dev.2589+eaa6218f0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>16.3MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/builds/zig-bootstrap-0.12.0-dev.2589+eaa6218f0.tar.xz>zig-bootstrap-0.12.0-dev.2589+eaa6218f0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/builds/zig-bootstrap-0.12.0-dev.2589+eaa6218f0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>43.4MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=3>Windows</th>
+                            <td>x86_64</td>
+                            <td>
+                                <a href=https://ziglang.org/builds/zig-windows-x86_64-0.12.0-dev.2589+eaa6218f0.zip>zig-windows-x86_64-0.12.0-dev.2589+eaa6218f0.zip</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/builds/zig-windows-x86_64-0.12.0-dev.2589+eaa6218f0.zip.minisig>minisig</a>
+                            </td>
+                            <td>78.4MiB</td>
+                        </tr>
+                        <tr>
+                            <td>x86</td>
+                            <td>
+                                <a href=https://ziglang.org/builds/zig-windows-x86-0.12.0-dev.2589+eaa6218f0.zip>zig-windows-x86-0.12.0-dev.2589+eaa6218f0.zip</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/builds/zig-windows-x86-0.12.0-dev.2589+eaa6218f0.zip.minisig>minisig</a>
+                            </td>
+                            <td>82.7MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>aarch64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/builds/zig-windows-aarch64-0.12.0-dev.2589+eaa6218f0.zip>zig-windows-aarch64-0.12.0-dev.2589+eaa6218f0.zip</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/builds/zig-windows-aarch64-0.12.0-dev.2589+eaa6218f0.zip.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>75.1MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=2>macOS</th>
+                            <td>aarch64</td>
+                            <td>
+                                <a href=https://ziglang.org/builds/zig-macos-aarch64-0.12.0-dev.2589+eaa6218f0.tar.xz>zig-macos-aarch64-0.12.0-dev.2589+eaa6218f0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/builds/zig-macos-aarch64-0.12.0-dev.2589+eaa6218f0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>44.0MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/builds/zig-macos-x86_64-0.12.0-dev.2589+eaa6218f0.tar.xz>zig-macos-x86_64-0.12.0-dev.2589+eaa6218f0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/builds/zig-macos-x86_64-0.12.0-dev.2589+eaa6218f0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>47.6MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=6>Linux</th>
+                            <td>x86_64</td>
+                            <td>
+                                <a href=https://ziglang.org/builds/zig-linux-x86_64-0.12.0-dev.2589+eaa6218f0.tar.xz>zig-linux-x86_64-0.12.0-dev.2589+eaa6218f0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/builds/zig-linux-x86_64-0.12.0-dev.2589+eaa6218f0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>46.0MiB</td>
+                        </tr>
+                        <tr>
+                            <td>x86</td>
+                            <td>
+                                <a href=https://ziglang.org/builds/zig-linux-x86-0.12.0-dev.2589+eaa6218f0.tar.xz>zig-linux-x86-0.12.0-dev.2589+eaa6218f0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/builds/zig-linux-x86-0.12.0-dev.2589+eaa6218f0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>50.8MiB</td>
+                        </tr>
+                        <tr>
+                            <td>aarch64</td>
+                            <td>
+                                <a href=https://ziglang.org/builds/zig-linux-aarch64-0.12.0-dev.2589+eaa6218f0.tar.xz>zig-linux-aarch64-0.12.0-dev.2589+eaa6218f0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/builds/zig-linux-aarch64-0.12.0-dev.2589+eaa6218f0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>42.5MiB</td>
+                        </tr>
+                        <tr>
+                            <td>armv7a</td>
+                            <td>
+                                <a href=https://ziglang.org/builds/zig-linux-armv7a-0.12.0-dev.2589+eaa6218f0.tar.xz>zig-linux-armv7a-0.12.0-dev.2589+eaa6218f0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/builds/zig-linux-armv7a-0.12.0-dev.2589+eaa6218f0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>43.3MiB</td>
+                        </tr>
+                        <tr>
+                            <td>riscv64</td>
+                            <td>
+                                <a href=https://ziglang.org/builds/zig-linux-riscv64-0.12.0-dev.2589+eaa6218f0.tar.xz>zig-linux-riscv64-0.12.0-dev.2589+eaa6218f0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/builds/zig-linux-riscv64-0.12.0-dev.2589+eaa6218f0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>44.5MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>powerpc64le</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/builds/zig-linux-powerpc64le-0.12.0-dev.2589+eaa6218f0.tar.xz>zig-linux-powerpc64le-0.12.0-dev.2589+eaa6218f0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/builds/zig-linux-powerpc64le-0.12.0-dev.2589+eaa6218f0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>45.8MiB</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <h2 id=release-0.11.0>0.11.0</h2>
+                <ul>
+                    <li>2023-08-04</li>
+                    <li>
+                        <a href=https://ziglang.org/download/0.11.0/release-notes.html>Release Notes</a>
+                    </li>
+                    <li>
+                        <a href=https://ziglang.org/documentation/0.11.0/>Language Reference</a>
+                    </li>
+                    <li>
+                        <a href=https://ziglang.org/documentation/0.11.0/std/>Standard Library Documentation</a>
+                         (experimental)
+                    </li>
+                </ul>
+                <table>
+                    <col width=10%>
+                    <col width=10%>
+                    <col width=40%>
+                    <col width=10%>
+                    <thead>
+                        <tr>
+                            <th>OS</th>
+                            <th>Arch</th>
+                            <th>Filename</th>
+                            <th>Signature</th>
+                            <th>Size</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th style=text-align:center colspan=2 rowspan=2>Source</th>
+                            <td>
+                                <a href=https://ziglang.org/download/0.11.0/zig-0.11.0.tar.xz>zig-0.11.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.11.0/zig-0.11.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>14.6MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.11.0/zig-bootstrap-0.11.0.tar.xz>zig-bootstrap-0.11.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.11.0/zig-bootstrap-0.11.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>41.2MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=3>Windows</th>
+                            <td>x86_64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.11.0/zig-windows-x86_64-0.11.0.zip>zig-windows-x86_64-0.11.0.zip</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.11.0/zig-windows-x86_64-0.11.0.zip.minisig>minisig</a>
+                            </td>
+                            <td>73.6MiB</td>
+                        </tr>
+                        <tr>
+                            <td>x86</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.11.0/zig-windows-x86-0.11.0.zip>zig-windows-x86-0.11.0.zip</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.11.0/zig-windows-x86-0.11.0.zip.minisig>minisig</a>
+                            </td>
+                            <td>77.8MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>aarch64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.11.0/zig-windows-aarch64-0.11.0.zip>zig-windows-aarch64-0.11.0.zip</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.11.0/zig-windows-aarch64-0.11.0.zip.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>70.5MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=2>macOS</th>
+                            <td>aarch64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.11.0/zig-macos-aarch64-0.11.0.tar.xz>zig-macos-aarch64-0.11.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.11.0/zig-macos-aarch64-0.11.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>41.8MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.11.0/zig-macos-x86_64-0.11.0.tar.xz>zig-macos-x86_64-0.11.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.11.0/zig-macos-x86_64-0.11.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>45.0MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=7>Linux</th>
+                            <td>x86_64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.11.0/zig-linux-x86_64-0.11.0.tar.xz>zig-linux-x86_64-0.11.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.11.0/zig-linux-x86_64-0.11.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>42.9MiB</td>
+                        </tr>
+                        <tr>
+                            <td>x86</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.11.0/zig-linux-x86-0.11.0.tar.xz>zig-linux-x86-0.11.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.11.0/zig-linux-x86-0.11.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>47.5MiB</td>
+                        </tr>
+                        <tr>
+                            <td>aarch64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.11.0/zig-linux-aarch64-0.11.0.tar.xz>zig-linux-aarch64-0.11.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.11.0/zig-linux-aarch64-0.11.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>39.6MiB</td>
+                        </tr>
+                        <tr>
+                            <td>armv7a</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.11.0/zig-linux-armv7a-0.11.0.tar.xz>zig-linux-armv7a-0.11.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.11.0/zig-linux-armv7a-0.11.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>40.3MiB</td>
+                        </tr>
+                        <tr>
+                            <td>riscv64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.11.0/zig-linux-riscv64-0.11.0.tar.xz>zig-linux-riscv64-0.11.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.11.0/zig-linux-riscv64-0.11.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>41.5MiB</td>
+                        </tr>
+                        <tr>
+                            <td>powerpc64le</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.11.0/zig-linux-powerpc64le-0.11.0.tar.xz>zig-linux-powerpc64le-0.11.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.11.0/zig-linux-powerpc64le-0.11.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>42.6MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>powerpc</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.11.0/zig-linux-powerpc-0.11.0.tar.xz>zig-linux-powerpc-0.11.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.11.0/zig-linux-powerpc-0.11.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>42.5MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=1>FreeBSD</th>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.11.0/zig-freebsd-x86_64-0.11.0.tar.xz>zig-freebsd-x86_64-0.11.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.11.0/zig-freebsd-x86_64-0.11.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>44.3MiB</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <h2 id=release-0.10.1>0.10.1</h2>
+                <ul>
+                    <li>2023-01-19</li>
+                    <li>
+                        <a href=https://ziglang.org/download/0.10.1/release-notes.html>Release Notes</a>
+                    </li>
+                    <li>
+                        <a href=https://ziglang.org/documentation/0.10.1/>Language Reference</a>
+                    </li>
+                    <li>
+                        <a href=https://ziglang.org/documentation/0.10.1/std/>Standard Library Documentation</a>
+                         (experimental)
+                    </li>
+                </ul>
+                <table>
+                    <col width=10%>
+                    <col width=10%>
+                    <col width=40%>
+                    <col width=10%>
+                    <thead>
+                        <tr>
+                            <th>OS</th>
+                            <th>Arch</th>
+                            <th>Filename</th>
+                            <th>Signature</th>
+                            <th>Size</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th style=text-align:center colspan=2 rowspan=2>Source</th>
+                            <td>
+                                <a href=https://ziglang.org/download/0.10.1/zig-0.10.1.tar.xz>zig-0.10.1.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.10.1/zig-0.10.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>14.4MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.10.1/zig-bootstrap-0.10.1.tar.xz>zig-bootstrap-0.10.1.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.10.1/zig-bootstrap-0.10.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>41.9MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=2>Windows</th>
+                            <td>x86_64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.10.1/zig-windows-x86_64-0.10.1.zip>zig-windows-x86_64-0.10.1.zip</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.10.1/zig-windows-x86_64-0.10.1.zip.minisig>minisig</a>
+                            </td>
+                            <td>69.9MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>aarch64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.10.1/zig-windows-aarch64-0.10.1.zip>zig-windows-aarch64-0.10.1.zip</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.10.1/zig-windows-aarch64-0.10.1.zip.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>66.2MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=2>macOS</th>
+                            <td>aarch64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.10.1/zig-macos-aarch64-0.10.1.tar.xz>zig-macos-aarch64-0.10.1.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.10.1/zig-macos-aarch64-0.10.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>38.6MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.10.1/zig-macos-x86_64-0.10.1.tar.xz>zig-macos-x86_64-0.10.1.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.10.1/zig-macos-x86_64-0.10.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>43.0MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=4>Linux</th>
+                            <td>x86_64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.10.1/zig-linux-x86_64-0.10.1.tar.xz>zig-linux-x86_64-0.10.1.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.10.1/zig-linux-x86_64-0.10.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>42.0MiB</td>
+                        </tr>
+                        <tr>
+                            <td>i386</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.10.1/zig-linux-i386-0.10.1.tar.xz>zig-linux-i386-0.10.1.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.10.1/zig-linux-i386-0.10.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>46.1MiB</td>
+                        </tr>
+                        <tr>
+                            <td>aarch64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.10.1/zig-linux-aarch64-0.10.1.tar.xz>zig-linux-aarch64-0.10.1.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.10.1/zig-linux-aarch64-0.10.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>38.5MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>riscv64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.10.1/zig-linux-riscv64-0.10.1.tar.xz>zig-linux-riscv64-0.10.1.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.10.1/zig-linux-riscv64-0.10.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>40.2MiB</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <h2 id=release-0.10.0>0.10.0</h2>
+                <ul>
+                    <li>2022-10-31</li>
+                    <li>
+                        <a href=https://ziglang.org/download/0.10.0/release-notes.html>Release Notes</a>
+                    </li>
+                    <li>
+                        <a href=https://ziglang.org/documentation/0.10.0/>Language Reference</a>
+                    </li>
+                    <li>
+                        <a href=https://ziglang.org/documentation/0.10.0/std/>Standard Library Documentation</a>
+                         (experimental)
+                    </li>
+                </ul>
+                <table>
+                    <col width=10%>
+                    <col width=10%>
+                    <col width=40%>
+                    <col width=10%>
+                    <thead>
+                        <tr>
+                            <th>OS</th>
+                            <th>Arch</th>
+                            <th>Filename</th>
+                            <th>Signature</th>
+                            <th>Size</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th style=text-align:center colspan=2 rowspan=2>Source</th>
+                            <td>
+                                <a href=https://ziglang.org/download/0.10.0/zig-0.10.0.tar.xz>zig-0.10.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.10.0/zig-0.10.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>13.9MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.10.0/zig-bootstrap-0.10.0.tar.xz>zig-bootstrap-0.10.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.10.0/zig-bootstrap-0.10.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>43.5MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=2>Windows</th>
+                            <td>x86_64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.10.0/zig-windows-x86_64-0.10.0.zip>zig-windows-x86_64-0.10.0.zip</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.10.0/zig-windows-x86_64-0.10.0.zip.minisig>minisig</a>
+                            </td>
+                            <td>69.8MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>aarch64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.10.0/zig-windows-aarch64-0.10.0.zip>zig-windows-aarch64-0.10.0.zip</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.10.0/zig-windows-aarch64-0.10.0.zip.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>66.1MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=2>macOS</th>
+                            <td>aarch64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.10.0/zig-macos-aarch64-0.10.0.tar.xz>zig-macos-aarch64-0.10.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.10.0/zig-macos-aarch64-0.10.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>38.7MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.10.0/zig-macos-x86_64-0.10.0.tar.xz>zig-macos-x86_64-0.10.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.10.0/zig-macos-x86_64-0.10.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>43.1MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=5>Linux</th>
+                            <td>x86_64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.10.0/zig-linux-x86_64-0.10.0.tar.xz>zig-linux-x86_64-0.10.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.10.0/zig-linux-x86_64-0.10.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>42.1MiB</td>
+                        </tr>
+                        <tr>
+                            <td>i386</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.10.0/zig-linux-i386-0.10.0.tar.xz>zig-linux-i386-0.10.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.10.0/zig-linux-i386-0.10.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>46.2MiB</td>
+                        </tr>
+                        <tr>
+                            <td>aarch64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.10.0/zig-linux-aarch64-0.10.0.tar.xz>zig-linux-aarch64-0.10.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.10.0/zig-linux-aarch64-0.10.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>38.5MiB</td>
+                        </tr>
+                        <tr>
+                            <td>armv7a</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.10.0/zig-linux-armv7a-0.10.0.tar.xz>zig-linux-armv7a-0.10.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.10.0/zig-linux-armv7a-0.10.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>48.5MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>riscv64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.10.0/zig-linux-riscv64-0.10.0.tar.xz>zig-linux-riscv64-0.10.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.10.0/zig-linux-riscv64-0.10.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>40.3MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=1>FreeBSD</th>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.10.0/zig-freebsd-x86_64-0.10.0.tar.xz>zig-freebsd-x86_64-0.10.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.10.0/zig-freebsd-x86_64-0.10.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>42.0MiB</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <h2 id=release-0.9.1>0.9.1</h2>
+                <ul>
+                    <li>2022-02-14</li>
+                    <li>
+                        <a href=https://ziglang.org/download/0.9.1/release-notes.html>Release Notes</a>
+                    </li>
+                    <li>
+                        <a href=https://ziglang.org/documentation/0.9.1/>Language Reference</a>
+                    </li>
+                    <li>
+                        <a href=https://ziglang.org/documentation/0.9.1/std/>Standard Library Documentation</a>
+                         (experimental)
+                    </li>
+                </ul>
+                <table>
+                    <col width=10%>
+                    <col width=10%>
+                    <col width=40%>
+                    <col width=10%>
+                    <thead>
+                        <tr>
+                            <th>OS</th>
+                            <th>Arch</th>
+                            <th>Filename</th>
+                            <th>Signature</th>
+                            <th>Size</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th style=text-align:center colspan=2 rowspan=2>Source</th>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.1/zig-0.9.1.tar.xz>zig-0.9.1.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.1/zig-0.9.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>13.3MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.9.1/zig-bootstrap-0.9.1.tar.xz>zig-bootstrap-0.9.1.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.9.1/zig-bootstrap-0.9.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>40.5MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=3>Windows</th>
+                            <td>x86_64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.1/zig-windows-x86_64-0.9.1.zip>zig-windows-x86_64-0.9.1.zip</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.1/zig-windows-x86_64-0.9.1.zip.minisig>minisig</a>
+                            </td>
+                            <td>62.0MiB</td>
+                        </tr>
+                        <tr>
+                            <td>i386</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.1/zig-windows-i386-0.9.1.zip>zig-windows-i386-0.9.1.zip</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.1/zig-windows-i386-0.9.1.zip.minisig>minisig</a>
+                            </td>
+                            <td>64.8MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>aarch64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.9.1/zig-windows-aarch64-0.9.1.zip>zig-windows-aarch64-0.9.1.zip</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.9.1/zig-windows-aarch64-0.9.1.zip.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>58.6MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=2>macOS</th>
+                            <td>aarch64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.1/zig-macos-aarch64-0.9.1.tar.xz>zig-macos-aarch64-0.9.1.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.1/zig-macos-aarch64-0.9.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>37.2MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.9.1/zig-macos-x86_64-0.9.1.tar.xz>zig-macos-x86_64-0.9.1.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.9.1/zig-macos-x86_64-0.9.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>41.7MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=5>Linux</th>
+                            <td>x86_64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.1/zig-linux-x86_64-0.9.1.tar.xz>zig-linux-x86_64-0.9.1.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.1/zig-linux-x86_64-0.9.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>39.1MiB</td>
+                        </tr>
+                        <tr>
+                            <td>i386</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.1/zig-linux-i386-0.9.1.tar.xz>zig-linux-i386-0.9.1.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.1/zig-linux-i386-0.9.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>42.9MiB</td>
+                        </tr>
+                        <tr>
+                            <td>aarch64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.1/zig-linux-aarch64-0.9.1.tar.xz>zig-linux-aarch64-0.9.1.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.1/zig-linux-aarch64-0.9.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>35.3MiB</td>
+                        </tr>
+                        <tr>
+                            <td>armv7a</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.1/zig-linux-armv7a-0.9.1.tar.xz>zig-linux-armv7a-0.9.1.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.1/zig-linux-armv7a-0.9.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>36.2MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>riscv64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.9.1/zig-linux-riscv64-0.9.1.tar.xz>zig-linux-riscv64-0.9.1.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.9.1/zig-linux-riscv64-0.9.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>37.6MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=1>FreeBSD</th>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.9.1/zig-freebsd-x86_64-0.9.1.tar.xz>zig-freebsd-x86_64-0.9.1.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.9.1/zig-freebsd-x86_64-0.9.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>37.2MiB</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <h2 id=release-0.9.0>0.9.0</h2>
+                <ul>
+                    <li>2021-12-20</li>
+                    <li>
+                        <a href=https://ziglang.org/download/0.9.0/release-notes.html>Release Notes</a>
+                    </li>
+                    <li>
+                        <a href=https://ziglang.org/documentation/0.9.0/>Language Reference</a>
+                    </li>
+                    <li>
+                        <a href=https://ziglang.org/documentation/0.9.0/std/>Standard Library Documentation</a>
+                         (experimental)
+                    </li>
+                </ul>
+                <table>
+                    <col width=10%>
+                    <col width=10%>
+                    <col width=40%>
+                    <col width=10%>
+                    <thead>
+                        <tr>
+                            <th>OS</th>
+                            <th>Arch</th>
+                            <th>Filename</th>
+                            <th>Signature</th>
+                            <th>Size</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th style=text-align:center colspan=2 rowspan=2>Source</th>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.0/zig-0.9.0.tar.xz>zig-0.9.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.0/zig-0.9.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>13.3MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.9.0/zig-bootstrap-0.9.0.tar.xz>zig-bootstrap-0.9.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.9.0/zig-bootstrap-0.9.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>40.6MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=3>Windows</th>
+                            <td>x86_64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.0/zig-windows-x86_64-0.9.0.zip>zig-windows-x86_64-0.9.0.zip</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.0/zig-windows-x86_64-0.9.0.zip.minisig>minisig</a>
+                            </td>
+                            <td>62.0MiB</td>
+                        </tr>
+                        <tr>
+                            <td>i386</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.0/zig-windows-i386-0.9.0.zip>zig-windows-i386-0.9.0.zip</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.0/zig-windows-i386-0.9.0.zip.minisig>minisig</a>
+                            </td>
+                            <td>64.8MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>aarch64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.9.0/zig-windows-aarch64-0.9.0.zip>zig-windows-aarch64-0.9.0.zip</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.9.0/zig-windows-aarch64-0.9.0.zip.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>58.6MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=2>macOS</th>
+                            <td>aarch64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.0/zig-macos-aarch64-0.9.0.tar.xz>zig-macos-aarch64-0.9.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.0/zig-macos-aarch64-0.9.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>37.2MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.9.0/zig-macos-x86_64-0.9.0.tar.xz>zig-macos-x86_64-0.9.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.9.0/zig-macos-x86_64-0.9.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>41.7MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=5>Linux</th>
+                            <td>x86_64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.0/zig-linux-x86_64-0.9.0.tar.xz>zig-linux-x86_64-0.9.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.0/zig-linux-x86_64-0.9.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>41.4MiB</td>
+                        </tr>
+                        <tr>
+                            <td>i386</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.0/zig-linux-i386-0.9.0.tar.xz>zig-linux-i386-0.9.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.0/zig-linux-i386-0.9.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>45.2MiB</td>
+                        </tr>
+                        <tr>
+                            <td>aarch64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.0/zig-linux-aarch64-0.9.0.tar.xz>zig-linux-aarch64-0.9.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.0/zig-linux-aarch64-0.9.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>38.2MiB</td>
+                        </tr>
+                        <tr>
+                            <td>armv7a</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.0/zig-linux-armv7a-0.9.0.tar.xz>zig-linux-armv7a-0.9.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.9.0/zig-linux-armv7a-0.9.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>39.3MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>riscv64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.9.0/zig-linux-riscv64-0.9.0.tar.xz>zig-linux-riscv64-0.9.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.9.0/zig-linux-riscv64-0.9.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>42.1MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=1>FreeBSD</th>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.9.0/zig-freebsd-x86_64-0.9.0.tar.xz>zig-freebsd-x86_64-0.9.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.9.0/zig-freebsd-x86_64-0.9.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>39.4MiB</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <h2 id=release-0.8.1>0.8.1</h2>
+                <ul>
+                    <li>2021-09-06</li>
+                    <li>
+                        <a href=https://ziglang.org/download/0.8.1/release-notes.html>Release Notes</a>
+                    </li>
+                    <li>
+                        <a href=https://ziglang.org/documentation/0.8.1/>Language Reference</a>
+                    </li>
+                    <li>
+                        <a href=https://ziglang.org/documentation/0.8.1/std/>Standard Library Documentation</a>
+                         (experimental)
+                    </li>
+                </ul>
+                <table>
+                    <col width=10%>
+                    <col width=10%>
+                    <col width=40%>
+                    <col width=10%>
+                    <thead>
+                        <tr>
+                            <th>OS</th>
+                            <th>Arch</th>
+                            <th>Filename</th>
+                            <th>Signature</th>
+                            <th>Size</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th style=text-align:center colspan=2 rowspan=2>Source</th>
+                            <td>
+                                <a href=https://ziglang.org/download/0.8.1/zig-0.8.1.tar.xz>zig-0.8.1.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.8.1/zig-0.8.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>12.1MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.8.1/zig-bootstrap-0.8.1.tar.xz>zig-bootstrap-0.8.1.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.8.1/zig-bootstrap-0.8.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>41.6MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=2>Windows</th>
+                            <td>x86_64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.8.1/zig-windows-x86_64-0.8.1.zip>zig-windows-x86_64-0.8.1.zip</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.8.1/zig-windows-x86_64-0.8.1.zip.minisig>minisig</a>
+                            </td>
+                            <td>59.0MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>i386</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.8.1/zig-windows-i386-0.8.1.zip>zig-windows-i386-0.8.1.zip</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.8.1/zig-windows-i386-0.8.1.zip.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>61.2MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=2>macOS</th>
+                            <td>aarch64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.8.1/zig-macos-aarch64-0.8.1.tar.xz>zig-macos-aarch64-0.8.1.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.8.1/zig-macos-aarch64-0.8.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>33.7MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.8.1/zig-macos-x86_64-0.8.1.tar.xz>zig-macos-x86_64-0.8.1.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.8.1/zig-macos-x86_64-0.8.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>38.1MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=5>Linux</th>
+                            <td>x86_64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.8.1/zig-linux-x86_64-0.8.1.tar.xz>zig-linux-x86_64-0.8.1.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.8.1/zig-linux-x86_64-0.8.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>39.3MiB</td>
+                        </tr>
+                        <tr>
+                            <td>i386</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.8.1/zig-linux-i386-0.8.1.tar.xz>zig-linux-i386-0.8.1.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.8.1/zig-linux-i386-0.8.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>42.7MiB</td>
+                        </tr>
+                        <tr>
+                            <td>aarch64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.8.1/zig-linux-aarch64-0.8.1.tar.xz>zig-linux-aarch64-0.8.1.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.8.1/zig-linux-aarch64-0.8.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>35.9MiB</td>
+                        </tr>
+                        <tr>
+                            <td>armv7a</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.8.1/zig-linux-armv7a-0.8.1.tar.xz>zig-linux-armv7a-0.8.1.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.8.1/zig-linux-armv7a-0.8.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>37.4MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>riscv64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.8.1/zig-linux-riscv64-0.8.1.tar.xz>zig-linux-riscv64-0.8.1.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.8.1/zig-linux-riscv64-0.8.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>39.3MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=1>FreeBSD</th>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.8.1/zig-freebsd-x86_64-0.8.1.tar.xz>zig-freebsd-x86_64-0.8.1.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.8.1/zig-freebsd-x86_64-0.8.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>37.3MiB</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <h2 id=release-0.8.0>0.8.0</h2>
+                <ul>
+                    <li>2021-06-04</li>
+                    <li>
+                        <a href=https://ziglang.org/download/0.8.0/release-notes.html>Release Notes</a>
+                    </li>
+                    <li>
+                        <a href=https://ziglang.org/documentation/0.8.0/>Language Reference</a>
+                    </li>
+                    <li>
+                        <a href=https://ziglang.org/documentation/0.8.0/std/>Standard Library Documentation</a>
+                         (experimental)
+                    </li>
+                </ul>
+                <table>
+                    <col width=10%>
+                    <col width=10%>
+                    <col width=40%>
+                    <col width=10%>
+                    <thead>
+                        <tr>
+                            <th>OS</th>
+                            <th>Arch</th>
+                            <th>Filename</th>
+                            <th>Signature</th>
+                            <th>Size</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th style=text-align:center colspan=2 rowspan=2>Source</th>
+                            <td>
+                                <a href=https://ziglang.org/download/0.8.0/zig-0.8.0.tar.xz>zig-0.8.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.8.0/zig-0.8.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>12.0MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.8.0/zig-bootstrap-0.8.0.tar.xz>zig-bootstrap-0.8.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.8.0/zig-bootstrap-0.8.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>41.6MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=2>Windows</th>
+                            <td>x86_64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.8.0/zig-windows-x86_64-0.8.0.zip>zig-windows-x86_64-0.8.0.zip</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.8.0/zig-windows-x86_64-0.8.0.zip.minisig>minisig</a>
+                            </td>
+                            <td>58.9MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>i386</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.8.0/zig-windows-i386-0.8.0.zip>zig-windows-i386-0.8.0.zip</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.8.0/zig-windows-i386-0.8.0.zip.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>58.7MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=2>macOS</th>
+                            <td>aarch64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.8.0/zig-macos-aarch64-0.8.0.tar.xz>zig-macos-aarch64-0.8.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.8.0/zig-macos-aarch64-0.8.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>33.7MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.8.0/zig-macos-x86_64-0.8.0.tar.xz>zig-macos-x86_64-0.8.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.8.0/zig-macos-x86_64-0.8.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>38.1MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=5>Linux</th>
+                            <td>x86_64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.8.0/zig-linux-x86_64-0.8.0.tar.xz>zig-linux-x86_64-0.8.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.8.0/zig-linux-x86_64-0.8.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>39.3MiB</td>
+                        </tr>
+                        <tr>
+                            <td>i386</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.8.0/zig-linux-i386-0.8.0.tar.xz>zig-linux-i386-0.8.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.8.0/zig-linux-i386-0.8.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>40.2MiB</td>
+                        </tr>
+                        <tr>
+                            <td>aarch64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.8.0/zig-linux-aarch64-0.8.0.tar.xz>zig-linux-aarch64-0.8.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.8.0/zig-linux-aarch64-0.8.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>35.8MiB</td>
+                        </tr>
+                        <tr>
+                            <td>armv7a</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.8.0/zig-linux-armv7a-0.8.0.tar.xz>zig-linux-armv7a-0.8.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.8.0/zig-linux-armv7a-0.8.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>37.1MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>riscv64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.8.0/zig-linux-riscv64-0.8.0.tar.xz>zig-linux-riscv64-0.8.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.8.0/zig-linux-riscv64-0.8.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>38.2MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=1>FreeBSD</th>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.8.0/zig-freebsd-x86_64-0.8.0.tar.xz>zig-freebsd-x86_64-0.8.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.8.0/zig-freebsd-x86_64-0.8.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>37.3MiB</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <h2 id=release-0.7.1>0.7.1</h2>
+                <ul>
+                    <li>2020-12-13</li>
+                    <li>
+                        <a href=https://ziglang.org/download/0.7.1/release-notes.html>Release Notes</a>
+                    </li>
+                    <li>
+                        <a href=https://ziglang.org/documentation/0.7.1/>Language Reference</a>
+                    </li>
+                    <li>
+                        <a href=https://ziglang.org/documentation/0.7.1/std/>Standard Library Documentation</a>
+                         (experimental)
+                    </li>
+                </ul>
+                <table>
+                    <col width=10%>
+                    <col width=10%>
+                    <col width=40%>
+                    <col width=10%>
+                    <thead>
+                        <tr>
+                            <th>OS</th>
+                            <th>Arch</th>
+                            <th>Filename</th>
+                            <th>Signature</th>
+                            <th>Size</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th style=text-align:center colspan=2 rowspan=2>Source</th>
+                            <td>
+                                <a href=https://ziglang.org/download/0.7.1/zig-0.7.1.tar.xz>zig-0.7.1.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.7.1/zig-0.7.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>10.2MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.7.1/zig-bootstrap-0.7.1.tar.xz>zig-bootstrap-0.7.1.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.7.1/zig-bootstrap-0.7.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>38.4MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=2>Windows</th>
+                            <td>x86_64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.7.1/zig-windows-x86_64-0.7.1.zip>zig-windows-x86_64-0.7.1.zip</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.7.1/zig-windows-x86_64-0.7.1.zip.minisig>minisig</a>
+                            </td>
+                            <td>52.4MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>i386</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.7.1/zig-windows-i386-0.7.1.zip>zig-windows-i386-0.7.1.zip</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.7.1/zig-windows-i386-0.7.1.zip.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>51.9MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=1>macOS</th>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.7.1/zig-macos-x86_64-0.7.1.tar.xz>zig-macos-x86_64-0.7.1.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.7.1/zig-macos-x86_64-0.7.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>34.5MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=5>Linux</th>
+                            <td>x86_64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.7.1/zig-linux-x86_64-0.7.1.tar.xz>zig-linux-x86_64-0.7.1.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.7.1/zig-linux-x86_64-0.7.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>36.1MiB</td>
+                        </tr>
+                        <tr>
+                            <td>i386</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.7.1/zig-linux-i386-0.7.1.tar.xz>zig-linux-i386-0.7.1.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.7.1/zig-linux-i386-0.7.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>37.4MiB</td>
+                        </tr>
+                        <tr>
+                            <td>aarch64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.7.1/zig-linux-aarch64-0.7.1.tar.xz>zig-linux-aarch64-0.7.1.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.7.1/zig-linux-aarch64-0.7.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>32.2MiB</td>
+                        </tr>
+                        <tr>
+                            <td>armv7a</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.7.1/zig-linux-armv7a-0.7.1.tar.xz>zig-linux-armv7a-0.7.1.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.7.1/zig-linux-armv7a-0.7.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>34.2MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>riscv64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.7.1/zig-linux-riscv64-0.7.1.tar.xz>zig-linux-riscv64-0.7.1.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.7.1/zig-linux-riscv64-0.7.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>35.7MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=1>FreeBSD</th>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.7.1/zig-freebsd-x86_64-0.7.1.tar.xz>zig-freebsd-x86_64-0.7.1.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.7.1/zig-freebsd-x86_64-0.7.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>37.3MiB</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <h2 id=release-0.7.0>0.7.0</h2>
+                <ul>
+                    <li>2020-11-08</li>
+                    <li>
+                        <a href=https://ziglang.org/download/0.7.0/release-notes.html>Release Notes</a>
+                    </li>
+                    <li>
+                        <a href=https://ziglang.org/documentation/0.7.0/>Language Reference</a>
+                    </li>
+                    <li>
+                        <a href=https://ziglang.org/documentation/0.7.0/std/>Standard Library Documentation</a>
+                         (experimental)
+                    </li>
+                </ul>
+                <table>
+                    <col width=10%>
+                    <col width=10%>
+                    <col width=40%>
+                    <col width=10%>
+                    <thead>
+                        <tr>
+                            <th>OS</th>
+                            <th>Arch</th>
+                            <th>Filename</th>
+                            <th>Signature</th>
+                            <th>Size</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th style=text-align:center colspan=2 rowspan=2>Source</th>
+                            <td>
+                                <a href=https://ziglang.org/download/0.7.0/zig-0.7.0.tar.xz>zig-0.7.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.7.0/zig-0.7.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>10.2MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.7.0/zig-bootstrap-0.7.0.tar.xz>zig-bootstrap-0.7.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.7.0/zig-bootstrap-0.7.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>38.3MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=2>Windows</th>
+                            <td>x86_64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.7.0/zig-windows-x86_64-0.7.0.zip>zig-windows-x86_64-0.7.0.zip</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.7.0/zig-windows-x86_64-0.7.0.zip.minisig>minisig</a>
+                            </td>
+                            <td>51.4MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>i386</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.7.0/zig-windows-i386-0.7.0.zip>zig-windows-i386-0.7.0.zip</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.7.0/zig-windows-i386-0.7.0.zip.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>50.9MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=2>macOS</th>
+                            <td>aarch64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.7.0/zig-macos-aarch64-0.7.0.tar.xz>zig-macos-aarch64-0.7.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.7.0/zig-macos-aarch64-0.7.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>32.2MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.7.0/zig-macos-x86_64-0.7.0.tar.xz>zig-macos-x86_64-0.7.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.7.0/zig-macos-x86_64-0.7.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>33.6MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=5>Linux</th>
+                            <td>x86_64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.7.0/zig-linux-x86_64-0.7.0.tar.xz>zig-linux-x86_64-0.7.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.7.0/zig-linux-x86_64-0.7.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>35.4MiB</td>
+                        </tr>
+                        <tr>
+                            <td>i386</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.7.0/zig-linux-i386-0.7.0.tar.xz>zig-linux-i386-0.7.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.7.0/zig-linux-i386-0.7.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>36.7MiB</td>
+                        </tr>
+                        <tr>
+                            <td>aarch64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.7.0/zig-linux-aarch64-0.7.0.tar.xz>zig-linux-aarch64-0.7.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.7.0/zig-linux-aarch64-0.7.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>31.6MiB</td>
+                        </tr>
+                        <tr>
+                            <td>armv7a</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.7.0/zig-linux-armv7a-0.7.0.tar.xz>zig-linux-armv7a-0.7.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.7.0/zig-linux-armv7a-0.7.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>33.5MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>riscv64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.7.0/zig-linux-riscv64-0.7.0.tar.xz>zig-linux-riscv64-0.7.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.7.0/zig-linux-riscv64-0.7.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>35.1MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=1>FreeBSD</th>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.7.0/zig-freebsd-x86_64-0.7.0.tar.xz>zig-freebsd-x86_64-0.7.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.7.0/zig-freebsd-x86_64-0.7.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>33.2MiB</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <h2 id=release-0.6.0>0.6.0</h2>
+                <ul>
+                    <li>2020-04-13</li>
+                    <li>
+                        <a href=https://ziglang.org/download/0.6.0/release-notes.html>Release Notes</a>
+                    </li>
+                    <li>
+                        <a href=https://ziglang.org/documentation/0.6.0/>Language Reference</a>
+                    </li>
+                    <li>
+                        <a href=https://ziglang.org/documentation/0.6.0/std/>Standard Library Documentation</a>
+                         (experimental)
+                    </li>
+                </ul>
+                <table>
+                    <col width=10%>
+                    <col width=10%>
+                    <col width=40%>
+                    <col width=10%>
+                    <thead>
+                        <tr>
+                            <th>OS</th>
+                            <th>Arch</th>
+                            <th>Filename</th>
+                            <th>Signature</th>
+                            <th>Size</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th style=text-align:center colspan=2 rowspan=2>Source</th>
+                            <td>
+                                <a href=https://ziglang.org/download/0.6.0/zig-0.6.0.tar.xz>zig-0.6.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.6.0/zig-0.6.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>9.9MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.6.0/zig-bootstrap-0.6.0.tar.xz>zig-bootstrap-0.6.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.6.0/zig-bootstrap-0.6.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>36.7MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=2>Windows</th>
+                            <td>x86_64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.6.0/zig-windows-x86_64-0.6.0.zip>zig-windows-x86_64-0.6.0.zip</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.6.0/zig-windows-x86_64-0.6.0.zip.minisig>minisig</a>
+                            </td>
+                            <td>46.8MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>i386</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.6.0/zig-windows-i386-0.6.0.zip>zig-windows-i386-0.6.0.zip</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.6.0/zig-windows-i386-0.6.0.zip.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>57.6MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=1>macOS</th>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.6.0/zig-macos-x86_64-0.6.0.tar.xz>zig-macos-x86_64-0.6.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.6.0/zig-macos-x86_64-0.6.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>40.6MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=6>Linux</th>
+                            <td>x86_64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.6.0/zig-linux-x86_64-0.6.0.tar.xz>zig-linux-x86_64-0.6.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.6.0/zig-linux-x86_64-0.6.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>42.7MiB</td>
+                        </tr>
+                        <tr>
+                            <td>i386</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.6.0/zig-linux-i386-0.6.0.tar.xz>zig-linux-i386-0.6.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.6.0/zig-linux-i386-0.6.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>42.8MiB</td>
+                        </tr>
+                        <tr>
+                            <td>aarch64</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.6.0/zig-linux-aarch64-0.6.0.tar.xz>zig-linux-aarch64-0.6.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.6.0/zig-linux-aarch64-0.6.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>35.4MiB</td>
+                        </tr>
+                        <tr>
+                            <td>armv6kz</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.6.0/zig-linux-armv6kz-0.6.0.tar.xz>zig-linux-armv6kz-0.6.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.6.0/zig-linux-armv6kz-0.6.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>37.3MiB</td>
+                        </tr>
+                        <tr>
+                            <td>armv7a</td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.6.0/zig-linux-armv7a-0.6.0.tar.xz>zig-linux-armv7a-0.6.0.tar.xz</a>
+                            </td>
+                            <td>
+                                <a href=https://ziglang.org/download/0.6.0/zig-linux-armv7a-0.6.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td>37.3MiB</td>
+                        </tr>
+                        <tr>
+                            <td class=last-row-in-section>riscv64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.6.0/zig-linux-riscv64-0.6.0.tar.xz>zig-linux-riscv64-0.6.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.6.0/zig-linux-riscv64-0.6.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>40.0MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=1>FreeBSD</th>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.6.0/zig-freebsd-x86_64-0.6.0.tar.xz>zig-freebsd-x86_64-0.6.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.6.0/zig-freebsd-x86_64-0.6.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>35.3MiB</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <h2 id=release-0.5.0>0.5.0</h2>
+                <ul>
+                    <li>2019-09-30</li>
+                    <li>
+                        <a href=https://ziglang.org/download/0.5.0/release-notes.html>Release Notes</a>
+                    </li>
+                    <li>
+                        <a href=https://ziglang.org/documentation/0.5.0/>Language Reference</a>
+                    </li>
+                </ul>
+                <table>
+                    <col width=10%>
+                    <col width=10%>
+                    <col width=40%>
+                    <col width=10%>
+                    <thead>
+                        <tr>
+                            <th>OS</th>
+                            <th>Arch</th>
+                            <th>Filename</th>
+                            <th>Signature</th>
+                            <th>Size</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th class=last-row-in-section style=text-align:center colspan=2 rowspan=1>Source</th>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.5.0/zig-0.5.0.tar.xz>zig-0.5.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.5.0/zig-0.5.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>10.4MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=1>Windows</th>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.5.0/zig-windows-x86_64-0.5.0.zip>zig-windows-x86_64-0.5.0.zip</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.5.0/zig-windows-x86_64-0.5.0.zip.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>42.8MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=1>macOS</th>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.5.0/zig-macos-x86_64-0.5.0.tar.xz>zig-macos-x86_64-0.5.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.5.0/zig-macos-x86_64-0.5.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>36.1MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=1>Linux</th>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.5.0/zig-linux-x86_64-0.5.0.tar.xz>zig-linux-x86_64-0.5.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.5.0/zig-linux-x86_64-0.5.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>39.0MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=1>FreeBSD</th>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.5.0/zig-freebsd-x86_64-0.5.0.tar.xz>zig-freebsd-x86_64-0.5.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.5.0/zig-freebsd-x86_64-0.5.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>32.1MiB</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <h2 id=release-0.4.0>0.4.0</h2>
+                <ul>
+                    <li>2019-04-08</li>
+                    <li>
+                        <a href=https://ziglang.org/download/0.4.0/release-notes.html>Release Notes</a>
+                    </li>
+                    <li>
+                        <a href=https://ziglang.org/documentation/0.4.0/>Language Reference</a>
+                    </li>
+                </ul>
+                <table>
+                    <col width=10%>
+                    <col width=10%>
+                    <col width=40%>
+                    <col width=10%>
+                    <thead>
+                        <tr>
+                            <th>OS</th>
+                            <th>Arch</th>
+                            <th>Filename</th>
+                            <th>Signature</th>
+                            <th>Size</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th class=last-row-in-section style=text-align:center colspan=2 rowspan=1>Source</th>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.4.0/zig-0.4.0.tar.xz>zig-0.4.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.4.0/zig-0.4.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>5.1MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=1>Windows</th>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.4.0/zig-windows-x86_64-0.4.0.zip>zig-windows-x86_64-0.4.0.zip</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.4.0/zig-windows-x86_64-0.4.0.zip.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>34.1MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=1>macOS</th>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.4.0/zig-macos-x86_64-0.4.0.tar.xz>zig-macos-x86_64-0.4.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.4.0/zig-macos-x86_64-0.4.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>29.4MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=1>Linux</th>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.4.0/zig-linux-x86_64-0.4.0.tar.xz>zig-linux-x86_64-0.4.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.4.0/zig-linux-x86_64-0.4.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>31.4MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=1>FreeBSD</th>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.4.0/zig-freebsd-x86_64-0.4.0.tar.xz>zig-freebsd-x86_64-0.4.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.4.0/zig-freebsd-x86_64-0.4.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>26.0MiB</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <h2 id=release-0.3.0>0.3.0</h2>
+                <ul>
+                    <li>2018-09-28</li>
+                    <li>
+                        <a href=https://ziglang.org/download/0.3.0/release-notes.html>Release Notes</a>
+                    </li>
+                    <li>
+                        <a href=https://ziglang.org/documentation/0.3.0/>Language Reference</a>
+                    </li>
+                </ul>
+                <table>
+                    <col width=10%>
+                    <col width=10%>
+                    <col width=40%>
+                    <col width=10%>
+                    <thead>
+                        <tr>
+                            <th>OS</th>
+                            <th>Arch</th>
+                            <th>Filename</th>
+                            <th>Signature</th>
+                            <th>Size</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th class=last-row-in-section style=text-align:center colspan=2 rowspan=1>Source</th>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.3.0/zig-0.3.0.tar.xz>zig-0.3.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.3.0/zig-0.3.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>2.2MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=1>Windows</th>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.3.0/zig-windows-x86_64-0.3.0.zip>zig-windows-x86_64-0.3.0.zip</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.3.0/zig-windows-x86_64-0.3.0.zip.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>21.5MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=1>macOS</th>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.3.0/zig-macos-x86_64-0.3.0.tar.xz>zig-macos-x86_64-0.3.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.3.0/zig-macos-x86_64-0.3.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>22.6MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=1>Linux</th>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.3.0/zig-linux-x86_64-0.3.0.tar.xz>zig-linux-x86_64-0.3.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.3.0/zig-linux-x86_64-0.3.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>24.0MiB</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <h2 id=release-0.2.0>0.2.0</h2>
+                <ul>
+                    <li>2018-03-15</li>
+                    <li>
+                        <a href=https://ziglang.org/download/0.2.0/release-notes.html>Release Notes</a>
+                    </li>
+                    <li>
+                        <a href=https://ziglang.org/documentation/0.2.0/>Language Reference</a>
+                    </li>
+                </ul>
+                <table>
+                    <col width=10%>
+                    <col width=10%>
+                    <col width=40%>
+                    <col width=10%>
+                    <thead>
+                        <tr>
+                            <th>OS</th>
+                            <th>Arch</th>
+                            <th>Filename</th>
+                            <th>Signature</th>
+                            <th>Size</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th class=last-row-in-section style=text-align:center colspan=2 rowspan=1>Source</th>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.2.0/zig-0.2.0.tar.xz>zig-0.2.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.2.0/zig-0.2.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>1.9MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=1>Windows</th>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.2.0/zig-win64-0.2.0.zip>zig-win64-0.2.0.zip</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.2.0/zig-win64-0.2.0.zip.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>20.1MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=1>Linux</th>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.2.0/zig-linux-x86_64-0.2.0.tar.xz>zig-linux-x86_64-0.2.0.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.2.0/zig-linux-x86_64-0.2.0.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>21.5MiB</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <h2 id=release-0.1.1>0.1.1</h2>
+                <ul>
+                    <li>2017-10-17</li>
+                    <li>
+                        <a href=https://ziglang.org/download/0.1.1/release-notes.html>Release Notes</a>
+                    </li>
+                    <li>
+                        <a href=https://ziglang.org/documentation/0.1.1/>Language Reference</a>
+                    </li>
+                </ul>
+                <table>
+                    <col width=10%>
+                    <col width=10%>
+                    <col width=40%>
+                    <col width=10%>
+                    <thead>
+                        <tr>
+                            <th>OS</th>
+                            <th>Arch</th>
+                            <th>Filename</th>
+                            <th>Signature</th>
+                            <th>Size</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th class=last-row-in-section style=text-align:center colspan=2 rowspan=1>Source</th>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.1.1/zig-0.1.1.tar.xz>zig-0.1.1.tar.xz</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.1.1/zig-0.1.1.tar.xz.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>1.6MiB</td>
+                        </tr>
+                        <tr>
+                            <th rowspan=1>Windows</th>
+                            <td class=last-row-in-section>x86_64</td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.1.1/zig-win64-0.1.1.zip>zig-win64-0.1.1.zip</a>
+                            </td>
+                            <td class=last-row-in-section>
+                                <a href=https://ziglang.org/download/0.1.1/zig-win64-0.1.1.zip.minisig>minisig</a>
+                            </td>
+                            <td class=last-row-in-section>18.8MiB</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class=container style=text-align:center;padding-top:2em>
+        <div id=languages-menu>
+            This page is also available in the following languages
+            <br>
+            <a href=https://ziglang.org/pt/download/>Português</a>
+            <a href=https://ziglang.org/es/download/>Español</a>
+            <a href=https://ziglang.org/de/download/>Deutsch</a>
+            <a href=https://ziglang.org/it/download/>Italiano</a>
+            <a href=https://ziglang.org/fr/download/>Français</a>
+            <a href=https://ziglang.org/id/download/>Indonesian</a>
+            <a href=https://ziglang.org/ru/download/>Русский</a>
+            <a href=https://ziglang.org/ar/download/>عربی</a>
+            <a href=https://ziglang.org/fa/download/>فارسی</a>
+            <a href=https://ziglang.org/ja/download/>日本語</a>
+            <a href=https://ziglang.org/zh/download/>简体中文</a>
+            <a href=https://ziglang.org/ko/download/>한국어</a>
+        </div>
+    </div>
+</body>
+</html>
