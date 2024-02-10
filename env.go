@@ -748,6 +748,7 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 		return errors.WithStack(err)
 	}
 	ops := e.allEnvarOpsForPackages(runtimeDeps, pkg, installed...)
+	ops = append(ops, e.systemEnvOverrideOps(ops)...)
 	packageHermitBin, err := e.getPackageRuntimeEnvops(pkg)
 	if err != nil {
 		return errors.WithStack(err)
@@ -775,6 +776,25 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 		return errors.Wrapf(err, "%s: failed to execute %q", pkg, bin)
 	}
 	return errors.Errorf("%s: could not find binary %q", pkg, binary)
+}
+
+// systemEnvOverrideOps returns environment variables overrode in an already activated system environment
+func (e *Env) systemEnvOverrideOps(ops envars.Ops) envars.Ops {
+	if activeEnv, ok := os.LookupEnv("HERMIT_ENV"); !ok || activeEnv != e.envDir {
+		return envars.Ops{}
+	}
+
+	system := envars.Parse(os.Environ())
+	changed := system.Apply(e.Root(), ops).Changed(false)
+
+	var overrides envars.Ops
+	for envar, v_new := range changed {
+		if v_system, ok := system[envar]; ok && v_new != v_system {
+			overrides = append(overrides, &envars.Force{Name: envar, Value: v_system})
+		}
+	}
+
+	return overrides
 }
 
 func (e *Env) getPackageRuntimeEnvops(pkg *manifest.Package) (envars.Op, error) {

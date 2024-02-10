@@ -318,7 +318,7 @@ Describe "Hermit"
 
   Describe "Runtime dependencies"
     . bin/activate-hermit
-    It "Does not install runtime-dependencies to the environment"
+    It "do not install to the environment"
       When call hermit install testbin1
       The status should be success
       The stderr should be blank
@@ -326,13 +326,13 @@ Describe "Hermit"
       The file ./bin/testbin2 should not be exist
     End
 
-    It "allows installing packages with binaries conflicting with runtime dependencies"
+    It "allow installing packages with conflicting binaries"
       When call hermit install faketestbin2
       The status should be success
       The stderr should be blank
     End
 
-    It "Calls the runtime dependency correctly"
+    It "calls the runtime dependency correctly"
       When call ./bin/testbin1
       The status should be success
       The stdout should equal "Hello from testbin2"
@@ -344,7 +344,7 @@ Describe "Hermit"
     ln -s . ./symlinked
     cd ./symlinked
     . bin/activate-hermit
-    It "Allows calling binaries in the environment"
+    It "allows calling binaries in the environment"
       When call ./bin/testbin1
       The status should be success
       The stdout should not be blank
