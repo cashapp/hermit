@@ -7,11 +7,12 @@ customise that Hermit environment.
 
 ## Attributes
 
-| Attribute | Type | Description |
-|-----------|------|-------------|
-| `env` | `{string:string}?` | Extra environment variables. |
-| `sources` | `[string]?` | Package manifest sources in order of preference. |
-| `manage-git` | `bool?` | Whether Hermit should manage Git. |
+| Attribute | Type | Description                                                                           |
+|-----------|------|---------------------------------------------------------------------------------------|
+| `env` | `{string:string}?` | Extra environment variables.                                                          |
+| `sources` | `[string]?` | Package manifest sources in order of preference.                                      |
+| `manage-git` | `bool?` | Whether Hermit should manage Git.                                                     |
+| `inherit-parent` | `bool?` | Whether this Hermit environment should inherit an environment from a parent diectory. | 
 
 ## Per-environment Sources
 

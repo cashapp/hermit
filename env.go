@@ -87,10 +87,11 @@ const (
 
 // Config for a Hermit environment.
 type Config struct {
-	Envars      envars.Envars `hcl:"env,optional" help:"Extra environment variables."`
-	Sources     []string      `hcl:"sources,optional" help:"Package manifest sources."`
-	ManageGit   bool          `hcl:"manage-git,optional" default:"true" help:"Whether Hermit should automatically 'git add' new packages."`
-	AddIJPlugin bool          `hcl:"idea,optional" default:"false" help:"Whether Hermit should automatically add the IntelliJ IDEA plugin."`
+	Envars        envars.Envars `hcl:"env,optional" help:"Extra environment variables."`
+	Sources       []string      `hcl:"sources,optional" help:"Package manifest sources."`
+	ManageGit     bool          `hcl:"manage-git,optional" default:"true" help:"Whether Hermit should automatically 'git add' new packages."`
+	InheritParent bool          `hcl:"inherit-parent,optional" default:"false" help:"Whether this environment inherits a potential parent environment from one of the parent directories"`
+	AddIJPlugin   bool          `hcl:"idea,optional" default:"false" help:"Whether Hermit should automatically add the IntelliJ IDEA plugin."`
 }
 
 // Env is a Hermit environment.
@@ -974,11 +975,27 @@ func (e *Env) Envars(l *ui.UI, inherit bool) ([]string, error) {
 // environment variables defined in the packages installed in the environment,
 // and finally any environment variables explicitly configured in the environment.
 func (e *Env) EnvOps(l *ui.UI) (envars.Ops, error) {
+	var ops envars.Ops
+
+	if e.config.InheritParent {
+		// load EnvOps from a potential parent environment first
+		parent, err := e.openParent()
+		if err != nil {
+			return nil, err
+		}
+		if parent != nil {
+			ops, err = parent.EnvOps(l)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	pkgs, err := e.ListInstalled(l)
 	if err != nil {
 		return nil, err
 	}
-	return e.allEnvarOpsForPackages(nil, nil, pkgs...), nil
+	return append(ops, e.allEnvarOpsForPackages(nil, nil, pkgs...)...), nil
 }
 
 // SetEnv sets an extra environment variable.
@@ -1431,6 +1448,27 @@ func (e *Env) resolver(l *ui.UI) (*manifest.Resolver, error) {
 	}
 	e.lazyResolver = resolver
 	return resolver, nil
+}
+
+// openParent finds the closest hermit Env from the parent directories of this Env.
+// if no such environment was found, returns nil
+func (e *Env) openParent() (*Env, error) {
+	path, err := filepath.Abs(e.envDir)
+	if err != nil {
+		return nil, err
+	}
+	for {
+		path = filepath.Dir(path)
+		if path == "/" {
+			// we are at the root of the filesystem, no hermit environments found
+			return nil, nil
+		}
+		if _, err := os.Stat(filepath.Join(path, "bin", "activate-hermit")); err == nil {
+			return OpenEnv(path, e.state, e.packageSource, nil, e.httpClient, e.scriptSums)
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+	}
 }
 
 // tidySha256Db is a helper function to remove leading and trailing
