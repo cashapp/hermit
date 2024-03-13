@@ -274,6 +274,22 @@ func TestIntegration(t *testing.T) {
 			. env2/bin/activate-hermit
 			assert test "$FOO" = "BAR"
 			`},
+		{name: "InheritsEnvVariables",
+			preparations: prep{fixture("environment_inheritance"), activate("child_environment")},
+			script:       `echo "${OVERWRITTEN} - ${NOT_OVERWRITTEN}"`,
+			expectations: exp{outputContains("child - parent")},
+		},
+		{name: "InheritanceOverwritesBinaries",
+			preparations: prep{fixture("environment_inheritance"), activate(".")},
+			script: `
+			hermit install binary
+			. child_environment/bin/activate-hermit
+			assert test "$(binary.sh)" = "Running from parent"
+			
+			hermit install binary
+			assert test "$(binary.sh)" = "Running from child"
+			`,
+		},
 	}
 
 	checkForShells(t)
