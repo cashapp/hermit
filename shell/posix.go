@@ -3,8 +3,8 @@ package shell
 import (
 	_ "embed" // Embedding files.
 	"fmt"
-	"html/template"
 	"io"
+	"text/template"
 
 	"github.com/cashapp/hermit/envars"
 	"github.com/cashapp/hermit/errors"
@@ -13,7 +13,11 @@ import (
 var (
 	//go:embed files/activate.tmpl.sh
 	posixActivationScript     string
-	posixActivationScriptTmpl = template.Must(template.New("activation").Parse(posixActivationScript))
+	posixActivationScriptTmpl = template.Must(
+		template.New("activation").
+			Funcs(template.FuncMap{"Quote": Quote}).
+			Parse(posixActivationScript),
+	)
 )
 
 // Template context for activation script.
