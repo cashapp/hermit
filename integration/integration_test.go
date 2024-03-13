@@ -265,6 +265,15 @@ func TestIntegration(t *testing.T) {
 			assert test "$(testbin1.sh)" = "FOO=runtimefoo"
 			assert test "$(testbin2.sh)" = "BAR=hermitbar"
 			`},
+		{name: "EnvironmentsWithOverlappingEnvVariablesCanBeSwitched",
+			preparations: prep{fixture("overlapping_envs")},
+			script: `
+			. env1/bin/activate-hermit
+			assert test "$FOO" = "BAR"
+
+			. env2/bin/activate-hermit
+			assert test "$FOO" = "BAR"
+			`},
 	}
 
 	checkForShells(t)

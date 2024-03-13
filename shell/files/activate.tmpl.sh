@@ -17,6 +17,10 @@ if [ -n "${ACTIVE_HERMIT+_}" ]; then
   fi
 fi
 
+{{ range $ENV_NAME, $ENV_VALUE := .Env }}
+export {{ $ENV_NAME }}={{ $ENV_VALUE | Quote }}
+{{ end }}
+
 _hermit_deactivate() {
   echo "Hermit environment $(${HERMIT_ENV}/bin/hermit env HERMIT_ENV) deactivated"
   eval "$(${ACTIVE_HERMIT}/bin/hermit env --deactivate-from-ops="${HERMIT_ENV_OPS}")"
