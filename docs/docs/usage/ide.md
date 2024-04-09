@@ -42,6 +42,25 @@ available.
 At this point your editor should be running with environment variables from
 the Hermit environment.
 
+### Visual Studio Code terminal
+
+When using Hermit with the VS Code terminal, note that VS Code may alter the `PATH` environment variable. This can lead to conflicts with system binaries.
+
+To ensure Hermit re-activation in VS Code terminal, adjust the VS Code settings as follows:
+
+```json
+{
+	"settings": {
+		"terminal.integrated.env.osx": {
+			"ACTIVE_HERMIT": null,
+			"HERMIT_ENV": null,
+			"HERMIT_ENV_OPS": null,
+			"HERMIT_BIN": null
+		},
+	}
+}
+```
+
 ## Other
 
 Some IDEs/editors have support for configuring environment variables
