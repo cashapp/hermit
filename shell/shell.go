@@ -94,7 +94,13 @@ func Resolve(name string) (Shell, error) {
 
 // Detect the user's shell.
 func Detect() (Shell, error) {
-	// First look for shell in parent processes.
+	// Check for SHELL environment variable.
+	shell, ok := shells[filepath.Base(os.Getenv("SHELL"))]
+	if ok {
+		return shell, nil
+	}
+
+	// Then, look for shell in parent processes.
 	pid := os.Getppid()
 	for {
 		process, err := ps.FindProcess(pid)
