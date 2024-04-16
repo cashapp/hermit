@@ -23,7 +23,7 @@ require (
 	github.com/klauspost/compress v1.15.1
 	github.com/mattn/go-isatty v0.0.14
 	github.com/mitchellh/go-ps v1.0.0
-	github.com/otiai10/copy v1.7.0
+	github.com/otiai10/copy v1.14.0
 	github.com/posener/complete v1.2.3
 	github.com/qdm12/reprint v0.0.0-20200326205758-722754a53494
 	github.com/saracen/go7z v0.0.0-20191010121135-9c09b6bd7fda
@@ -52,6 +52,7 @@ require (
 	github.com/saracen/solidblock v0.0.0-20190426153529-45df20abab6f // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	golang.org/x/crypto v0.0.0-20220214200702-86341886e292 // indirect
+	golang.org/x/sync v0.3.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 )

@@ -9,6 +9,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"path"
@@ -180,7 +181,12 @@ func isDirectory(path string) (bool, error) {
 }
 
 func installFromDirectory(source string, pkg *manifest.Package) error {
-	err := copy.Copy(source, pkg.Dest)
+	err := copy.Copy(source, pkg.Dest, copy.Options{Skip: func(info os.FileInfo, src, dest string) (bool, error) {
+		// Skip sockets in the source, as they can not be copied anyway.
+		// We can get sockets in git based sources if the user is using fs-monitor with git.
+		// see https://git-scm.com/docs/git-fsmonitor--daemon
+		return info.Mode().Type() == fs.ModeSocket, nil
+	}})
 	if err != nil {
 		return errors.WithStack(err)
 	}
