@@ -134,7 +134,7 @@ func Detect() (Shell, error) {
 	if entry.Shell == "" {
 		return nil, errors.Errorf("/etc/passwd file entry for %q does not contain a shell field", u.Username)
 	}
-	shell, ok := shells[filepath.Base(entry.Shell)]
+	shell, ok = shells[filepath.Base(entry.Shell)]
 	if ok {
 		return shell, nil
 	}
