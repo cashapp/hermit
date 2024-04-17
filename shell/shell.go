@@ -95,8 +95,8 @@ func Resolve(name string) (Shell, error) {
 // Detect the user's shell.
 func Detect() (Shell, error) {
 	// Check for SHELL environment variable.
-	shell, ok := shells[filepath.Base(os.Getenv("SHELL"))]
-	if ok {
+	envShell := filepath.Base(os.Getenv("SHELL"))
+	if shell, ok := shells[envShell]; ok {
 		return shell, nil
 	}
 
@@ -134,7 +134,7 @@ func Detect() (Shell, error) {
 	if entry.Shell == "" {
 		return nil, errors.Errorf("/etc/passwd file entry for %q does not contain a shell field", u.Username)
 	}
-	shell, ok = shells[filepath.Base(entry.Shell)]
+	shell, ok := shells[filepath.Base(entry.Shell)]
 	if ok {
 		return shell, nil
 	}
