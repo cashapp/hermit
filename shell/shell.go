@@ -112,6 +112,12 @@ func Detect() (Shell, error) {
 		}
 	}
 
+	// Next, check for SHELL environment variable.
+	envShell := filepath.Base(os.Getenv("SHELL"))
+	if shell, ok := shells[envShell]; ok {
+		return shell, nil
+	}
+
 	// Next, try to pull the shell from the user's password entry.
 	u, err := user.Current()
 	if err != nil {
