@@ -64,7 +64,7 @@ func (s *GitSource) Bundle() fs.FS { // nolint: golint
 }
 
 func (s *GitSource) ensureSourcesDirExists() error {
-	if err := os.MkdirAll(s.sourceDir, 0700); err != nil {
+	if err := os.MkdirAll(s.sourceDir, 1755); err != nil {
 		return errors.WithStack(err)
 	}
 	return nil

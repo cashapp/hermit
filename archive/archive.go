@@ -41,6 +41,11 @@ func init() {
 	}, "text/x-shellscript", ".sh")
 }
 
+const (
+	dirPerm  os.FileMode = 0777
+	filePerm             = 0777
+)
+
 // Extract from "source" to package destination.
 //
 // "finalise" must be called to complete extraction of the package.
@@ -75,7 +80,7 @@ func Extract(b *ui.Task, source string, pkg *manifest.Package) (finalise func() 
 	}
 
 	parentDir := filepath.Dir(pkg.Dest)
-	if err := os.MkdirAll(parentDir, 0700); err != nil {
+	if err := os.MkdirAll(parentDir, dirPerm); err != nil {
 		return finalise, errors.WithStack(err)
 	}
 
@@ -195,7 +200,7 @@ func installFromDirectory(source string, pkg *manifest.Package) error {
 
 func installMacDMG(b *ui.Task, source string, pkg *manifest.Package) error {
 	dest := pkg.Dest + "~"
-	err := os.MkdirAll(dest, 0700)
+	err := os.MkdirAll(dest, dirPerm)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -256,7 +261,7 @@ func extractExecutable(r io.Reader, dest, executableName string) error {
 		destExe = strings.TrimSuffix(destExe, ext)
 	}
 
-	w, err := os.OpenFile(destExe, os.O_CREATE|os.O_WRONLY, 0700) // nolint: gosec
+	w, err := os.OpenFile(destExe, os.O_CREATE|os.O_WRONLY, filePerm) // nolint: gosec
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -268,7 +273,7 @@ func extractExecutable(r io.Reader, dest, executableName string) error {
 // copyDirect just copies the archive to the destination with no changes
 func copyDirect(r io.Reader, dest, filename string) error {
 	destFile := filepath.Join(dest, filename)
-	w, err := os.OpenFile(destFile, os.O_CREATE|os.O_WRONLY, 0600)
+	w, err := os.OpenFile(destFile, os.O_CREATE|os.O_WRONLY, filePerm)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -357,7 +362,7 @@ func extractMacPKG(b *ui.Task, path, dest string, strip int) error {
 	if strip != 0 {
 		return errors.Errorf("\"strip = %d\" is not supported for Mac installer .pkg files", strip)
 	}
-	err := os.MkdirAll(dest, 0700)
+	err := os.MkdirAll(dest, dirPerm)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -410,7 +415,7 @@ func extractZipFile(zf *zip.File, destFile string) error {
 	}
 	defer zfr.Close()
 	if zf.Mode().IsDir() {
-		return errors.WithStack(os.MkdirAll(destFile, 0700))
+		return errors.WithStack(os.MkdirAll(destFile, dirPerm))
 	}
 	// Handle symlinks.
 	if zf.Mode()&os.ModeSymlink != 0 {
@@ -427,12 +432,12 @@ func extractZipFile(zf *zip.File, destFile string) error {
 		return errors.WithStack(os.Symlink(symlinkPath, destFile))
 	}
 
-	err = os.MkdirAll(filepath.Dir(destFile), 0700)
+	err = os.MkdirAll(filepath.Dir(destFile), dirPerm)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	w, err := os.OpenFile(destFile, os.O_CREATE|os.O_WRONLY, zf.Mode()&^0077)
+	w, err := os.OpenFile(destFile, os.O_CREATE|os.O_WRONLY, zf.Mode())
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -457,7 +462,7 @@ func extractPackageTarball(b *ui.Task, r io.Reader, dest string, strip int) erro
 		} else if err != nil {
 			return errors.WithStack(err)
 		}
-		mode := hdr.FileInfo().Mode() &^ 0077
+		mode := hdr.FileInfo().Mode()
 		destFile, err := makeDestPath(dest, hdr.Name, strip)
 		if err != nil {
 			return err
@@ -466,13 +471,13 @@ func extractPackageTarball(b *ui.Task, r io.Reader, dest string, strip int) erro
 			continue
 		}
 		b.Tracef("  %s -> %s", hdr.Name, destFile)
-		err = os.MkdirAll(filepath.Dir(destFile), 0700)
+		err = os.MkdirAll(filepath.Dir(destFile), dirPerm)
 		if err != nil {
 			return errors.WithStack(err)
 		}
 		switch {
 		case mode.IsDir():
-			err = os.MkdirAll(destFile, 0700)
+			err = os.MkdirAll(destFile, dirPerm)
 			if err != nil {
 				return errors.Wrapf(err, "%s: failed to create directory", destFile)
 			}
@@ -496,11 +501,11 @@ func extractPackageTarball(b *ui.Task, r io.Reader, dest string, strip int) erro
 			}
 
 		default:
-			err := os.MkdirAll(filepath.Dir(destFile), 0700)
+			err := os.MkdirAll(filepath.Dir(destFile), dirPerm)
 			if err != nil {
 				return errors.WithStack(err)
 			}
-			w, err := os.OpenFile(destFile, os.O_CREATE|os.O_WRONLY, mode)
+			w, err := os.OpenFile(destFile, os.O_CREATE|os.O_WRONLY, filePerm)
 			if err != nil {
 				return errors.WithStack(err)
 			}
@@ -525,7 +530,7 @@ func extractDebianPackage(b *ui.Task, r io.Reader, dest string, pkg *manifest.Pa
 		if strings.HasPrefix(header.Name, "data.tar") {
 			r := io.LimitReader(reader, header.Size)
 			filename := filepath.Join(dest, header.Name)
-			w, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+			w, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, filePerm)
 			if err != nil {
 				return errors.WithStack(err)
 			}
@@ -573,7 +578,7 @@ func extract7Zip(r io.ReaderAt, size int64, dest string, strip int) error {
 		}
 
 		// Create file
-		f, err := os.OpenFile(destFile, os.O_CREATE|os.O_RDWR, 0755) // nolint: gosec
+		f, err := os.OpenFile(destFile, os.O_CREATE|os.O_RDWR, filePerm) // nolint: gosec
 		if err != nil {
 			return errors.WithStack(err)
 		}

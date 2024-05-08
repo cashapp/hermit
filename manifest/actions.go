@@ -185,7 +185,7 @@ func (m *MkdirAction) String() string {
 func (m *MkdirAction) Apply(*Package) error { // nolint
 	mode := m.Mode
 	if mode == 0 {
-		mode = 0750
+		mode = 0755
 	}
 	return os.MkdirAll(m.Dir, mode)
 }
