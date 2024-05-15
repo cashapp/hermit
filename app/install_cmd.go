@@ -41,7 +41,7 @@ func (i *installCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
 		// Checking that all the packages are downloaded and unarchived
 		for _, ref := range installed {
 			task := l.Task(ref.String())
-			pkg, err := env.Resolve(l, manifest.ExactSelector(ref), false)
+			pkg, err := env.Resolve(l, manifest.ExactSelector(ref), true)
 			if err != nil {
 				return errors.WithStack(err)
 			}
