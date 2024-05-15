@@ -1,13 +1,14 @@
 package sources
 
 import (
-	"github.com/cashapp/hermit/util"
 	"io/fs"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/cashapp/hermit/util"
 
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/ui"
@@ -55,7 +56,7 @@ func (s *Sources) Add(source Source) {
 // Will be synced at most every SyncFrequency unless "force" is true.
 // A Sources set can only be synchronised once. Following calls will not have any effect.
 func (s *Sources) Sync(p *ui.UI, force bool) error {
-	if s.isSynchronised {
+	if s.isSynchronised && !force {
 		return nil
 	}
 	s.isSynchronised = true
