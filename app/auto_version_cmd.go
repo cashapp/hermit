@@ -1,7 +1,6 @@
 package app
 
 import (
-	"io/ioutil"
 	"net/http"
 	"os"
 
@@ -26,7 +25,7 @@ func (a *autoVersionCmd) Run(l *ui.UI, hclient *http.Client, state *state.State,
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		original, err := ioutil.ReadFile(path)
+		original, err := os.ReadFile(path)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -36,7 +35,7 @@ func (a *autoVersionCmd) Run(l *ui.UI, hclient *http.Client, state *state.State,
 				return errors.Wrap(err, path)
 			}
 			l.Warnf("Could not update digests for %q: %s", path, err)
-			err = ioutil.WriteFile(path, original, info.Mode())
+			err = os.WriteFile(path, original, info.Mode())
 			if err != nil {
 				return errors.Wrapf(err, "could not restore original manifest: %s", path)
 			}

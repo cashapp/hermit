@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -79,7 +78,7 @@ func Extract(b *ui.Task, source string, pkg *manifest.Package) (finalise func() 
 		return finalise, errors.WithStack(err)
 	}
 
-	tmpDest, err := ioutil.TempDir(parentDir, filepath.Base(pkg.Dest)+"-*")
+	tmpDest, err := os.MkdirTemp(parentDir, filepath.Base(pkg.Dest)+"-*")
 	if err != nil {
 		return finalise, errors.WithStack(err)
 	}
@@ -363,7 +362,7 @@ func extractMacPKG(b *ui.Task, path, dest string, strip int) error {
 	}
 	task := b.SubProgress("install", 2)
 	defer task.Done()
-	changesf, err := ioutil.TempFile("", "hermit-*.xml")
+	changesf, err := os.CreateTemp("", "hermit-*.xml")
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -414,7 +413,7 @@ func extractZipFile(zf *zip.File, destFile string) error {
 	}
 	// Handle symlinks.
 	if zf.Mode()&os.ModeSymlink != 0 {
-		symlink, err := ioutil.ReadAll(zfr)
+		symlink, err := io.ReadAll(zfr)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -623,7 +622,7 @@ func extractRpmPackage(r io.Reader, dest string, pkg *manifest.Package) error {
 			if err != nil {
 				return errors.WithStack(err)
 			}
-			err = ioutil.WriteFile(filename, bts, os.FileMode(header.Mode()))
+			err = os.WriteFile(filename, bts, os.FileMode(header.Mode()))
 			if err != nil {
 				return errors.WithStack(err)
 			}

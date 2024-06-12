@@ -2,7 +2,6 @@ package state_test
 
 import (
 	"io/fs"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -55,7 +54,7 @@ func (f *StateTestFixture) Clean() {
 func (f *StateTestFixture) State() *state.State {
 	root := f.root
 	if root == "" {
-		nroot, err := ioutil.TempDir("", "")
+		nroot, err := os.MkdirTemp("", "")
 		assert.NoError(f.t, err)
 		root = nroot
 	}

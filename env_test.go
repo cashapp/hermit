@@ -1,7 +1,6 @@
 package hermit_test
 
 import (
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -48,7 +47,7 @@ func TestUpdateTimestampOnInstall(t *testing.T) {
 	calls := 0
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("ETag", "testtag")
-		dat, _ := ioutil.ReadFile("archive/testdata/archive.tar.gz")
+		dat, _ := os.ReadFile("archive/testdata/archive.tar.gz")
 		_, err := w.Write(dat)
 		assert.NoError(t, err)
 		calls++
@@ -116,7 +115,7 @@ func TestEnsureUpToDate(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 1, getCalls)
 	assert.Equal(t, 0, headCalls)
-	file, _ := ioutil.ReadFile(filepath.Join(pkg.Dest, "bin"))
+	file, _ := os.ReadFile(filepath.Join(pkg.Dest, "bin"))
 	assert.Equal(t, data, string(file))
 
 	// Update after a check is needed but etag has not changed
@@ -125,7 +124,7 @@ func TestEnsureUpToDate(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 1, getCalls)
 	assert.Equal(t, 1, headCalls)
-	file, _ = ioutil.ReadFile(filepath.Join(pkg.Dest, "bin"))
+	file, _ = os.ReadFile(filepath.Join(pkg.Dest, "bin"))
 	assert.Equal(t, data, string(file))
 
 	// Update after a check is needed and the etag has changed
@@ -136,7 +135,7 @@ func TestEnsureUpToDate(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 2, getCalls)
 	assert.Equal(t, 2, headCalls)
-	file, _ = ioutil.ReadFile(filepath.Join(pkg.Dest, "bin"))
+	file, _ = os.ReadFile(filepath.Join(pkg.Dest, "bin"))
 	assert.Equal(t, data, string(file))
 
 	// Check that the package is still in the DB after the upgrade
@@ -156,7 +155,7 @@ func TestEnsureUpToDate(t *testing.T) {
 
 // Test that files referred in the Files map are copied correctly
 func TestCopyFiles(t *testing.T) {
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 
@@ -182,7 +181,7 @@ func TestCopyFiles(t *testing.T) {
 
 // Test that files referred in the Files map are copied correctly
 func TestCopyFilesAction(t *testing.T) {
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 
@@ -213,7 +212,7 @@ func TestCopyFilesAction(t *testing.T) {
 }
 
 func TestTriggers(t *testing.T) {
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 

@@ -2,7 +2,6 @@ package sources
 
 import (
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
@@ -90,7 +89,7 @@ func syncGit(b *ui.Task, dir, source, finalDest string, runner util.CommandRunne
 		// If pull fails, assume the repo is corrupted and just try and re-clone it.
 	}
 	// No git repo, clone down to temporary directory.
-	dest, err := ioutil.TempDir(dir, filepath.Base(finalDest)+"-*")
+	dest, err := os.MkdirTemp(dir, filepath.Base(finalDest)+"-*")
 	if err != nil {
 		return errors.WithStack(err)
 	}

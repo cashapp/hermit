@@ -1,7 +1,7 @@
 package sources_test
 
 import (
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
@@ -27,7 +27,7 @@ func TestGitDoesNotRemoveSourceAfterSyncFailure(t *testing.T) {
 	u, _ := ui.NewForTesting()
 	err := source.Sync(u, true)
 	assert.NoError(t, err)
-	files, err := ioutil.ReadDir(sourceDir)
+	files, err := os.ReadDir(sourceDir)
 	assert.NoError(t, err)
 	assert.Equal(t, len(files), 1)
 	gitDir := files[0].Name()
@@ -40,7 +40,7 @@ func TestGitDoesNotRemoveSourceAfterSyncFailure(t *testing.T) {
 	assert.NoError(t, err)
 
 	// the directory should still be in place after git failed to update
-	files, err = ioutil.ReadDir(sourceDir)
+	files, err = os.ReadDir(sourceDir)
 	assert.NoError(t, err)
 	assert.Equal(t, len(files), 1)
 	assert.Equal(t, gitDir, files[0].Name())

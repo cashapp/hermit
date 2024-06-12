@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -153,7 +152,7 @@ func Init(l *ui.UI, env string, distURL string, stateDir string, config Config, 
 				return errors.WithStack(err)
 			}
 
-			err = ioutil.WriteFile(extDepPath, extDepData, 0600)
+			err = os.WriteFile(extDepPath, extDepData, 0600)
 			if err != nil {
 				return errors.WithStack(err)
 			}
@@ -177,7 +176,7 @@ func Init(l *ui.UI, env string, distURL string, stateDir string, config Config, 
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		err = ioutil.WriteFile(configPath, data, 0600)
+		err = os.WriteFile(configPath, data, 0600)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -263,7 +262,7 @@ func getSources(l *ui.UI, envDir string, config *Config, state *state.State, def
 
 func readConfig(configFile string) (*Config, error) {
 	config := &Config{Envars: map[string]string{}, ManageGit: true}
-	source, err := ioutil.ReadFile(configFile)
+	source, err := os.ReadFile(configFile)
 	if !os.IsNotExist(err) {
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't load environment config")
@@ -388,7 +387,7 @@ func (e *Env) ValidateManifests(l *ui.UI) (manifest.ManifestErrors, error) {
 
 // LinkedBinaries lists just the binaries installed in the environment.
 func (e *Env) LinkedBinaries(pkg *manifest.Package) (binaries []string, err error) {
-	files, err := ioutil.ReadDir(e.binDir)
+	files, err := os.ReadDir(e.binDir)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -1005,7 +1004,7 @@ func (e *Env) SetEnv(key, value string) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	return ioutil.WriteFile(e.configFile, data, 0600)
+	return os.WriteFile(e.configFile, data, 0600)
 }
 
 // DelEnv deletes a custom environment variable.
@@ -1015,7 +1014,7 @@ func (e *Env) DelEnv(key string) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	return ioutil.WriteFile(e.configFile, data, 0600)
+	return os.WriteFile(e.configFile, data, 0600)
 }
 
 // Clean parts of the hermit system.
@@ -1404,7 +1403,7 @@ func writeFileToEnvBin(l *ui.Task, useGit bool, src, envDir string, vars map[str
 	for key, value := range vars {
 		source = bytes.ReplaceAll(source, []byte(key), []byte(value))
 	}
-	if err = ioutil.WriteFile(dest, source, perm); err != nil {
+	if err = os.WriteFile(dest, source, perm); err != nil {
 		return errors.WithStack(err)
 	}
 	if useGit {

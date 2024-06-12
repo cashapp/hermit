@@ -2,7 +2,6 @@ package hermittest
 
 import (
 	"bytes"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -36,10 +35,10 @@ type EnvTestFixture struct {
 // A test handler can be given to be used as an test http server for testing http interactions
 func NewEnvTestFixture(t *testing.T, handler http.Handler) *EnvTestFixture {
 	t.Helper()
-	envDir, err := ioutil.TempDir("", "")
+	envDir, err := os.MkdirTemp("", "")
 	assert.NoError(t, err)
 
-	stateDir, err := ioutil.TempDir("", "")
+	stateDir, err := os.MkdirTemp("", "")
 	assert.NoError(t, err)
 
 	log, buf := ui.NewForTesting()
@@ -94,7 +93,7 @@ func (f *EnvTestFixture) Clean() {
 
 // NewEnv returns a new environment using the state directory from this fixture
 func (f *EnvTestFixture) NewEnv() *hermit.Env {
-	envDir, err := ioutil.TempDir("", "")
+	envDir, err := os.MkdirTemp("", "")
 	assert.NoError(f.t, err)
 	log, _ := ui.NewForTesting()
 	err = hermit.Init(log, envDir, "", f.State.Root(), hermit.Config{}, "BYPASS")

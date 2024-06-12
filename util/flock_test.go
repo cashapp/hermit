@@ -2,7 +2,6 @@ package util
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,7 +14,7 @@ import (
 
 // Test that a lock eventually times out if the lock has been opened by someone else
 func TestFileLockTimeout(t *testing.T) {
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 
@@ -41,7 +40,7 @@ func TestFileLockTimeout(t *testing.T) {
 
 // Test that releasing a lock allows others to lock it again
 func TestFileLockRelease(t *testing.T) {
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 
@@ -65,7 +64,7 @@ func TestFileLockRelease(t *testing.T) {
 
 // Test that releasing a lock allows other waiting locks to proceed
 func TestFileLockProceed(t *testing.T) {
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 
