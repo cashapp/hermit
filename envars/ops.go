@@ -300,7 +300,7 @@ type Unset struct {
 }
 
 func (e *Unset) sealed()        {}
-func (e *Unset) String() string { return fmt.Sprintf("unset %s", e.Name) }
+func (e *Unset) String() string { return "unset " + e.Name }
 func (e *Unset) Envar() string  { return e.Name } // nolint: golint
 func (e *Unset) Apply(transform *Transform) { // nolint: golint
 	if value, ok := transform.get(e.Name); ok {
