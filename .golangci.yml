@@ -103,3 +103,9 @@ issues:
     - 'should have.*comment'
     - 'uses unkeyed fields'
     - 'G307'
+  exclude-rules:
+    # Don't warn on unused parameters.
+    # Parameter names are useful documentation--even when unused.
+    # Replacing them with '_' is undesirable.
+    - linters: [revive]
+      text: 'unused-parameter: parameter \S+ seems to be unused, consider removing or renaming it as _'
