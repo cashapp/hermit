@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -462,7 +461,7 @@ type prep []preparation
 func addFile(name, content string) preparation {
 	return func(t *testing.T, dir string) string {
 		t.Helper()
-		err := ioutil.WriteFile(filepath.Join(dir, name), []byte(content), 0600)
+		err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0600)
 		assert.NoError(t, err)
 		return ""
 	}

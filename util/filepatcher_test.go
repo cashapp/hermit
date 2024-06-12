@@ -1,7 +1,6 @@
 package util
 
 import (
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -82,7 +81,7 @@ foobar
 `,
 	}}
 
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 
@@ -109,7 +108,7 @@ func fileWith(t *testing.T, dir, content string) (fileName string) {
 	file, err := os.CreateTemp(dir, ".file")
 	assert.NoError(t, err)
 	name := file.Name()
-	err = ioutil.WriteFile(name, []byte(content), 0644) // nolint: gosec
+	err = os.WriteFile(name, []byte(content), 0644) // nolint: gosec
 	assert.NoError(t, err)
 	return name
 }

@@ -1,7 +1,6 @@
 package util
 
 import (
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -29,7 +28,7 @@ func (fp *FilePatcher) Patch(fileName, content string) (bool, error) {
 	}
 	defer file.Close() // nolint: gosec
 
-	previousBts, err := ioutil.ReadFile(fileName)
+	previousBts, err := os.ReadFile(fileName)
 	if err != nil {
 		return false, errors.WithStack(err)
 	}

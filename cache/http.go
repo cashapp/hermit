@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -91,7 +90,7 @@ func downloadHTTP(b *ui.Task, response *http.Response, checksum string, uri stri
 	cacheDir := filepath.Dir(cachePath)
 	_ = os.MkdirAll(cacheDir, os.ModePerm)
 
-	w, err := ioutil.TempFile(cacheDir, filepath.Base(cachePath)+".*.hermit.tmp.download")
+	w, err := os.CreateTemp(cacheDir, filepath.Base(cachePath)+".*.hermit.tmp.download")
 	if err != nil {
 		return "", "", "", errors.Wrap(err, "couldn't create temporary for download")
 	}

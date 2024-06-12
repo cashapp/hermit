@@ -1,7 +1,6 @@
 package archive
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -35,7 +34,7 @@ func TestExtract(t *testing.T) {
 		t.Run(test.file, func(t *testing.T) {
 			p, _ := ui.NewForTesting()
 
-			dest, err := ioutil.TempDir("", "")
+			dest, err := os.MkdirTemp("", "")
 			assert.NoError(t, err)
 			defer os.RemoveAll(dest)
 

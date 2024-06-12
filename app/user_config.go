@@ -1,7 +1,6 @@
 package app
 
 import (
-	"io/ioutil"
 	"os"
 
 	"github.com/alecthomas/hcl"
@@ -37,7 +36,7 @@ func LoadUserConfig() (UserConfig, error) {
 	config := UserConfig{}
 	// always return a valid config on error, with defaults set.
 	_ = hcl.Unmarshal([]byte{}, &config)
-	data, err := ioutil.ReadFile(kong.ExpandPath(userConfigPath))
+	data, err := os.ReadFile(kong.ExpandPath(userConfigPath))
 	if os.IsNotExist(err) {
 		return config, nil
 	} else if err != nil {

@@ -2,8 +2,8 @@ package app
 
 import (
 	"bytes"
-	"io/ioutil"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -151,7 +151,7 @@ func staticFileHTTPHandler(t *testing.T, dir string) http.HandlerFunc {
 	t.Helper()
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("ETag", "testtag")
-		dat, err := ioutil.ReadFile(filepath.Join(dir, r.RequestURI))
+		dat, err := os.ReadFile(filepath.Join(dir, r.RequestURI))
 		if err != nil {
 			w.WriteHeader(http.StatusNotFound)
 		} else {
