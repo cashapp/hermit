@@ -47,7 +47,8 @@ linters:
     - maintidx
     - nilerr
     - errchkjson
-    - mnd  # overly sensitive to any number
+    - mnd      # overly sensitive to any number
+    - tagalign # don't care about struct tag alignment (help:".." tends to be long)
 
 linters-settings:
   govet:
