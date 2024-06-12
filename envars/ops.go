@@ -105,7 +105,7 @@ func UnmarshalOps(data []byte) (Ops, error) {
 	for _, enc := range encoded {
 		var key string
 		var encodedOp json.RawMessage
-		for key, encodedOp = range enc {
+		for key, encodedOp = range enc { //nolint:revive // empty block is intentional
 		}
 		typ, ok := unmarshalKeys[key]
 		if !ok {
