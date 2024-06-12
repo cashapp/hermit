@@ -72,11 +72,13 @@ linters-settings:
   exhaustive:
     default-signifies-exhaustive: true
   depguard:
-    list-type: blacklist
-    include-go-root: true
-    packages-with-error-message:
-      - errors: "use github.com/cashapp/hermit/errors"
-      - github.com/pkg/errors: "use github.com/cashapp/hermit/errors"
+    rules:
+      main:
+        deny:
+          - pkg: errors
+            desc: "use github.com/cashapp/hermit/errors"
+          - pkg: github.com/pkg/errors
+            desc: "use github.com/cashapp/hermit/errors"
   forbidigo:
     forbid:
       - '^fmt.Errorf'
