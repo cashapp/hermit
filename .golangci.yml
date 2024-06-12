@@ -8,7 +8,6 @@ output:
 linters:
   enable-all: true
   disable:
-    - maligned
     - megacheck
     - lll
     - typecheck # `go build` catches this, and it doesn't currently work with Go 1.11 modules
@@ -16,7 +15,6 @@ linters:
     - dupl # has never been actually useful
     - gochecknoglobals
     - gochecknoinits
-    - interfacer # author deprecated it because it provides bad suggestions
     - funlen
     - whitespace
     - godox
@@ -25,22 +23,18 @@ linters:
     - gomnd
     - gocognit
     - gocyclo
-    - scopelint
     - godot
     - nestif
     - testpackage
     - goerr113
     - gci
     - gofumpt
-    - exhaustivestruct
     - nlreturn
     - cyclop
     - paralleltest
-    - ifshort # so annoying
     - prealloc
     - nolintlint
     - varnamelen
-    - nosnakecase
     - nonamedreturns
     - nilnil
     - ireturn
