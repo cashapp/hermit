@@ -123,14 +123,14 @@ func Init(l *ui.UI, env string, distURL string, stateDir string, config Config, 
 		"HERMIT_INSTALL_SCRIPT_SHA256": installScriptSHA,
 	}
 	bin := filepath.Join(env, "bin")
-	if err := os.Mkdir(bin, os.ModePerm); err != nil && !os.IsExist(err) {
+	if err := os.Mkdir(bin, os.ModePerm); err != nil && !os.IsExist(err) { //nolint:gosec
 		return errors.WithStack(err)
 	}
-	if err := os.MkdirAll(stateDir, os.ModePerm); err != nil && !os.IsExist(err) {
+	if err := os.MkdirAll(stateDir, os.ModePerm); err != nil && !os.IsExist(err) { //nolint:gosec
 		return errors.WithStack(err)
 	}
 	sourcesDir := filepath.Join(stateDir, "sources")
-	if err := os.MkdirAll(sourcesDir, os.ModePerm); err != nil && !os.IsExist(err) {
+	if err := os.MkdirAll(sourcesDir, os.ModePerm); err != nil && !os.IsExist(err) { //nolint:gosec
 		return errors.WithStack(err)
 	}
 
@@ -148,7 +148,7 @@ func Init(l *ui.UI, env string, distURL string, stateDir string, config Config, 
 		extDepPath := filepath.Join(ideaPath, "externalDependencies.xml")
 
 		if _, err := os.Stat(extDepPath); errors.Is(err, os.ErrNotExist) {
-			if err := os.MkdirAll(ideaPath, os.ModePerm); err != nil && !os.IsExist(err) {
+			if err := os.MkdirAll(ideaPath, os.ModePerm); err != nil && !os.IsExist(err) { //nolint:gosec
 				return errors.WithStack(err)
 			}
 
