@@ -91,6 +91,14 @@ type Config struct {
 	ManageGit     bool          `hcl:"manage-git,optional" default:"true" help:"Whether Hermit should automatically 'git add' new packages."`
 	InheritParent bool          `hcl:"inherit-parent,optional" default:"false" help:"Whether this environment inherits a potential parent environment from one of the parent directories"`
 	AddIJPlugin   bool          `hcl:"idea,optional" default:"false" help:"Whether Hermit should automatically add the IntelliJ IDEA plugin."`
+
+	GitHubTokenAuth GitHubTokenAuthConfig `hcl:"github-token-auth,block" help:"When to use GitHub token authentication."`
+}
+
+// GitHubTokenAuthConfig configures under what conditions
+// GitHub token authentication should be used.
+type GitHubTokenAuthConfig struct {
+	Match []string `hcl:"match,optional" help:"One or more glob patterns. If any of these match the 'owner/repo' pair of a GitHub repository, the GitHub token from the current environment will be used to fetch their artifacts."`
 }
 
 // Env is a Hermit environment.
@@ -275,19 +283,26 @@ func readConfig(configFile string) (*Config, error) {
 	return config, nil
 }
 
-// OpenEnv opens a Hermit environment.
-//
-// The environment may not exist, in which case this will succeed but subsequent operations will fail.
-//
-// "scriptSums" contains all known SHA256 checksums for "bin/hermit" and "bin/activate-hermit" scripts.
-func OpenEnv(
-	envDir string,
-	state *state.State,
-	packageSource cache.PackageSourceSelector,
-	ephemeral envars.Envars,
-	httpClient *http.Client,
-	scriptSums []string,
-) (*Env, error) {
+// EnvInfo holds information about the current Hermit environment.
+type EnvInfo struct {
+	// Root is the root environment directory.
+	// This contains the bin/hermit.hcl.
+	Root string
+
+	// BinDir is the path to the binary directory of the environment.
+	BinDir string
+
+	// ConfigFile is the path to the environment's configuration file.
+	ConfigFile string
+
+	// Config is the parsed representation of ConfigFile.
+	Config *Config
+}
+
+// LoadEnvInfo loads information about the environment rooted at the given
+// directory.
+func LoadEnvInfo(envDir string) (*EnvInfo, error) {
+	envDir = util.RealPath(envDir)
 	binDir := filepath.Join(envDir, "bin")
 	configFile := filepath.Join(binDir, "hermit.hcl")
 	config, err := readConfig(configFile)
@@ -295,20 +310,40 @@ func OpenEnv(
 		return nil, errors.Wrap(err, configFile)
 	}
 
-	useGit := config.ManageGit && isEnvAGitRepo(envDir)
-	envDir = util.RealPath(envDir)
+	return &EnvInfo{
+		Root:       envDir,
+		BinDir:     binDir,
+		ConfigFile: configFile,
+		Config:     config,
+	}, nil
+}
+
+// OpenEnv opens a Hermit environment.
+//
+// The environment may not exist, in which case this will succeed but subsequent operations will fail.
+//
+// "scriptSums" contains all known SHA256 checksums for "bin/hermit" and "bin/activate-hermit" scripts.
+func OpenEnv(
+	info *EnvInfo,
+	state *state.State,
+	packageSource cache.PackageSourceSelector,
+	ephemeral envars.Envars,
+	httpClient *http.Client,
+	scriptSums []string,
+) (*Env, error) {
+	useGit := info.Config.ManageGit && isEnvAGitRepo(info.Root)
 	if len(scriptSums) == 0 {
 		scriptSums = ScriptSHAs
 	}
 
 	return &Env{
 		packageSource:   packageSource,
-		config:          config,
-		envDir:          envDir,
+		config:          info.Config,
+		envDir:          info.Root,
 		useGit:          useGit,
 		state:           state,
-		binDir:          binDir,
-		configFile:      configFile,
+		binDir:          info.BinDir,
+		configFile:      info.ConfigFile,
 		ephemeralEnvars: envars.Infer(ephemeral.System()),
 		httpClient:      httpClient,
 		scriptSums:      scriptSums,
@@ -779,7 +814,11 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 
 func (e *Env) getPackageRuntimeEnvops(pkg *manifest.Package) (envars.Op, error) {
 	// If the package contains a Hermit env, add that to the PATH for runtime dependencies
-	pkgEnv, err := OpenEnv(pkg.Root, e.state, e.packageSource, nil, e.httpClient, e.scriptSums)
+	pkgEnvInfo, err := LoadEnvInfo(pkg.Root)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	pkgEnv, err := OpenEnv(pkgEnvInfo, e.state, e.packageSource, nil, e.httpClient, e.scriptSums)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -1463,7 +1502,11 @@ func (e *Env) openParent() (*Env, error) {
 			return nil, nil
 		}
 		if _, err := os.Stat(filepath.Join(path, "bin", "activate-hermit")); err == nil {
-			return OpenEnv(path, e.state, e.packageSource, nil, e.httpClient, e.scriptSums)
+			parentEnvInfo, err := LoadEnvInfo(path)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+			return OpenEnv(parentEnvInfo, e.state, e.packageSource, nil, e.httpClient, e.scriptSums)
 		} else if !errors.Is(err, os.ErrNotExist) {
 			return nil, err
 		}
