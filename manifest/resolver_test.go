@@ -10,7 +10,7 @@ import (
 	"github.com/alecthomas/repr"
 
 	"github.com/cashapp/hermit/envars"
-	. "github.com/cashapp/hermit/manifest"
+	. "github.com/cashapp/hermit/manifest" //nolint:revive // dot import
 	"github.com/cashapp/hermit/manifest/manifesttest"
 	"github.com/cashapp/hermit/platform"
 	"github.com/cashapp/hermit/sources"
