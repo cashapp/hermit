@@ -1,11 +1,6 @@
 run:
   tests: true
   max-same-issues: 50
-  skip-dirs:
-    - resources
-    - old
-  skip-files:
-    - cmd/protopkg/main.go
 
 output:
   print-issued-lines: false
@@ -91,6 +86,11 @@ issues:
   max-per-linter: 0
   max-same-issues: 0
   exclude-use-default: false
+  exclude-files:
+    - cmd/protopkg/main.go
+  exclude-dirs:
+    - resources
+    - old
   exclude:
     # Captured by errcheck.
     - '^(G104|G204):'
