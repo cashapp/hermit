@@ -36,7 +36,7 @@ func (fp *FilePatcher) Patch(fileName, content string) (bool, error) {
 	from := strings.Index(previous, fp.startLine+"\n")
 	to := strings.Index(previous, fp.endLine) - 1
 
-	result := ""
+	var result string
 	if from >= 0 && to >= 0 {
 		result = previous[:(from+len(fp.startLine)+1)] + content + previous[to:]
 	} else if from >= 0 {

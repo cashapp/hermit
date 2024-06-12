@@ -316,7 +316,7 @@ func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 //
 // This method will only cache the values and get a digest.
 func (s *State) CacheAndDigest(b *ui.Task, p *manifest.Package) (string, error) {
-	actualDigest := ""
+	var actualDigest string
 	var err error
 	if !s.isCached(p) {
 		mirrors := make([]string, len(p.Mirrors))

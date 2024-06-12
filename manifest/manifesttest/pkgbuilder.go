@@ -50,7 +50,7 @@ func (b PkgBuilder) WithVersion(version string) PkgBuilder {
 	return b
 }
 
-// WithChannel sets the the channel of the package
+// WithChannel sets the channel of the package
 func (b PkgBuilder) WithChannel(name string) PkgBuilder {
 	b.result.Reference.Channel = name
 	return b

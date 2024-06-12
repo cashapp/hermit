@@ -17,7 +17,7 @@ type envCmd struct {
 	Ops               bool   `xor:"action" help:"Print the operations needed to manipulate the environment."`
 	Activate          bool   `xor:"action" help:"Print the commands needed to set the environment to the activated state."`
 	Deactivate        bool   `xor:"action" help:"Print the commands needed to reset the environment to the deactivated state."`
-	DeactivateFromOps string `xor:"action" placeholder:"OPS" help:"Decodes the operations, and prints the shell commands to to reset the environment to the deactivated state."`
+	DeactivateFromOps string `xor:"action" placeholder:"OPS" help:"Decodes the operations, and prints the shell commands to reset the environment to the deactivated state."`
 	Shell             string `short:"s" help:"Shell type."`
 	Inherit           bool   `short:"i" help:"Inherit variables from parent environment."`
 	Names             bool   `short:"n" help:"Show only names."`
