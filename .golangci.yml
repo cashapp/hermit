@@ -53,6 +53,7 @@ linters:
     - maintidx
     - nilerr
     - errchkjson
+    - mnd  # overly sensitive to any number
 
 linters-settings:
   govet:
