@@ -51,7 +51,6 @@ linters:
 
 linters-settings:
   govet:
-    check-shadowing: true
     use-installed-packages: true
   dupl:
     threshold: 100
