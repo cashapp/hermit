@@ -80,6 +80,9 @@ blocks:
 
 	// Update the manifest and write it out to disk.
 	content, err = hcl.MarshalAST(ast)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
 	w, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".*")
 	if err != nil {
 		return "", errors.WithStack(err)
