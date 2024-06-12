@@ -26,7 +26,6 @@ linters:
     - godot
     - nestif
     - testpackage
-    - goerr113
     - gci
     - gofumpt
     - nlreturn
