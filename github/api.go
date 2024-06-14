@@ -48,10 +48,8 @@ func New(client *http.Client, token string) *Client {
 	if client == nil {
 		client = http.DefaultClient
 	}
-	if token == "" {
-		client = http.DefaultClient
-	} else {
-		client = &http.Client{Transport: TokenAuthenticatedTransport(client.Transport, token)}
+	if token != "" {
+		client.Transport = TokenAuthenticatedTransport(client.Transport, token)
 	}
 	return &Client{client: client}
 }
