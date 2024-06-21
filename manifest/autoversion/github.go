@@ -13,7 +13,7 @@ func gitHub(client GitHubClient, autoVersion *hmanifest.AutoVersionBlock) (strin
 		releases []*github.Release
 		err      error
 	)
-	const history = 100
+	const history = 200
 	// When there may be invalid versions, we need to fetch multiple release to find the latest valid one.
 	// When IgnoreInvalidVersions is off, fetch only the latest release for performance.
 	if autoVersion.IgnoreInvalidVersions {
