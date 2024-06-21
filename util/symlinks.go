@@ -15,7 +15,7 @@ func ResolveSymlinks(path string) (links []string, err error) {
 	}
 	links = append(links, path)
 	var link string
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		if info, err := os.Lstat(path); err != nil {
 			return nil, errors.Wrap(err, path)
 		} else if info.Mode()&os.ModeSymlink == 0 {

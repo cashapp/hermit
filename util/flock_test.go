@@ -76,12 +76,9 @@ func TestFileLockProceed(t *testing.T) {
 	err1 := lock1.Acquire(context.Background(), logger1)
 	timer := time.NewTimer(50 * time.Millisecond)
 	go func() {
-		for {
-			select {
-			case <-timer.C:
-				lock1.Release(logger1)
-				timer.Stop()
-			}
+		for range timer.C {
+			lock1.Release(logger1)
+			timer.Stop()
 		}
 	}()
 	assert.NoError(t, err1)

@@ -1,8 +1,6 @@
 package cache
 
 import (
-	"bytes"
-	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -192,16 +190,4 @@ func (c *Cache) Clean() error {
 func (c *Cache) Path(checksum, uri string) string {
 	base := BasePath(checksum, uri)
 	return filepath.Join(c.root, base)
-}
-
-func (c *Cache) defaultDownloadStrategy(ctx context.Context, url string) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", url, &bytes.Reader{})
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, errors.Wrap(err, "default HTTP client failed")
-	}
-	return resp, nil
 }

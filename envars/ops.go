@@ -197,14 +197,12 @@ func (e *Append) Apply(transform *Transform) { // nolint: golint
 	out := splitAndDrop(value, e.Value)
 	out = append(out, e.Value)
 	transform.set(e.Name, strings.Join(out, ":"))
-	return
 }
 
 func (e *Append) Revert(transform *Transform) { // nolint: golint
 	value, _ := transform.get(e.Name)
 	out := splitAndDrop(value, e.Value)
 	transform.set(e.Name, strings.Join(out, ":"))
-	return
 }
 
 // Prepend ensures an element exists at the beginning of a colon separated list.
@@ -224,14 +222,12 @@ func (e *Prepend) Apply(transform *Transform) { // nolint: golint
 	out := splitAndDrop(value, prepend)
 	out = append([]string{prepend}, out...)
 	transform.set(e.Name, strings.Join(out, ":"))
-	return
 }
 func (e *Prepend) Revert(transform *Transform) { // nolint: golint
 	value, _ := transform.get(e.Name)
 	prepend := transform.expand(e.Value)
 	out := splitAndDrop(value, prepend)
 	transform.set(e.Name, strings.Join(out, ":"))
-	return
 }
 
 // Prefix ensures the environment variable has the given prefix.
@@ -250,14 +246,12 @@ func (p *Prefix) Apply(transform *Transform) { // nolint: golint
 	if value, ok := transform.get(p.Name); ok && !strings.HasPrefix(value, prefix) {
 		transform.set(p.Name, prefix+value)
 	}
-	return
 }
 func (p *Prefix) Revert(transform *Transform) { // nolint: golint
 	prefix := transform.expand(p.Prefix)
 	if value, ok := transform.get(p.Name); ok && strings.HasPrefix(value, prefix) {
 		transform.set(p.Name, strings.TrimPrefix(value, prefix))
 	}
-	return
 }
 
 // Set an environment variable.
@@ -277,7 +271,6 @@ func (e *Set) Apply(transform *Transform) { // nolint: golint
 		}
 	}
 	transform.set(e.Name, e.Value)
-	return
 }
 func (e *Set) Revert(transform *Transform) { // nolint: golint
 	old := makeRevertKey(transform, e)
@@ -291,7 +284,6 @@ func (e *Set) Revert(transform *Transform) { // nolint: golint
 		transform.set(e.Name, value)
 		transform.unset(old)
 	}
-	return
 }
 
 // Unset an environment variable.
@@ -308,7 +300,6 @@ func (e *Unset) Apply(transform *Transform) { // nolint: golint
 		transform.set(old, value)
 	}
 	transform.unset(e.Name)
-	return
 }
 func (e *Unset) Revert(transform *Transform) { // nolint: golint
 	old := makeRevertKey(transform, e) // nolint: ifshort
@@ -322,7 +313,6 @@ func (e *Unset) Revert(transform *Transform) { // nolint: golint
 		transform.set(e.Name, value)
 		transform.unset(old)
 	}
-	return
 }
 
 // Force set/unset an environment variable without preserving or restoring its previous value.
@@ -338,12 +328,10 @@ func (f *Force) String() string {
 func (f *Force) Envar() string { return f.Name } // nolint: golint
 func (f *Force) Apply(transform *Transform) { // nolint: golint
 	transform.set(f.Name, f.Value)
-	return
 }
 
 func (f *Force) Revert(transform *Transform) { // nolint: golint
 	transform.unset(f.Name)
-	return
 }
 
 // Split "envar" by ":" and drop "value" from it.
@@ -375,7 +363,7 @@ func makeRevertKey(transform *Transform, op Op) string {
 	t := v.Type()
 	hash.Write([]byte(t.Name()))
 	hash.Write(zero)
-	for i := 0; i < t.NumField(); i++ {
+	for i := range t.NumField() {
 		ft := t.Field(i)
 		if ft.Type.Kind() != reflect.String {
 			panic("field " + ft.Name + " must be a string")

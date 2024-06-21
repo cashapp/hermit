@@ -102,7 +102,7 @@ func MustParseGlobSelector(from string) GlobSelector {
 }
 
 func splitNameAndQualifier(from string) (name string, version string, channel string) {
-	for cursor := 0; cursor < len(from); cursor++ {
+	for cursor := range len(from) {
 		rn := rune(from[cursor])
 		if cursor > 0 && rune(from[cursor-1]) == '-' && (unicode.IsDigit(rn) || strings.ContainsRune("*[]{}", rn)) {
 			return from[:cursor-1], from[cursor:], ""
