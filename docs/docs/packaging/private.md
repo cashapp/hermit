@@ -41,3 +41,15 @@ or a [GitHub App installation token](https://docs.github.com/en/developers/apps/
 This token must have the `repo` scope set at creation.
 
 The environment variable `HERMIT_GITHUB_TOKEN` must be set to this a token.
+
+You can configure a Hermit-initialized repository to use this token
+by adding a `github-token-auth` block to your `bin/hermit.hcl`.
+For example:
+
+```hcl
+# Use HERMIT_GITHUB_TOKEN to authenticate downloads from GitHub repositories
+# owned by the 'cashapp' organization.
+github-token-auth {
+  match = ["cashapp/*"]
+}
+```
