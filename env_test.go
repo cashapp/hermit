@@ -414,6 +414,63 @@ func TestEnv_EphemeralVariableSubstitutionOverride(t *testing.T) {
 	opsContains(t, vars, "TOOL_HOME="+fixture.Env.Root()+"/.hermit/tool")
 }
 
+func TestLoadEnvInfo(t *testing.T) {
+	tests := []struct {
+		name     string
+		in       string
+		expected hermit.Config
+	}{
+		{
+			name: "empty",
+			expected: hermit.Config{
+				Envars:    map[string]string{},
+				ManageGit: true,
+			},
+		},
+		{
+			name: "github-token-auth",
+			in: joinLines(
+				`github-token-auth {`,
+				`  match = ["cashapp/*"]`,
+				`}`,
+			),
+			expected: hermit.Config{
+				Envars:    map[string]string{},
+				ManageGit: true,
+				GitHubTokenAuth: hermit.GitHubTokenAuthConfig{
+					Match: []string{
+						"cashapp/*",
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := t.TempDir()
+			// On macOS, the temporary directory path may be a symlink.
+			// Resolve it so we can match it exactly later.
+			root, err := filepath.EvalSymlinks(root)
+			assert.NoError(t, err)
+
+			binDir := filepath.Join(root, "bin")
+			fpath := filepath.Join(binDir, "hermit.hcl")
+			assert.NoError(t,
+				os.MkdirAll(filepath.Dir(fpath), 0750))
+			assert.NoError(t,
+				os.WriteFile(fpath, []byte(tt.in), 0600))
+
+			info, err := hermit.LoadEnvInfo(root)
+			assert.NoError(t, err)
+
+			assert.Equal(t, &tt.expected, info.Config)
+			assert.Equal(t, root, info.Root)
+			assert.Equal(t, binDir, info.BinDir)
+		})
+	}
+}
+
 func opsContains[T any](t *testing.T, slice []T, needle T) {
 	t.Helper()
 	for _, el := range slice {
@@ -422,4 +479,9 @@ func opsContains[T any](t *testing.T, slice []T, needle T) {
 		}
 	}
 	t.Fatalf("%v does not contain %v", slice, needle)
+}
+
+// Helper to write multi-line strings inside a table test.
+func joinLines(lines ...string) string {
+	return strings.Join(lines, "\n") + "\n"
 }

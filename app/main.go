@@ -220,6 +220,14 @@ func Main(config Config) {
 		log.Fatalf("failed to initialise CLI: %s", err)
 	}
 
+	var envInfo *hermit.EnvInfo
+	if isActivated {
+		envInfo, err = hermit.LoadEnvInfo(envPath)
+		if err != nil {
+			log.Fatalf("failed to load environment info: %s", err)
+		}
+	}
+
 	getSource := config.PackageSourceSelector
 	if config.PackageSourceSelector == nil {
 		getSource = cache.GetSource
@@ -227,6 +235,22 @@ func Main(config Config) {
 	defaultHTTPClient := config.defaultHTTPClient(p)
 
 	ghClient := github.New(defaultHTTPClient, githubToken)
+	if envInfo != nil {
+		// If the environment has been configured to use GitHub token
+		// authentication for any patterns, wrap the
+		// PackageSourceSelector to use the GitHub client for those
+		// patterns.
+		ghTokenAuth := envInfo.Config.GitHubTokenAuth
+		if len(ghTokenAuth.Match) > 0 {
+			matcher, err := cache.GlobRepoMatcher(ghTokenAuth.Match)
+			if err != nil {
+				log.Fatalf("Environment configuration has a bad github-auth-token.match: %v", err)
+			}
+
+			getSource = cache.GitHubSourceSelector(getSource, ghClient, matcher)
+		}
+	}
+
 	cache, err := cache.Open(hermit.UserStateDir, getSource, defaultHTTPClient, config.fastHTTPClient(p))
 	if err != nil {
 		log.Fatalf("failed to open cache: %s", err)
@@ -243,7 +267,8 @@ func Main(config Config) {
 	}
 
 	if isActivated {
-		env, err = hermit.OpenEnv(envPath, sta, cache.GetSource, cli.getGlobalState().Env, defaultHTTPClient, config.SHA256Sums)
+		// envInfo is guaranteed to be non-nil here
+		env, err = hermit.OpenEnv(envInfo, sta, cache.GetSource, cli.getGlobalState().Env, defaultHTTPClient, config.SHA256Sums)
 		if err != nil {
 			log.Fatalf("failed to open environment: %s", err)
 		}

@@ -55,7 +55,9 @@ func NewEnvTestFixture(t *testing.T, handler http.Handler) *EnvTestFixture {
 		Builtin: sources.NewBuiltInSource(vfs.InMemoryFS(nil)),
 	}, cache)
 	assert.NoError(t, err)
-	env, err := hermit.OpenEnv(envDir, sta, cache.GetSource, envars.Envars{}, server.Client(), nil)
+	info, err := hermit.LoadEnvInfo(envDir)
+	assert.NoError(t, err)
+	env, err := hermit.OpenEnv(info, sta, cache.GetSource, envars.Envars{}, server.Client(), nil)
 	assert.NoError(t, err)
 
 	return &EnvTestFixture{
@@ -98,7 +100,9 @@ func (f *EnvTestFixture) NewEnv() *hermit.Env {
 	log, _ := ui.NewForTesting()
 	err = hermit.Init(log, envDir, "", f.State.Root(), hermit.Config{}, "BYPASS")
 	assert.NoError(f.t, err)
-	env, err := hermit.OpenEnv(envDir, f.State, f.Cache.GetSource, envars.Envars{}, f.Server.Client(), nil)
+	info, err := hermit.LoadEnvInfo(envDir)
+	assert.NoError(f.t, err)
+	env, err := hermit.OpenEnv(info, f.State, f.Cache.GetSource, envars.Envars{}, f.Server.Client(), nil)
 	assert.NoError(f.t, err)
 	return env
 }
