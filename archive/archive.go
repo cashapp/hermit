@@ -633,7 +633,7 @@ func extractRpmPackage(r io.Reader, dest string, pkg *manifest.Package) error {
 
 func ensureDirExists(file string) error {
 	dir := filepath.Dir(file)
-	return os.MkdirAll(dir, os.ModePerm)
+	return os.MkdirAll(dir, os.ModePerm) //nolint:gosec
 }
 
 // Strip leading path component.

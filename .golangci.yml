@@ -1,11 +1,6 @@
 run:
   tests: true
   max-same-issues: 50
-  skip-dirs:
-    - resources
-    - old
-  skip-files:
-    - cmd/protopkg/main.go
 
 output:
   print-issued-lines: false
@@ -13,7 +8,6 @@ output:
 linters:
   enable-all: true
   disable:
-    - maligned
     - megacheck
     - lll
     - typecheck # `go build` catches this, and it doesn't currently work with Go 1.11 modules
@@ -21,7 +15,6 @@ linters:
     - dupl # has never been actually useful
     - gochecknoglobals
     - gochecknoinits
-    - interfacer # author deprecated it because it provides bad suggestions
     - funlen
     - whitespace
     - godox
@@ -30,22 +23,17 @@ linters:
     - gomnd
     - gocognit
     - gocyclo
-    - scopelint
     - godot
     - nestif
     - testpackage
-    - goerr113
     - gci
     - gofumpt
-    - exhaustivestruct
     - nlreturn
     - cyclop
     - paralleltest
-    - ifshort # so annoying
     - prealloc
     - nolintlint
     - varnamelen
-    - nosnakecase
     - nonamedreturns
     - nilnil
     - ireturn
@@ -58,10 +46,11 @@ linters:
     - maintidx
     - nilerr
     - errchkjson
+    - mnd      # overly sensitive to any number
+    - tagalign # don't care about struct tag alignment (help:".." tends to be long)
 
 linters-settings:
   govet:
-    check-shadowing: true
     use-installed-packages: true
   dupl:
     threshold: 100
@@ -76,11 +65,13 @@ linters-settings:
   exhaustive:
     default-signifies-exhaustive: true
   depguard:
-    list-type: blacklist
-    include-go-root: true
-    packages-with-error-message:
-      - errors: "use github.com/cashapp/hermit/errors"
-      - github.com/pkg/errors: "use github.com/cashapp/hermit/errors"
+    rules:
+      main:
+        deny:
+          - pkg: errors
+            desc: "use github.com/cashapp/hermit/errors"
+          - pkg: github.com/pkg/errors
+            desc: "use github.com/cashapp/hermit/errors"
   forbidigo:
     forbid:
       - '^fmt.Errorf'
@@ -91,6 +82,11 @@ issues:
   max-per-linter: 0
   max-same-issues: 0
   exclude-use-default: false
+  exclude-files:
+    - cmd/protopkg/main.go
+  exclude-dirs:
+    - resources
+    - old
   exclude:
     # Captured by errcheck.
     - '^(G104|G204):'
@@ -107,3 +103,9 @@ issues:
     - 'should have.*comment'
     - 'uses unkeyed fields'
     - 'G307'
+  exclude-rules:
+    # Don't warn on unused parameters.
+    # Parameter names are useful documentation--even when unused.
+    # Replacing them with '_' is undesirable.
+    - linters: [revive]
+      text: 'unused-parameter: parameter \S+ seems to be unused, consider removing or renaming it as _'

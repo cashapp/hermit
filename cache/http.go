@@ -88,7 +88,7 @@ func downloadHTTP(b *ui.Task, response *http.Response, checksum string, uri stri
 	}
 	task := b.SubTask("download")
 	cacheDir := filepath.Dir(cachePath)
-	_ = os.MkdirAll(cacheDir, os.ModePerm)
+	_ = os.MkdirAll(cacheDir, os.ModePerm) //nolint:gosec
 
 	w, err := os.CreateTemp(cacheDir, filepath.Base(cachePath)+".*.hermit.tmp.download")
 	if err != nil {

@@ -31,7 +31,7 @@ type MessageAction struct {
 }
 
 func (m *MessageAction) position() hcl.Position { return m.Pos }
-func (m *MessageAction) String() string         { return fmt.Sprintf("echo %s", shell.Quote(m.Text)) }
+func (m *MessageAction) String() string         { return "echo " + shell.Quote(m.Text) }
 func (m *MessageAction) Apply(p *Package) error { return nil } // nolint
 
 // RenameAction renames a file.
@@ -60,9 +60,9 @@ type DeleteAction struct {
 func (d *DeleteAction) position() hcl.Position { return d.Pos }
 func (d *DeleteAction) String() string {
 	if d.Recursive {
-		return fmt.Sprintf("rm -r %s", strings.Join(d.Files, " "))
+		return "rm -r " + strings.Join(d.Files, " ")
 	}
-	return fmt.Sprintf("rm %s", strings.Join(d.Files, " "))
+	return "rm " + strings.Join(d.Files, " ")
 }
 func (d *DeleteAction) Apply(*Package) error { // nolint
 	for _, file := range d.Files {

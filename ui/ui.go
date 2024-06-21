@@ -186,7 +186,7 @@ func (w *UI) logf(level Level, label string, format string, args ...interface{})
 	// Format the message.
 	var msg string
 	if ansi {
-		msg += fmt.Sprintf("\033[1m%s", levelColor[level])
+		msg += "\033[1m" + levelColor[level]
 	}
 	msg += level.String() + ":"
 	if label != "" {
@@ -194,7 +194,7 @@ func (w *UI) logf(level Level, label string, format string, args ...interface{})
 	}
 	msg += " "
 	if ansi {
-		msg += fmt.Sprintf("\033[0m%s", levelColor[level])
+		msg += "\033[0m" + levelColor[level]
 		msg += fmt.Sprintf(format, args...)
 		msg += "\033[0m\033[0K"
 	} else {

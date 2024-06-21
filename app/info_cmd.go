@@ -58,7 +58,7 @@ func (i *infoCmd) Run(l *ui.UI, env *hermit.Env, sta *state.State) error {
 	}
 
 	if i.JSON {
-		js, err := json.Marshal(packages)
+		js, err := json.Marshal(packages) //nolint:musttag // default JSON behavior is fine
 		if err != nil {
 			return errors.WithStack(err)
 		}

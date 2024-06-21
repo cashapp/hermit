@@ -44,7 +44,7 @@ func BasePath(checksum, uri string) string {
 // A default raw HTTP download strategy will always be the first strategy attempted.
 func Open(stateDir string, selector PackageSourceSelector, client *http.Client, fastFailClient *http.Client) (*Cache, error) {
 	stateDir = filepath.Join(stateDir, "cache")
-	err := os.MkdirAll(stateDir, os.ModePerm)
+	err := os.MkdirAll(stateDir, os.ModePerm) //nolint:gosec
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -68,14 +68,14 @@ func (c *Cache) Root() string {
 // Mkdir makes a directory for the given URI.
 func (c *Cache) Mkdir(uri string) (string, error) {
 	path := c.Path("", uri)
-	return path, os.MkdirAll(path, os.ModePerm)
+	return path, os.MkdirAll(path, os.ModePerm) //nolint:gosec
 }
 
 // Create a new, empty, cache entry.
 func (c *Cache) Create(checksum, uri string) (*os.File, error) {
 	path := c.Path(checksum, uri)
 	dir := filepath.Dir(path)
-	err := os.MkdirAll(dir, os.ModePerm)
+	err := os.MkdirAll(dir, os.ModePerm) //nolint:gosec
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
