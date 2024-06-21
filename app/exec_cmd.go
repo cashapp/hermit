@@ -23,7 +23,7 @@ type execCmd struct {
 	Args   []string `arg:"" help:"Arguments to pass to executable (use -- to separate)." optional:""`
 }
 
-func (e *execCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, env *hermit.Env, globalState GlobalState, config Config, defaultHTTPClient *http.Client) error {
+func (e *execCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, globalState GlobalState, config Config, defaultHTTPClient *http.Client) error {
 	envDir, err := hermit.FindEnvDir(e.Binary)
 	if err != nil {
 		return errors.WithStack(err)
@@ -34,7 +34,7 @@ func (e *execCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, env *hermi
 	}
 
 	// Pass config.SHA256Sums because OpenEnv uses the defaults cashapp/hermit; internal builds inject additional SHA256Sums.
-	env, err = hermit.OpenEnv(envInfo, sta, cache.GetSource, globalState.Env, defaultHTTPClient, config.SHA256Sums)
+	env, err := hermit.OpenEnv(envInfo, sta, cache.GetSource, globalState.Env, defaultHTTPClient, config.SHA256Sums)
 	if err != nil {
 		return errors.WithStack(err)
 	}

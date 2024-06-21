@@ -236,7 +236,7 @@ func (w *UI) clearProgress() {
 		return
 	}
 	// Clear previous progress indicator.
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		fmt.Fprintf(w.stdout, "\033[0A\033[2K\r") // Move up and clear line
 	}
 }

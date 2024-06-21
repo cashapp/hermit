@@ -8,7 +8,6 @@ output:
 linters:
   enable-all: true
   disable:
-    - megacheck
     - lll
     - typecheck # `go build` catches this, and it doesn't currently work with Go 1.11 modules
     - goimports # horrendously slow with go modules :(
@@ -48,6 +47,7 @@ linters:
     - errchkjson
     - mnd      # overly sensitive to any number
     - tagalign # don't care about struct tag alignment (help:".." tends to be long)
+    - execinquery
 
 linters-settings:
   govet:
@@ -103,6 +103,7 @@ issues:
     - 'should have.*comment'
     - 'uses unkeyed fields'
     - 'G307'
+    - 'strings.Title has been deprecated'
   exclude-rules:
     # Don't warn on unused parameters.
     # Parameter names are useful documentation--even when unused.

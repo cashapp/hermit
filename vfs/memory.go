@@ -28,7 +28,7 @@ func (i inMemoryBundle) Open(path string) (fs.File, error) {
 	if !ok {
 		return nil, os.ErrNotExist
 	}
-	return inMemoryFile{path, len(data), strings.NewReader(data)}, nil
+	return &inMemoryFile{path, len(data), strings.NewReader(data)}, nil
 }
 
 func (i inMemoryBundle) Glob(pattern string) ([]string, error) {
@@ -49,7 +49,7 @@ type inMemoryFile struct {
 	*strings.Reader
 }
 
-func (i inMemoryFile) Close() error {
+func (i *inMemoryFile) Close() error {
 	i.Reader = nil
 	return nil
 }

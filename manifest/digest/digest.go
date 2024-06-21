@@ -231,10 +231,9 @@ func updateHCLSHA256Sums(ast *hcl.AST, updated []pkgAndDigest) error {
 	}
 
 	for _, pkg := range updated {
-		pkg := pkg
 		sha256Sums.Map = append(sha256Sums.Map, &hcl.MapEntry{
-			Key:   &hcl.Value{Str: &pkg.source},
-			Value: &hcl.Value{Str: &pkg.digest},
+			Key:   &hcl.Value{Str: &pkg.source}, //nolint:exportloopref
+			Value: &hcl.Value{Str: &pkg.digest}, //nolint:exportloopref
 		})
 	}
 

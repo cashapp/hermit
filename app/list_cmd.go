@@ -162,7 +162,7 @@ func printPackage(pkgs []*manifest.Package, option *listPackageOption, name stri
 		versions = append(versions, fmt.Sprintf("%s%s%s^R", clr, pkg.Reference.StringNoName(), suffix))
 	}
 	colour.Println("^B^2" + name + "^R (" + strings.Join(versions, ", ") + ")")
-	doc.ToText(os.Stdout, pkgs[0].Description, "  ", "", w-2)
+	doc.ToText(os.Stdout, pkgs[0].Description, "  ", "", w-2) //nolint:staticcheck
 }
 
 func listPackages(pkgs manifest.Packages, option *listPackageOption) error {

@@ -723,7 +723,7 @@ func inferPackageRepository(p *Package, manifest *Manifest) {
 		}
 	}
 
-	if strings.HasPrefix(p.Source, githubComPrefix) == false || strings.HasPrefix(p.Source, "https://github.com/cashapp/hermit-build") {
+	if !strings.HasPrefix(p.Source, githubComPrefix) || strings.HasPrefix(p.Source, "https://github.com/cashapp/hermit-build") {
 		return
 	}
 
