@@ -117,3 +117,7 @@ func WithStack(err error) error {
 	}
 	return newErr(err, "")
 }
+
+func Join(errs ...error) error {
+	return errors.Join(errs...)
+}

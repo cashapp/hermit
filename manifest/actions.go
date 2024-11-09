@@ -87,8 +87,8 @@ type ChmodAction struct {
 
 func (c *ChmodAction) position() hcl.Position { return c.Pos }
 func (c *ChmodAction) String() string         { return fmt.Sprintf("chmod %o %s", c.Mode, shell.Quote(c.File)) }
-func (c *ChmodAction) Apply(*Package) error { // nolint
-	return os.Chmod(c.File, os.FileMode(c.Mode))
+func (c *ChmodAction) Apply(*Package) error {
+	return os.Chmod(c.File, os.FileMode(c.Mode)) //nolint:gosec
 }
 
 // RunAction executes a command when a lifecycle event occurs
