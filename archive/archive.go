@@ -622,7 +622,7 @@ func extractRpmPackage(r io.Reader, dest string, pkg *manifest.Package) error {
 			if err != nil {
 				return errors.WithStack(err)
 			}
-			err = os.WriteFile(filename, bts, os.FileMode(header.Mode()))
+			err = os.WriteFile(filename, bts, os.FileMode(header.Mode())) //nolint:gosec
 			if err != nil {
 				return errors.WithStack(err)
 			}

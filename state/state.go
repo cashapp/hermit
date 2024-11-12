@@ -2,6 +2,7 @@ package state
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -18,6 +19,7 @@ import (
 	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/ui"
 	"github.com/cashapp/hermit/util"
+	"github.com/cashapp/hermit/util/flock"
 	"github.com/cashapp/hermit/vfs"
 )
 
@@ -60,7 +62,7 @@ type State struct {
 	autoMirrors []precompiledAutoMirror
 	cache       *cache.Cache
 	dao         *dao.DAO
-	lock        *util.FileLock
+	lock        string
 	lockTimeout time.Duration
 }
 
@@ -99,7 +101,7 @@ func Open(stateDir string, config Config, cache *cache.Cache) (*State, error) {
 		config:      config,
 		pkgDir:      pkgDir,
 		cache:       cache,
-		lock:        util.NewLock(filepath.Join(stateDir, ".lock"), 1*time.Second),
+		lock:        filepath.Join(stateDir, ".lock"),
 		lockTimeout: config.LockTimeout,
 	}
 	return s, nil
@@ -206,15 +208,15 @@ func (s *State) Sources(l *ui.UI) (*sources.Sources, error) {
 	return ss, nil
 }
 
-func (s *State) acquireLock(log ui.Logger) (*util.FileLock, error) {
+func (s *State) acquireLock(log ui.Logger, format string, args ...any) (release func() error, err error) {
 	log.Tracef("timeout for acquiring the lock is %s", s.lockTimeout)
 	ctx, cancel := context.WithTimeout(context.Background(), s.lockTimeout)
-	err := s.lock.Acquire(ctx, log)
+	release, err = flock.Acquire(ctx, s.lock, fmt.Sprintf(format, args...))
 	cancel()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to acquire lock")
 	}
-	return s.lock, nil
+	return
 }
 
 // ReadPackageState updates the package fields from the global database
@@ -257,11 +259,11 @@ func (s *State) removeRecursive(b *ui.Task, dest string) error {
 	}
 
 	task := b.SubTask("remove")
-	lock, err := s.acquireLock(b)
+	release, err := s.acquireLock(b, "recursively removing %s", dest)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	defer lock.Release(b)
+	defer release() //nolint:errcheck
 
 	task.Debugf("chmod -R +w %s", dest)
 	_ = filepath.Walk(dest, func(path string, info os.FileInfo, err error) error {
@@ -291,11 +293,11 @@ func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 		return nil
 	}
 
-	lock, err := s.acquireLock(b)
+	release, err := s.acquireLock(b, "downloading and extracting %s", p)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	defer lock.Release(b)
+	defer release() //nolint:errcheck
 
 	if !s.isExtracted(p) {
 		if err := s.extract(b, p); err != nil {
@@ -445,11 +447,11 @@ func (s *State) areBinariesLinked(p *manifest.Package) bool {
 // CleanPackages removes all extracted packages
 func (s *State) CleanPackages(b *ui.UI) error {
 	// TODO: Uninstall packages from their configured root so that eg. external packages can be uninstalled.
-	lock, err := s.acquireLock(b)
+	release, err := s.acquireLock(b, "cleaning all extracted packages")
 	if err != nil {
 		return err
 	}
-	defer lock.Release(b)
+	defer release() //nolint:errcheck
 
 	bins, err := os.ReadDir(s.binaryDir)
 	if err != nil && !os.IsNotExist(err) {
@@ -481,11 +483,11 @@ func (s *State) CleanPackages(b *ui.UI) error {
 
 // CleanCache clears the download cache
 func (s *State) CleanCache(b ui.Logger) error {
-	lock, err := s.acquireLock(b)
+	release, err := s.acquireLock(b, "cleaning download cache")
 	if err != nil {
 		return err
 	}
-	defer lock.Release(b)
+	defer release() //nolint:errcheck
 
 	b.Debugf("rm -rf %q", s.cacheDir)
 	return os.RemoveAll(s.cacheDir)
@@ -548,11 +550,11 @@ func (s *State) removePackage(task *ui.Task, pkg *manifest.Package) error {
 }
 
 func (s *State) evictPackage(b *ui.Task, pkg *manifest.Package) error {
-	lock, err := s.acquireLock(b)
+	release, err := s.acquireLock(b, "evicting package %s", pkg)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	defer lock.Release(b)
+	defer release() //nolint:errcheck
 
 	if err := s.cache.Evict(b, pkg.SHA256, pkg.Source); err != nil {
 		return errors.WithStack(err)
