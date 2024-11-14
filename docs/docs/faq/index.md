@@ -92,12 +92,6 @@ Hermit sets [`PYTHONUSERBASE`](https://docs.python.org/3/using/cmdline.html#envv
 `${PATH}` when in an activated environment. This results in packages installed
 within the environment being mostly (completely?) isolated similar to how virtualenv works.
 
-## Is Ruby supported?
-
-Not yet. Hermit only supports static/relocatable binary packages and there are
-no recent Ruby versions compiled in this way. We would love contributions to
-support Ruby.
-
 ## Why Doesn't Hermit Have a Package for ...?
 
 There could be a number of reasons why a package isn't present in Hermit. 
