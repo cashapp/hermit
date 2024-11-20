@@ -74,7 +74,7 @@ func TestCacheAndUnpackHooksRunOnMutablePackage(t *testing.T) {
 
 	info, err = os.Stat(filepath.Join(state.PkgDir(), "file_renamed"))
 	assert.NoError(t, err)
-	assert.Equal(t, os.FileMode(0500), info.Mode()&0777, info.Mode().String())
+	assert.Equal(t, os.FileMode(0555), info.Mode()&0777, info.Mode().String())
 }
 
 func TestLinksMissingBinaries(t *testing.T) {

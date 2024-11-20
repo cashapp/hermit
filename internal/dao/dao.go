@@ -24,7 +24,7 @@ type Package struct {
 // Open returns a new DAO at the given state directory
 func Open(stateDir string) (*DAO, error) {
 	metadataDir := filepath.Join(stateDir, "metadata")
-	if err := os.MkdirAll(metadataDir, 0700); err != nil && !os.IsExist(err) {
+	if err := os.MkdirAll(metadataDir, 0777); err != nil && !os.IsExist(err) {
 		return nil, errors.WithStack(err)
 	}
 	return &DAO{stateDir: stateDir, metadataDir: metadataDir}, nil
