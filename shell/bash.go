@@ -14,7 +14,7 @@ else
   PROMPT_COMMAND="change_hermit_env"
 fi
 
-complete -o nospace -C "${HERMIT_ROOT_BIN:-"$HOME/bin/hermit"}" hermit
+complete -o nospace -C "${HERMIT_ROOT_BIN:-"$HOME/bin/hermit"} noop" hermit
 `
 
 // Bash represent the Bash shell
