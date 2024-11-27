@@ -368,7 +368,8 @@ func TestIntegration(t *testing.T) {
 					assert.NoError(t, err)
 					defer f.Close()
 
-					go io.Copy(tee, f)
+					//nolint: errcheck // an io error is always returned, ignore it: read /dev/ptmx: input/output error
+					io.Copy(tee, f)
 
 					err = cmd.Wait()
 
