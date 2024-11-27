@@ -42,7 +42,7 @@ type cliBase struct {
 	Info       infoCmd       `cmd:"" help:"Show information on packages." group:"global"`
 	ShellHooks shellHooksCmd `cmd:"" help:"Manage Hermit auto-activation hooks of a shell." group:"global" aliases:"install-hooks"`
 
-	Noop                 noopCmd              `cmd:"" help:"No-op, just exit." hidden:""`
+	Noop                 noopCmd              `cmd:"" help:"No-op, just exit." hidden:"" passthrough:""`
 	Activate             activateCmd          `cmd:"" help:"Activate an environment." hidden:""`
 	Exec                 execCmd              `cmd:"" help:"Directly execute a binary in a package." hidden:""`
 	Update               updateCmd            `cmd:"" aliases:"sync" help:"Update manifest sources." group:"global"`
