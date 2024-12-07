@@ -343,3 +343,10 @@ func (w *UI) Confirmation(message string, args ...interface{}) (bool, error) {
 	s = strings.ToLower(s)
 	return s == "y" || s == "yes", nil
 }
+
+// Sync flushes IO to stdout and stderr.
+func (w *UI) Sync() error {
+	w.lock.Lock()
+	defer w.lock.Unlock()
+	return errors.Join(w.stdout.Sync(), w.stderr.Sync())
+}

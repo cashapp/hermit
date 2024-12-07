@@ -122,20 +122,15 @@ func Main(config Config) {
 		// This is necessary because stdout/stderr are unbuffered and thus _very_ slow.
 		stdout := bufio.NewWriter(os.Stdout)
 		stderr := bufio.NewWriter(os.Stderr)
+		p = ui.New(config.LogLevel, &bufioSyncer{stdout}, &bufioSyncer{stderr}, stdoutIsTTY, stderrIsTTY)
 		go func() {
 			for {
 				time.Sleep(time.Millisecond * 100)
-				err = stdout.Flush()
-				if err != nil {
-					break
-				}
-				err = stderr.Flush()
-				if err != nil {
+				if err := p.Sync(); err != nil {
 					break
 				}
 			}
 		}()
-		p = ui.New(config.LogLevel, &bufioSyncer{stdout}, &bufioSyncer{stderr}, stdoutIsTTY, stderrIsTTY)
 		defer stdout.Flush()
 		defer stderr.Flush()
 	} else {
