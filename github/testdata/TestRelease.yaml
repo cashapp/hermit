@@ -1,0 +1,502 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        transfer_encoding: []
+        trailer: {}
+        host: api.github.com
+        remote_addr: ""
+        request_uri: ""
+        body: ""
+        form: {}
+        headers: {}
+        url: https://api.github.com/repos/cashapp/hermit/releases/tags/v0.39.2
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        transfer_encoding: []
+        trailer: {}
+        content_length: -1
+        uncompressed: true
+        body: '{"url":"https://api.github.com/repos/cashapp/hermit/releases/158259817","assets_url":"https://api.github.com/repos/cashapp/hermit/releases/158259817/assets","upload_url":"https://uploads.github.com/repos/cashapp/hermit/releases/158259817/assets{?name,label}","html_url":"https://github.com/cashapp/hermit/releases/tag/v0.39.2","id":158259817,"author":{"login":"github-actions[bot]","id":41898282,"node_id":"MDM6Qm90NDE4OTgyODI=","avatar_url":"https://avatars.githubusercontent.com/in/15368?v=4","gravatar_id":"","url":"https://api.github.com/users/github-actions%5Bbot%5D","html_url":"https://github.com/apps/github-actions","followers_url":"https://api.github.com/users/github-actions%5Bbot%5D/followers","following_url":"https://api.github.com/users/github-actions%5Bbot%5D/following{/other_user}","gists_url":"https://api.github.com/users/github-actions%5Bbot%5D/gists{/gist_id}","starred_url":"https://api.github.com/users/github-actions%5Bbot%5D/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/github-actions%5Bbot%5D/subscriptions","organizations_url":"https://api.github.com/users/github-actions%5Bbot%5D/orgs","repos_url":"https://api.github.com/users/github-actions%5Bbot%5D/repos","events_url":"https://api.github.com/users/github-actions%5Bbot%5D/events{/privacy}","received_events_url":"https://api.github.com/users/github-actions%5Bbot%5D/received_events","type":"Bot","site_admin":false},"node_id":"RE_kwDOFf-izM4Jbtpp","tag_name":"v0.39.2","target_commitish":"master","name":"v0.39.2","draft":false,"prerelease":false,"created_at":"2024-05-15T21:57:56Z","published_at":"2024-05-30T23:47:36Z","assets":[{"url":"https://api.github.com/repos/cashapp/hermit/releases/assets/171036319","id":171036319,"node_id":"RA_kwDOFf-izM4KMc6f","name":"hermit-darwin-amd64.gz","label":"","uploader":{"login":"github-actions[bot]","id":41898282,"node_id":"MDM6Qm90NDE4OTgyODI=","avatar_url":"https://avatars.githubusercontent.com/in/15368?v=4","gravatar_id":"","url":"https://api.github.com/users/github-actions%5Bbot%5D","html_url":"https://github.com/apps/github-actions","followers_url":"https://api.github.com/users/github-actions%5Bbot%5D/followers","following_url":"https://api.github.com/users/github-actions%5Bbot%5D/following{/other_user}","gists_url":"https://api.github.com/users/github-actions%5Bbot%5D/gists{/gist_id}","starred_url":"https://api.github.com/users/github-actions%5Bbot%5D/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/github-actions%5Bbot%5D/subscriptions","organizations_url":"https://api.github.com/users/github-actions%5Bbot%5D/orgs","repos_url":"https://api.github.com/users/github-actions%5Bbot%5D/repos","events_url":"https://api.github.com/users/github-actions%5Bbot%5D/events{/privacy}","received_events_url":"https://api.github.com/users/github-actions%5Bbot%5D/received_events","type":"Bot","site_admin":false},"content_type":"raw","state":"uploaded","size":8747866,"download_count":0,"created_at":"2024-05-30T23:47:41Z","updated_at":"2024-05-30T23:47:42Z","browser_download_url":"https://github.com/cashapp/hermit/releases/download/v0.39.2/hermit-darwin-amd64.gz"},{"url":"https://api.github.com/repos/cashapp/hermit/releases/assets/171036315","id":171036315,"node_id":"RA_kwDOFf-izM4KMc6b","name":"hermit-darwin-arm64.gz","label":"","uploader":{"login":"github-actions[bot]","id":41898282,"node_id":"MDM6Qm90NDE4OTgyODI=","avatar_url":"https://avatars.githubusercontent.com/in/15368?v=4","gravatar_id":"","url":"https://api.github.com/users/github-actions%5Bbot%5D","html_url":"https://github.com/apps/github-actions","followers_url":"https://api.github.com/users/github-actions%5Bbot%5D/followers","following_url":"https://api.github.com/users/github-actions%5Bbot%5D/following{/other_user}","gists_url":"https://api.github.com/users/github-actions%5Bbot%5D/gists{/gist_id}","starred_url":"https://api.github.com/users/github-actions%5Bbot%5D/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/github-actions%5Bbot%5D/subscriptions","organizations_url":"https://api.github.com/users/github-actions%5Bbot%5D/orgs","repos_url":"https://api.github.com/users/github-actions%5Bbot%5D/repos","events_url":"https://api.github.com/users/github-actions%5Bbot%5D/events{/privacy}","received_events_url":"https://api.github.com/users/github-actions%5Bbot%5D/received_events","type":"Bot","site_admin":false},"content_type":"raw","state":"uploaded","size":8420135,"download_count":1,"created_at":"2024-05-30T23:47:40Z","updated_at":"2024-05-30T23:47:40Z","browser_download_url":"https://github.com/cashapp/hermit/releases/download/v0.39.2/hermit-darwin-arm64.gz"},{"url":"https://api.github.com/repos/cashapp/hermit/releases/assets/171036311","id":171036311,"node_id":"RA_kwDOFf-izM4KMc6X","name":"hermit-linux-amd64.gz","label":"","uploader":{"login":"github-actions[bot]","id":41898282,"node_id":"MDM6Qm90NDE4OTgyODI=","avatar_url":"https://avatars.githubusercontent.com/in/15368?v=4","gravatar_id":"","url":"https://api.github.com/users/github-actions%5Bbot%5D","html_url":"https://github.com/apps/github-actions","followers_url":"https://api.github.com/users/github-actions%5Bbot%5D/followers","following_url":"https://api.github.com/users/github-actions%5Bbot%5D/following{/other_user}","gists_url":"https://api.github.com/users/github-actions%5Bbot%5D/gists{/gist_id}","starred_url":"https://api.github.com/users/github-actions%5Bbot%5D/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/github-actions%5Bbot%5D/subscriptions","organizations_url":"https://api.github.com/users/github-actions%5Bbot%5D/orgs","repos_url":"https://api.github.com/users/github-actions%5Bbot%5D/repos","events_url":"https://api.github.com/users/github-actions%5Bbot%5D/events{/privacy}","received_events_url":"https://api.github.com/users/github-actions%5Bbot%5D/received_events","type":"Bot","site_admin":false},"content_type":"raw","state":"uploaded","size":8940242,"download_count":2,"created_at":"2024-05-30T23:47:39Z","updated_at":"2024-05-30T23:47:39Z","browser_download_url":"https://github.com/cashapp/hermit/releases/download/v0.39.2/hermit-linux-amd64.gz"},{"url":"https://api.github.com/repos/cashapp/hermit/releases/assets/171036309","id":171036309,"node_id":"RA_kwDOFf-izM4KMc6V","name":"hermit-linux-arm64.gz","label":"","uploader":{"login":"github-actions[bot]","id":41898282,"node_id":"MDM6Qm90NDE4OTgyODI=","avatar_url":"https://avatars.githubusercontent.com/in/15368?v=4","gravatar_id":"","url":"https://api.github.com/users/github-actions%5Bbot%5D","html_url":"https://github.com/apps/github-actions","followers_url":"https://api.github.com/users/github-actions%5Bbot%5D/followers","following_url":"https://api.github.com/users/github-actions%5Bbot%5D/following{/other_user}","gists_url":"https://api.github.com/users/github-actions%5Bbot%5D/gists{/gist_id}","starred_url":"https://api.github.com/users/github-actions%5Bbot%5D/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/github-actions%5Bbot%5D/subscriptions","organizations_url":"https://api.github.com/users/github-actions%5Bbot%5D/orgs","repos_url":"https://api.github.com/users/github-actions%5Bbot%5D/repos","events_url":"https://api.github.com/users/github-actions%5Bbot%5D/events{/privacy}","received_events_url":"https://api.github.com/users/github-actions%5Bbot%5D/received_events","type":"Bot","site_admin":false},"content_type":"raw","state":"uploaded","size":8352833,"download_count":1,"created_at":"2024-05-30T23:47:38Z","updated_at":"2024-05-30T23:47:39Z","browser_download_url":"https://github.com/cashapp/hermit/releases/download/v0.39.2/hermit-linux-arm64.gz"},{"url":"https://api.github.com/repos/cashapp/hermit/releases/assets/171036305","id":171036305,"node_id":"RA_kwDOFf-izM4KMc6R","name":"install-180e997dd837f839a3072a5e2f558619b6d12555cd5452d3ab19d87720704e38.sh","label":"","uploader":{"login":"github-actions[bot]","id":41898282,"node_id":"MDM6Qm90NDE4OTgyODI=","avatar_url":"https://avatars.githubusercontent.com/in/15368?v=4","gravatar_id":"","url":"https://api.github.com/users/github-actions%5Bbot%5D","html_url":"https://github.com/apps/github-actions","followers_url":"https://api.github.com/users/github-actions%5Bbot%5D/followers","following_url":"https://api.github.com/users/github-actions%5Bbot%5D/following{/other_user}","gists_url":"https://api.github.com/users/github-actions%5Bbot%5D/gists{/gist_id}","starred_url":"https://api.github.com/users/github-actions%5Bbot%5D/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/github-actions%5Bbot%5D/subscriptions","organizations_url":"https://api.github.com/users/github-actions%5Bbot%5D/orgs","repos_url":"https://api.github.com/users/github-actions%5Bbot%5D/repos","events_url":"https://api.github.com/users/github-actions%5Bbot%5D/events{/privacy}","received_events_url":"https://api.github.com/users/github-actions%5Bbot%5D/received_events","type":"Bot","site_admin":false},"content_type":"raw","state":"uploaded","size":4146,"download_count":1,"created_at":"2024-05-30T23:47:38Z","updated_at":"2024-05-30T23:47:38Z","browser_download_url":"https://github.com/cashapp/hermit/releases/download/v0.39.2/install-180e997dd837f839a3072a5e2f558619b6d12555cd5452d3ab19d87720704e38.sh"},{"url":"https://api.github.com/repos/cashapp/hermit/releases/assets/171036304","id":171036304,"node_id":"RA_kwDOFf-izM4KMc6Q","name":"install.sh","label":"","uploader":{"login":"github-actions[bot]","id":41898282,"node_id":"MDM6Qm90NDE4OTgyODI=","avatar_url":"https://avatars.githubusercontent.com/in/15368?v=4","gravatar_id":"","url":"https://api.github.com/users/github-actions%5Bbot%5D","html_url":"https://github.com/apps/github-actions","followers_url":"https://api.github.com/users/github-actions%5Bbot%5D/followers","following_url":"https://api.github.com/users/github-actions%5Bbot%5D/following{/other_user}","gists_url":"https://api.github.com/users/github-actions%5Bbot%5D/gists{/gist_id}","starred_url":"https://api.github.com/users/github-actions%5Bbot%5D/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/github-actions%5Bbot%5D/subscriptions","organizations_url":"https://api.github.com/users/github-actions%5Bbot%5D/orgs","repos_url":"https://api.github.com/users/github-actions%5Bbot%5D/repos","events_url":"https://api.github.com/users/github-actions%5Bbot%5D/events{/privacy}","received_events_url":"https://api.github.com/users/github-actions%5Bbot%5D/received_events","type":"Bot","site_admin":false},"content_type":"raw","state":"uploaded","size":4146,"download_count":2,"created_at":"2024-05-30T23:47:37Z","updated_at":"2024-05-30T23:47:37Z","browser_download_url":"https://github.com/cashapp/hermit/releases/download/v0.39.2/install.sh"}],"tarball_url":"https://api.github.com/repos/cashapp/hermit/tarball/v0.39.2","zipball_url":"https://api.github.com/repos/cashapp/hermit/zipball/v0.39.2","body":""}'
+        headers:
+            Accept-Ranges:
+                - bytes
+            Access-Control-Allow-Origin:
+                - '*'
+            Access-Control-Expose-Headers:
+                - ETag, Link, Location, Retry-After, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Used, X-RateLimit-Resource, X-RateLimit-Reset, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval, X-GitHub-Media-Type, X-GitHub-SSO, X-GitHub-Request-Id, Deprecation, Sunset
+            Cache-Control:
+                - public, max-age=60, s-maxage=60
+            Content-Security-Policy:
+                - default-src 'none'
+            Content-Type:
+                - application/json; charset=utf-8
+            Date:
+                - Fri, 14 Jun 2024 16:56:38 GMT
+            Etag:
+                - W/"cf15d2a02b11c4fc424541a0ddf6079bf72e130c50face38cf09b809dc13d670"
+            Last-Modified:
+                - Thu, 30 May 2024 23:47:42 GMT
+            Referrer-Policy:
+                - origin-when-cross-origin, strict-origin-when-cross-origin
+            Server:
+                - GitHub.com
+            Strict-Transport-Security:
+                - max-age=31536000; includeSubdomains; preload
+            Vary:
+                - Accept, Accept-Encoding, Accept, X-Requested-With
+            X-Content-Type-Options:
+                - nosniff
+            X-Frame-Options:
+                - deny
+            X-Github-Api-Version-Selected:
+                - "2022-11-28"
+            X-Github-Media-Type:
+                - github.v3; format=json
+            X-Github-Request-Id:
+                - FAC8:3BA2D9:DBD50F:DD8993:666C7645
+            X-Ratelimit-Limit:
+                - "60"
+            X-Ratelimit-Remaining:
+                - "58"
+            X-Ratelimit-Reset:
+                - "1718387797"
+            X-Ratelimit-Resource:
+                - core
+            X-Ratelimit-Used:
+                - "2"
+            X-Xss-Protection:
+                - "0"
+        status: 200 OK
+        code: 200
+        duration: 184.658375ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        transfer_encoding: []
+        trailer: {}
+        host: api.github.com
+        remote_addr: ""
+        request_uri: ""
+        body: ""
+        form: {}
+        headers:
+            Accept:
+                - application/octet-stream
+        url: https://api.github.com/repos/cashapp/hermit/releases/assets/171036304
+        method: HEAD
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        transfer_encoding: []
+        trailer: {}
+        content_length: 0
+        uncompressed: false
+        body: ""
+        headers:
+            Access-Control-Allow-Origin:
+                - '*'
+            Access-Control-Expose-Headers:
+                - ETag, Link, Location, Retry-After, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Used, X-RateLimit-Resource, X-RateLimit-Reset, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval, X-GitHub-Media-Type, X-GitHub-SSO, X-GitHub-Request-Id, Deprecation, Sunset
+            Content-Length:
+                - "0"
+            Content-Security-Policy:
+                - default-src 'none'
+            Content-Type:
+                - text/html;charset=utf-8
+            Date:
+                - Fri, 14 Jun 2024 16:56:38 GMT
+            Location:
+                - https://objects.githubusercontent.com/github-production-release-asset-2e65be/369074892/cfe37494-7b20-45a8-9ef3-42f32079ba24?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=releaseassetproduction%2F20240614%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20240614T165638Z&X-Amz-Expires=300&X-Amz-Signature=94eadc46a7b9d39960463bd5cf31f14bc50ab0e43c78587b30f12400e170a381&X-Amz-SignedHeaders=host&actor_id=0&key_id=0&repo_id=369074892&response-content-disposition=attachment%3B%20filename%3Dinstall.sh&response-content-type=application%2Foctet-stream
+            Referrer-Policy:
+                - origin-when-cross-origin, strict-origin-when-cross-origin
+            Server:
+                - GitHub.com
+            Strict-Transport-Security:
+                - max-age=31536000; includeSubdomains; preload
+            Vary:
+                - Accept-Encoding, Accept, X-Requested-With
+            X-Content-Type-Options:
+                - nosniff
+            X-Frame-Options:
+                - deny
+            X-Github-Api-Version-Selected:
+                - "2022-11-28"
+            X-Github-Request-Id:
+                - FAC8:3BA2D9:DBD65E:DD8AD4:666C7646
+            X-Ratelimit-Limit:
+                - "60"
+            X-Ratelimit-Remaining:
+                - "57"
+            X-Ratelimit-Reset:
+                - "1718387797"
+            X-Ratelimit-Resource:
+                - core
+            X-Ratelimit-Used:
+                - "3"
+            X-Xss-Protection:
+                - "0"
+        status: 302 Found
+        code: 302
+        duration: 152.070709ms
+    - id: 2
+      request:
+        proto: ""
+        proto_major: 0
+        proto_minor: 0
+        content_length: 0
+        transfer_encoding: []
+        trailer: {}
+        host: ""
+        remote_addr: ""
+        request_uri: ""
+        body: ""
+        form: {}
+        headers:
+            Accept:
+                - application/octet-stream
+            Referer:
+                - https://api.github.com/repos/cashapp/hermit/releases/assets/171036304
+        url: https://objects.githubusercontent.com/github-production-release-asset-2e65be/369074892/cfe37494-7b20-45a8-9ef3-42f32079ba24?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=releaseassetproduction%2F20240614%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20240614T165638Z&X-Amz-Expires=300&X-Amz-Signature=94eadc46a7b9d39960463bd5cf31f14bc50ab0e43c78587b30f12400e170a381&X-Amz-SignedHeaders=host&actor_id=0&key_id=0&repo_id=369074892&response-content-disposition=attachment%3B%20filename%3Dinstall.sh&response-content-type=application%2Foctet-stream
+        method: HEAD
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        transfer_encoding: []
+        trailer: {}
+        content_length: 4146
+        uncompressed: false
+        body: ""
+        headers:
+            Accept-Ranges:
+                - bytes
+            Age:
+                - "141"
+            Content-Disposition:
+                - attachment; filename=install.sh
+            Content-Length:
+                - "4146"
+            Content-Type:
+                - application/octet-stream
+            Date:
+                - Fri, 14 Jun 2024 16:56:39 GMT
+            Etag:
+                - '"0x8DC8102E2DDFA9A"'
+            Last-Modified:
+                - Thu, 30 May 2024 23:47:37 GMT
+            Server:
+                - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
+            Via:
+                - 1.1 varnish, 1.1 varnish
+            X-Cache:
+                - MISS, HIT
+            X-Cache-Hits:
+                - 0, 0
+            X-Ms-Blob-Type:
+                - BlockBlob
+            X-Ms-Creation-Time:
+                - Thu, 30 May 2024 23:47:37 GMT
+            X-Ms-Lease-State:
+                - available
+            X-Ms-Lease-Status:
+                - unlocked
+            X-Ms-Request-Id:
+                - fb33b4e2-701e-0020-1f17-bc9af2000000
+            X-Ms-Server-Encrypted:
+                - "true"
+            X-Ms-Version:
+                - "2020-10-02"
+            X-Served-By:
+                - cache-iad-kiad7000049-IAD, cache-pao-kpao1770021-PAO
+            X-Timer:
+                - S1718384199.707375,VS0,VE304
+        status: 200 OK
+        code: 200
+        duration: 350.960625ms
+    - id: 3
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        transfer_encoding: []
+        trailer: {}
+        host: api.github.com
+        remote_addr: ""
+        request_uri: ""
+        body: ""
+        form: {}
+        headers:
+            Accept:
+                - application/octet-stream
+        url: https://api.github.com/repos/cashapp/hermit/releases/assets/171036304
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        transfer_encoding: []
+        trailer: {}
+        content_length: 0
+        uncompressed: false
+        body: ""
+        headers:
+            Access-Control-Allow-Origin:
+                - '*'
+            Access-Control-Expose-Headers:
+                - ETag, Link, Location, Retry-After, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Used, X-RateLimit-Resource, X-RateLimit-Reset, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval, X-GitHub-Media-Type, X-GitHub-SSO, X-GitHub-Request-Id, Deprecation, Sunset
+            Content-Length:
+                - "0"
+            Content-Security-Policy:
+                - default-src 'none'
+            Content-Type:
+                - text/html;charset=utf-8
+            Date:
+                - Fri, 14 Jun 2024 16:56:38 GMT
+            Location:
+                - https://objects.githubusercontent.com/github-production-release-asset-2e65be/369074892/cfe37494-7b20-45a8-9ef3-42f32079ba24?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=releaseassetproduction%2F20240614%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20240614T165638Z&X-Amz-Expires=300&X-Amz-Signature=94eadc46a7b9d39960463bd5cf31f14bc50ab0e43c78587b30f12400e170a381&X-Amz-SignedHeaders=host&actor_id=0&key_id=0&repo_id=369074892&response-content-disposition=attachment%3B%20filename%3Dinstall.sh&response-content-type=application%2Foctet-stream
+            Referrer-Policy:
+                - origin-when-cross-origin, strict-origin-when-cross-origin
+            Server:
+                - GitHub.com
+            Strict-Transport-Security:
+                - max-age=31536000; includeSubdomains; preload
+            Vary:
+                - Accept-Encoding, Accept, X-Requested-With
+            X-Content-Type-Options:
+                - nosniff
+            X-Frame-Options:
+                - deny
+            X-Github-Api-Version-Selected:
+                - "2022-11-28"
+            X-Github-Request-Id:
+                - FAC8:3BA2D9:DBD9A1:DD8E27:666C7646
+            X-Ratelimit-Limit:
+                - "60"
+            X-Ratelimit-Remaining:
+                - "56"
+            X-Ratelimit-Reset:
+                - "1718387797"
+            X-Ratelimit-Resource:
+                - core
+            X-Ratelimit-Used:
+                - "4"
+            X-Xss-Protection:
+                - "0"
+        status: 302 Found
+        code: 302
+        duration: 32.568667ms
+    - id: 4
+      request:
+        proto: ""
+        proto_major: 0
+        proto_minor: 0
+        content_length: 0
+        transfer_encoding: []
+        trailer: {}
+        host: ""
+        remote_addr: ""
+        request_uri: ""
+        body: ""
+        form: {}
+        headers:
+            Accept:
+                - application/octet-stream
+            Referer:
+                - https://api.github.com/repos/cashapp/hermit/releases/assets/171036304
+        url: https://objects.githubusercontent.com/github-production-release-asset-2e65be/369074892/cfe37494-7b20-45a8-9ef3-42f32079ba24?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=releaseassetproduction%2F20240614%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20240614T165638Z&X-Amz-Expires=300&X-Amz-Signature=94eadc46a7b9d39960463bd5cf31f14bc50ab0e43c78587b30f12400e170a381&X-Amz-SignedHeaders=host&actor_id=0&key_id=0&repo_id=369074892&response-content-disposition=attachment%3B%20filename%3Dinstall.sh&response-content-type=application%2Foctet-stream
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        transfer_encoding: []
+        trailer: {}
+        content_length: 4146
+        uncompressed: false
+        body: |-
+            #!/bin/bash
+
+            # shellcheck disable=SC2018,SC2019
+            # SC2019: Use '[:upper:]' to support accents and foreign alphabets.
+            # SC2018: Use '[:lower:]' to support accents and foreign alphabets.
+
+
+            set -euo pipefail
+
+            if [ -z "${HERMIT_STATE_DIR:-}" ]; then
+              case "$(uname -s)" in
+              Darwin)
+                HERMIT_STATE_DIR_RAW="\${HOME}/Library/Caches/hermit"
+                ;;
+              Linux)
+                HERMIT_STATE_DIR_RAW="\${XDG_CACHE_HOME:-\${HOME}/.cache}/hermit"
+                ;;
+              esac
+              eval HERMIT_STATE_DIR="${HERMIT_STATE_DIR_RAW}"
+            else
+              HERMIT_STATE_DIR_RAW="${HERMIT_STATE_DIR}"
+            fi
+
+            if [ ! "$(type -P curl)"  ]; then
+                echo "No curl detected in the PATH. Please, install curl before installing Hermit"
+                exit 1
+            fi
+
+            #  This must be in the form <url>/<channel>
+            # eg. https://github.com/cashapp/hermit/releases/download/stable
+            HERMIT_DIST_URL="${HERMIT_DIST_URL:-https://github.com/cashapp/hermit/releases/download/stable}"
+            HERMIT_CHANNEL="$(basename "${HERMIT_DIST_URL}")"
+            HERMIT_EXE_RAW="${HERMIT_STATE_DIR_RAW}/pkg/hermit@${HERMIT_CHANNEL}/hermit"
+            eval HERMIT_EXE="\${HERMIT_EXE:-${HERMIT_EXE_RAW}}"
+            HERMIT_EXE_DIR="$(dirname "${HERMIT_EXE}")"
+
+            ID_USER=$(id -u)
+            ID_GROUP=$(id -g)
+
+            function user_install() {
+              for dir in "${HERMIT_EXE_DIR}" "${HERMIT_STATE_DIR}"; do
+                if [ ! -e "${dir}" ]; then
+                  echo "Creating ${dir}"
+                  mkdir -p "${dir}"
+                  chown "$ID_USER:$ID_GROUP" "${dir}"
+                fi
+
+                if [ ! -w "${dir}" ]; then
+                  echo "${dir} is not writeable, making it so"
+                  chown "$ID_USER:$ID_GROUP" "${dir}"
+                  chmod u+w "${dir}"
+                fi
+              done
+
+              OS="$(uname -s | tr A-Z a-z)"
+              ARCH="$(uname -m | tr A-Z a-z)"
+              if [ "$ARCH" = "x86_64" ]; then
+                ARCH="amd64"
+              elif [ "$ARCH" = "aarch64" ]; then
+                ARCH="arm64"
+              fi
+              URL="${HERMIT_DIST_URL}/hermit-${OS}-${ARCH}.gz"
+              TMP_FILE="${HERMIT_EXE}.download.${RANDOM}"
+              echo "Downloading ${URL} to ${HERMIT_EXE}"
+              chmod -f u+w "${HERMIT_EXE}" 2> /dev/null || true
+              curl -fsSL "${URL}" | gzip -dc > "${TMP_FILE}"
+              chown "$ID_USER:$ID_GROUP" "${TMP_FILE}"
+              chmod u+wx "${TMP_FILE}"
+              mv "${TMP_FILE}" "${HERMIT_EXE}"
+
+              echo "Hermit installed as ${HERMIT_EXE}"
+            }
+
+            # Install system-wide components
+            function system_install() {
+              local HERMIT_INSTALL_NAME=hermit-${HERMIT_CHANNEL}
+              local CREATE_SYMLINK=1
+              # If HERMIT_BIN_INSTALL_DIR is not set, see if we can detect where Hermit was previously installed.
+              if [ -z "${HERMIT_BIN_INSTALL_DIR:-}" ]; then
+                for dir in ${HOME}/bin /opt/homebrew/bin /usr/local/bin; do
+                  # shellcheck disable=SC2016
+                  if test -x "${dir}/hermit" && grep -Fq ': "${HERMIT' "${dir}/hermit"; then
+                    if ! grep -q 'https://github.com/cashapp/hermit/releases/download/stable' "${dir}/hermit"; then
+                      echo "Found Hermit in ${dir}/hermit but it is a different distribution, not overwriting."
+                      CREATE_SYMLINK=
+                    fi
+                    HERMIT_BIN_INSTALL_DIR="${dir}"
+                    break
+                  fi
+                done
+                HERMIT_BIN_INSTALL_DIR="${HERMIT_BIN_INSTALL_DIR:-${HOME}/bin}"
+              fi
+              if [ ! -d "$HERMIT_BIN_INSTALL_DIR" ]; then
+                echo "NOTE: $HERMIT_BIN_INSTALL_DIR should be added to your \$PATH if it is not already"
+                mkdir -p "$HERMIT_BIN_INSTALL_DIR"
+              fi
+
+              if [ -e "$HERMIT_BIN_INSTALL_DIR/$HERMIT_INSTALL_NAME" ]; then
+                echo "Removing the previous $HERMIT_BIN_INSTALL_DIR/$HERMIT_INSTALL_NAME"
+                rm -f "$HERMIT_BIN_INSTALL_DIR/$HERMIT_INSTALL_NAME"
+              fi
+              cat > "$HERMIT_BIN_INSTALL_DIR/$HERMIT_INSTALL_NAME" << EOF
+            #!/bin/bash
+            : "\${HERMIT_EXE:=${HERMIT_EXE_RAW}}"
+            test -x \${HERMIT_EXE} && exec "\${HERMIT_EXE}" "\$@"
+            (curl -fsSL "${HERMIT_DIST_URL}/install.sh" | bash) && exec "\${HERMIT_EXE}" "\$@"
+            EOF
+              chmod +x "$HERMIT_BIN_INSTALL_DIR/$HERMIT_INSTALL_NAME"
+              if [ -n "${CREATE_SYMLINK}" ]; then
+                echo "Hermit is installed as $HERMIT_BIN_INSTALL_DIR/hermit"
+                ln -fs "$HERMIT_INSTALL_NAME" "$HERMIT_BIN_INSTALL_DIR/hermit"
+              else
+                echo "Hermit is installed as $HERMIT_BIN_INSTALL_DIR/$HERMIT_INSTALL_NAME"
+              fi
+              cat <<-EOF
+
+            See https://cashapp.github.io/hermit/usage/get-started/ for more information.
+
+            EOF
+            }
+
+            # Used by system-wide package managers (eg. Homebrew)
+            if [ -z "${HERMIT_SKIP_USER_INSTALL:-}" ]; then
+              user_install
+            fi
+            system_install
+        headers:
+            Accept-Ranges:
+                - bytes
+            Age:
+                - "142"
+            Content-Disposition:
+                - attachment; filename=install.sh
+            Content-Length:
+                - "4146"
+            Content-Type:
+                - application/octet-stream
+            Date:
+                - Fri, 14 Jun 2024 16:56:39 GMT
+            Etag:
+                - '"0x8DC8102E2DDFA9A"'
+            Last-Modified:
+                - Thu, 30 May 2024 23:47:37 GMT
+            Server:
+                - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
+            Via:
+                - 1.1 varnish, 1.1 varnish
+            X-Cache:
+                - MISS, HIT
+            X-Cache-Hits:
+                - 0, 1
+            X-Ms-Blob-Type:
+                - BlockBlob
+            X-Ms-Creation-Time:
+                - Thu, 30 May 2024 23:47:37 GMT
+            X-Ms-Lease-State:
+                - available
+            X-Ms-Lease-Status:
+                - unlocked
+            X-Ms-Request-Id:
+                - fb33b4e2-701e-0020-1f17-bc9af2000000
+            X-Ms-Server-Encrypted:
+                - "true"
+            X-Ms-Version:
+                - "2020-10-02"
+            X-Served-By:
+                - cache-iad-kiad7000049-IAD, cache-pao-kpao1770021-PAO
+            X-Timer:
+                - S1718384199.444807,VS0,VE310
+        status: 200 OK
+        code: 200
+        duration: 320.624542ms
