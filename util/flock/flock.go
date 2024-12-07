@@ -32,6 +32,9 @@ var getPID = os.Getpid
 // updated.
 //
 // If the lock is held by another process, Acquire will block until the lock is released or the context is cancelled.
+//
+// The file is NOT deleted on release; doing so creates a race condition that allows multiple processes to acquire
+// the same lock.
 func Acquire(ctx context.Context, path, message string) (release func() error, err error) {
 	absPath, err := filepath.Abs(path)
 	if err != nil {
@@ -87,11 +90,16 @@ func acquire(path, message string) (release func() error, err error) {
 		return nil, errors.Wrapf(err, "marshal failed")
 	}
 
+	err = unix.Ftruncate(fd, 0)
+	if err != nil {
+		return nil, errors.Wrapf(err, "truncate failed")
+	}
+
 	_, err = unix.Write(fd, payload)
 	if err != nil {
 		return nil, errors.Wrapf(err, "write failed")
 	}
 	return func() error {
-		return errors.Join(os.Remove(path), unix.Flock(fd, unix.LOCK_UN), unix.Close(fd))
+		return errors.Join(unix.Flock(fd, unix.LOCK_UN), unix.Close(fd))
 	}, nil
 }
