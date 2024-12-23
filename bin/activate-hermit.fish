@@ -16,7 +16,7 @@ if status is-interactive
         functions -c > /dev/null 2>&1
 
         # Display activation message
-        echo "Hermit environment FISH $($HERMIT_ENV/bin/hermit env HERMIT_ENV) activated"
+        echo "Hermit environment $($HERMIT_ENV/bin/hermit env HERMIT_ENV) activated"
     end
 else
     echo "You must source this script: source $argv[0]" >&2
