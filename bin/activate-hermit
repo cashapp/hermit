@@ -1,6 +1,8 @@
 #!/bin/bash
 # This file must be used with "source bin/activate-hermit" from bash or zsh.
 # You cannot run it directly
+#
+# THIS FILE IS GENERATED; DO NOT MODIFY
 
 if [ "${BASH_SOURCE-}" = "$0" ]; then
   echo "You must source this script: \$ source $0" >&2
