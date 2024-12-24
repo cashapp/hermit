@@ -41,3 +41,12 @@ in order for the changes to take effect.
 ```shell
 hermit shell-hooks --bash
 ```
+
+### Fish
+
+This will install Hermit hooks into `~/.config/fish/conf.d/hermit.fish`. Restart your shell
+in order for the changes to take effect.
+
+```shell
+hermit shell-hooks --fish
+````
