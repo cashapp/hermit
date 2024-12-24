@@ -6,50 +6,10 @@ hide:
 
 ## Which Shells Does Hermit work with?
 
-Hermit currently works with `bash` and `zsh` natively. `fish` is available via
-a [workaround](#fish-support-via-direnv). But we would welcome
-[contributions](https://github.com/cashapp/hermit/pulls) to support other
-shells.
+Hermit currently works with `bash`, `zsh`, `fish` natively.
 
-### `fish` support via `direnv`
-
-Hermit does not currently support `fish` directly, but you can use `direnv` to
-achieve similar functionality.
-
-1. Install `direnv` via your package manager.
-2. Create `$HOME/.direnvrc` with the following [content](#direnvrc).
-3. Create a `project_dir/.envrc` with the following [content](#envrc).
-4. Use `direnv allow` to activate the environment (usually only needed on
-   modification of `.envrc`)
-
-
-#### `~/.direnvrc`
-
-```bash
-# shellcheck shell=bash
-
-# derived from https://github.com/direnv/direnv/wiki/Python#virtualenvwrapper
-layout_hermit() {
-  local activate_hermit
-  activate_hermit="$(\
-    find . \
-      -type f \
-      -name 'activate-hermit' \
-      -exec test -x {} \; \
-      -print
-  )"
-  if [[ -n "$activate_hermit" ]];then
-    # shellcheck source=/dev/null
-    source "$activate_hermit"
-  fi
-}
-```
-
-#### `.envrc`
-
-```bash
-layout hermit
-```
+For `fish` shell, when using hermit in a repo created prior to native fish support, run `hermit init` again and check in
+the new `activate-hermit.fish` script.
 
 ### powerlevel10k support
 If you would like powerlevel10k to support hermit, all that is needed is to add the following to your `~/.p10k.zsh`

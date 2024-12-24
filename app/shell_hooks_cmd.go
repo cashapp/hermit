@@ -9,6 +9,7 @@ import (
 type shellHooksCmd struct {
 	Zsh   bool `xor:"shell" help:"Update Zsh hooks."`
 	Bash  bool `xor:"shell" help:"Update Bash hooks."`
+	Fish  bool `xor:"shell" help:"Update Fish hooks."`
 	Print bool `help:"Prints out the hook configuration code" hidden:"" `
 }
 
@@ -21,6 +22,8 @@ func (s *shellHooksCmd) Run(l *ui.UI, config Config) error {
 		sh = &shell.Bash{}
 	} else if s.Zsh {
 		sh = &shell.Zsh{}
+	} else if s.Fish {
+		sh = &shell.Fish{}
 	} else {
 		sh, err = shell.Detect()
 		if err != nil {

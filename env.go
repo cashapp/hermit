@@ -65,9 +65,10 @@ var (
 
 // Files to copy into the env.
 var envBinFiles = map[string]os.FileMode{
-	"README.hermit.md": 0600,
-	"activate-hermit":  0700,
-	"hermit":           0700,
+	"README.hermit.md":     0600,
+	"activate-hermit":      0700,
+	"activate-hermit.fish": 0700,
+	"hermit":               0700,
 }
 
 //go:generate stringer -linecomment -type CleanMask
@@ -358,11 +359,15 @@ func (e *Env) Root() string {
 // Verify contains valid Hermit scripts.
 func (e *Env) Verify() error {
 next:
-	for _, path := range []string{"activate-hermit", "hermit"} {
+	for _, path := range []string{"activate-hermit", "activate-hermit.fish", "hermit"} {
 		path = filepath.Join(e.binDir, path)
 		hasher := sha256.New()
 		r, err := os.Open(path)
 		if os.IsNotExist(err) {
+			if path == "activate-hermit.fish" {
+				// Fish support was added later. Older hermit envs won't have it.
+				continue next
+			}
 			return errors.Wrapf(err, "%s is missing, not a Hermit environment?", path)
 		} else if err != nil {
 			return errors.WithStack(err)

@@ -44,6 +44,7 @@ var (
 	shells = map[string]Shell{
 		"zsh":  &Zsh{},
 		"bash": &Bash{},
+		"fish": &Fish{},
 	}
 )
 
