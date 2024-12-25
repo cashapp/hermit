@@ -25,3 +25,13 @@ function activate_hermit --on-variable PWD
       type -q _hermit_deactivate; and _hermit_deactivate
   end
 end
+
+function __complete_hermit
+    set -q HERMIT_ROOT_BIN; or set HERMIT_ROOT_BIN "$HOME/bin/hermit"
+    set -lx COMP_LINE (commandline -cp)
+    test -z (commandline -ct)
+    and set COMP_LINE "$COMP_LINE "
+    $HERMIT_ROOT_BIN noop
+end
+
+complete -f -c hermit -a "(__complete_hermit)"

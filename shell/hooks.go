@@ -18,7 +18,6 @@ const (
 
 	fishInstallationScript = `if status is-interactive
   set -q HERMIT_ROOT_BIN; or set HERMIT_ROOT_BIN $HOME/bin/hermit
-  echo "Using $HERMIT_ROOT_BIN"
   eval "$(test -x $HERMIT_ROOT_BIN && $HERMIT_ROOT_BIN shell-hooks --print --fish)"
 end`
 )
