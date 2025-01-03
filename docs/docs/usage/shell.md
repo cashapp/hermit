@@ -49,4 +49,4 @@ in order for the changes to take effect.
 
 ```shell
 hermit shell-hooks --fish
-````
+```

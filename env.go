@@ -359,12 +359,12 @@ func (e *Env) Root() string {
 // Verify contains valid Hermit scripts.
 func (e *Env) Verify() error {
 next:
-	for _, path := range []string{"activate-hermit", "activate-hermit.fish", "hermit"} {
-		path = filepath.Join(e.binDir, path)
+	for _, file := range []string{"activate-hermit", "activate-hermit.fish", "hermit"} {
+		path := filepath.Join(e.binDir, file)
 		hasher := sha256.New()
 		r, err := os.Open(path)
 		if os.IsNotExist(err) {
-			if path == "activate-hermit.fish" {
+			if file == "activate-hermit.fish" {
 				// Fish support was added later. Older hermit envs won't have it.
 				continue next
 			}
