@@ -289,6 +289,13 @@ func TestIntegration(t *testing.T) {
 			assert test "$(binary.sh)" = "Running from child"
 			`,
 		},
+		{
+			name:         "MissingActivateFishShellFileIsValidEnv",
+			preparations: prep{fixture("testenv1"), activate(".")},
+			script: `
+            hermit validate env .
+`,
+		},
 	}
 
 	checkForShells(t)
