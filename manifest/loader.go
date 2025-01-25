@@ -113,6 +113,14 @@ func (l *Loader) All() ([]*AnnotatedManifest, error) {
 		manifests []*AnnotatedManifest
 		seen      = map[string]bool{}
 	)
+
+	type result struct {
+		mft  *AnnotatedManifest
+		name string
+	}
+	mftC := make(chan result)
+	wg := sync.WaitGroup{}
+
 	for _, bundle := range l.sources.Bundles() {
 		files, err := fs.Glob(bundle, "*.hcl")
 		if err != nil {
@@ -128,14 +136,27 @@ func (l *Loader) All() ([]*AnnotatedManifest, error) {
 				manifests = append(manifests, manifest)
 				continue
 			}
-			manifest := load(bundle, name, file)
-			if manifest == nil {
-				continue
-			}
-			l.files[name] = manifest
-			if manifest.Manifest != nil {
-				manifests = append(manifests, manifest)
-			}
+
+			wg.Add(1)
+			go func() {
+				manifest := load(bundle, name, file)
+				if manifest != nil {
+					mftC <- result{manifest, name}
+				}
+				wg.Done()
+			}()
+		}
+	}
+
+	go func() {
+		wg.Wait()
+		close(mftC)
+	}()
+
+	for t := range mftC {
+		l.files[t.name] = t.mft
+		if t.mft.Manifest != nil {
+			manifests = append(manifests, t.mft)
 		}
 	}
 	return manifests, nil
