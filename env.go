@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 	"syscall"
@@ -474,7 +475,6 @@ func (e *Env) uninstall(l *ui.Task, pkg *manifest.Package) (*shell.Changes, erro
 }
 
 func (e *Env) unlinkPackage(l *ui.Task, pkg *manifest.Package) error {
-
 	link := e.pkgLink(pkg)
 
 	binaries, err := e.LinkedBinaries(pkg)
@@ -1411,24 +1411,28 @@ func (e *Env) ResolveWithDeps(l *ui.UI, installed []manifest.Reference, selector
 }
 
 func (e *Env) resolveVirtual(l *ui.UI, name string) (manifest.Reference, error) {
+	installed, err := e.ListInstalled(l)
+	if err != nil {
+		return manifest.Reference{}, errors.WithStack(err)
+	}
+	for _, pkg := range installed {
+		if pkg.Reference.Name == name || slices.Contains(pkg.Provides, name) {
+			return pkg.Reference, nil
+		}
+	}
+
+	// No installed packages provide the requested package.
 	virtual, err := e.ResolveVirtual(l, name)
 	if err != nil {
 		return manifest.Reference{}, errors.WithStack(err)
 	}
-	installed, err := e.ListInstalledReferences()
-	if err != nil {
-		return manifest.Reference{}, errors.WithStack(err)
-	}
+
 	candidates := []string{}
 	for _, vpkg := range virtual {
 		candidates = append(candidates, vpkg.Reference.Name)
-		for _, ref := range installed {
-			if ref.Name == vpkg.Reference.Name {
-				return ref, nil
-			}
-		}
 	}
 	sort.Strings(candidates)
+
 	return manifest.Reference{}, errors.Errorf("multiple packages satisfy the required dependency %q, please install one of the following manually: %s", name, strings.Join(candidates, ", "))
 }
 
