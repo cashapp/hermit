@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/alecthomas/hcl"
 	"github.com/gobwas/glob"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/sources"
@@ -119,7 +121,24 @@ func (l *Loader) All() ([]*AnnotatedManifest, error) {
 		name string
 	}
 	mftC := make(chan result)
-	wg := sync.WaitGroup{}
+	allDone := make(chan struct{})
+	mu := sync.Mutex{}
+
+	go func() {
+		for t := range mftC {
+			mu.Lock()
+			l.files[t.name] = t.mft
+			if t.mft.Manifest != nil {
+				manifests = append(manifests, t.mft)
+			}
+			mu.Unlock()
+		}
+		close(allDone)
+	}()
+
+	wg := errgroup.Group{}
+	// Throttle concurrency to avoid being too resource-greedy.
+	wg.SetLimit(max(3, runtime.NumCPU()/4))
 
 	for _, bundle := range l.sources.Bundles() {
 		files, err := fs.Glob(bundle, "*.hcl")
@@ -132,33 +151,29 @@ func (l *Loader) All() ([]*AnnotatedManifest, error) {
 				continue
 			}
 			seen[name] = true
+
+			mu.Lock()
 			if manifest, ok := l.files[name]; ok {
 				manifests = append(manifests, manifest)
+				mu.Unlock()
 				continue
 			}
+			mu.Unlock()
 
-			wg.Add(1)
-			go func() {
+			wg.Go(func() error {
 				manifest := load(bundle, name, file)
 				if manifest != nil {
 					mftC <- result{manifest, name}
 				}
-				wg.Done()
-			}()
+				return nil
+			})
 		}
 	}
 
-	go func() {
-		wg.Wait()
-		close(mftC)
-	}()
+	_ = wg.Wait()
+	close(mftC)
+	<-allDone
 
-	for t := range mftC {
-		l.files[t.name] = t.mft
-		if t.mft.Manifest != nil {
-			manifests = append(manifests, t.mft)
-		}
-	}
 	return manifests, nil
 }
 
