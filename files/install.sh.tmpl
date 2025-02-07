@@ -123,4 +123,6 @@ EOF
 if [ -z "${HERMIT_SKIP_USER_INSTALL:-}" ]; then
   user_install
 fi
-system_install
+if [ -z "${HERMIT_SKIP_SYSTEM_INSTALL:-}" ]; then
+  system_install
+fi
