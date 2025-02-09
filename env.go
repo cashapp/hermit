@@ -783,10 +783,21 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 		return errors.WithStack(err)
 	}
 
-	installed, err := e.ListInstalled(l)
-	if err != nil {
-		return errors.WithStack(err)
+	var installed []*manifest.Package
+
+	// If we are activated, the parent shell already has
+	// already passed us all necessary environment variables.
+	// This may not be the case if the user manually ran
+	// e.g. ./bin/go
+	// We still need to call e.allEnvarOpsForPackages to ensure
+	// the selected package's env vars take precedence.
+	if os.Getenv("DEACTIVATED_HERMIT") != "" {
+		installed, err = e.ListInstalled(l)
+		if err != nil {
+			return errors.WithStack(err)
+		}
 	}
+
 	ops := e.allEnvarOpsForPackages(runtimeDeps, pkg, installed...)
 	packageHermitBin, err := e.getPackageRuntimeEnvops(pkg)
 	if err != nil {
@@ -797,9 +808,6 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 	}
 	env := e.envarsFromOps(true, ops)
 
-	if err != nil {
-		return errors.WithStack(err)
-	}
 	for _, bin := range binaries {
 		if filepath.Base(bin) != filepath.Base(binary) {
 			continue
