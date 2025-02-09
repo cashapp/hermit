@@ -49,7 +49,7 @@ var (
 	//go:embed "files/install.sh.tmpl"
 	InstallerTemplateSource string
 
-	// UserStateDir should be passed to Open()/Init() in most cases.
+	// UserStateDir should be passed to OpenEnv()/Init() in most cases.
 	UserStateDir = func() string {
 		// Check if state dir is explicitly set
 		explicit := os.Getenv("HERMIT_STATE_DIR")
@@ -114,6 +114,7 @@ type Env struct {
 	configFile      string
 	httpClient      *http.Client
 	scriptSums      []string
+	activated       bool
 
 	// Lazily initialized fields
 	lazyResolver  *manifest.Resolver
@@ -349,6 +350,7 @@ func OpenEnv(
 		ephemeralEnvars: envars.Infer(ephemeral.System()),
 		httpClient:      httpClient,
 		scriptSums:      scriptSums,
+		activated:       os.Getenv("DEACTIVATED_HERMIT") == "",
 	}, nil
 }
 
@@ -791,7 +793,7 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 	// e.g. ./bin/go
 	// We still need to call e.allEnvarOpsForPackages to ensure
 	// the selected package's env vars take precedence.
-	if os.Getenv("DEACTIVATED_HERMIT") != "" {
+	if !e.activated {
 		installed, err = e.ListInstalled(l)
 		if err != nil {
 			return errors.WithStack(err)
