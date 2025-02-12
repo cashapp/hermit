@@ -18,8 +18,20 @@ func (i *initCmd) Run(w *ui.UI, config Config) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
+
+	userConfig, err := LoadUserConfig()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	sources := i.Sources
+	if len(sources) == 0 {
+		w.Tracef("Using init_sources from user config: %v", userConfig.InitSources)
+		sources = userConfig.InitSources
+	}
+
 	return hermit.Init(w, i.Dir, config.BaseDistURL, hermit.UserStateDir, hermit.Config{
-		Sources:     i.Sources,
+		Sources:     sources,
 		ManageGit:   !i.NoGit,
 		AddIJPlugin: i.Idea,
 	}, sum)

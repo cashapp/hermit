@@ -25,10 +25,11 @@ var userConfigSchema = func() string {
 
 // UserConfig is stored in ~/.hermit.hcl
 type UserConfig struct {
-	Prompt      string `hcl:"prompt,optional" default:"env" enum:"env,short,none" help:"Modify prompt to include hermit environment (env), just an icon (short) or nothing (none)"`
-	ShortPrompt bool   `hcl:"short-prompt,optional" help:"If true use a short prompt when an environment is activated."`
-	NoGit       bool   `hcl:"no-git,optional" help:"If true Hermit will never add/remove files from Git automatically."`
-	Idea        bool   `hcl:"idea,optional" help:"If true Hermit will try to add the IntelliJ IDEA plugin automatically."`
+	Prompt      string   `hcl:"prompt,optional" default:"env" enum:"env,short,none" help:"Modify prompt to include hermit environment (env), just an icon (short) or nothing (none)"`
+	ShortPrompt bool     `hcl:"short-prompt,optional" help:"If true use a short prompt when an environment is activated."`
+	NoGit       bool     `hcl:"no-git,optional" help:"If true Hermit will never add/remove files from Git automatically."`
+	Idea        bool     `hcl:"idea,optional" help:"If true Hermit will try to add the IntelliJ IDEA plugin automatically."`
+	InitSources []string `hcl:"init_sources,optional" help:"Default sources to use when initialising a new Hermit environment."`
 }
 
 // LoadUserConfig from disk.
