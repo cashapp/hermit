@@ -2,13 +2,14 @@ package autoversion
 
 import (
 	"fmt"
-	"github.com/alecthomas/assert/v2"
-	"github.com/cashapp/hermit/errors"
-	"github.com/cashapp/hermit/manifest"
 	"os"
 	"os/exec"
 	"path"
 	"testing"
+
+	"github.com/alecthomas/assert/v2"
+	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/manifest"
 )
 
 func Test_GitTagsAutoVersion(t *testing.T) {
@@ -25,6 +26,8 @@ func Test_GitTagsAutoVersion(t *testing.T) {
 	err = runCommandInDir(tmpDir, "git", "config", "--local", "user.email", "test@example.com")
 	assert.NoError(t, err)
 	err = runCommandInDir(tmpDir, "git", "config", "--local", "user.name", "test")
+	assert.NoError(t, err)
+	err = runCommandInDir(tmpDir, "git", "config", "--local", "commit.gpgsign", "false")
 	assert.NoError(t, err)
 	err = runCommandInDir(tmpDir, "git", "add", ".")
 	assert.NoError(t, err)
