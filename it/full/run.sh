@@ -16,6 +16,7 @@ beforeAll() {
   git add .
   git config user.email "you@example.com"
   git config user.name "Your Name"
+  git config commit.gpgsign false
   git commit -m 'test commit'
   popd
 }
