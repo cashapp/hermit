@@ -8,3 +8,5 @@ short-prompt = boolean # (optional)
 no-git = boolean # (optional)
 # If true Hermit will try to add the IntelliJ IDEA plugin automatically.
 idea = boolean # (optional)
+# Default sources to use when initialising a new Hermit environment.
+init-sources = [string] # (optional)

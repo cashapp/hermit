@@ -95,6 +95,41 @@ func TestIntegration(t *testing.T) {
 					"bin/hermit", ".idea/externalDependencies.xml",
 					"bin/activate-hermit", "bin/hermit.hcl"),
 				outputContains("Creating new Hermit environment")}},
+		{name: "InitWithUserConfigSources",
+			script: `
+				cat > hermit.hcl <<EOF
+init-sources = ["source1", "source2"]
+EOF
+				hermit init --user-config hermit.hcl .
+			`,
+			expectations: exp{
+				filesExist("bin/hermit.hcl"),
+				fileContains("bin/hermit.hcl", `source1`),
+				fileContains("bin/hermit.hcl", `source2`)}},
+		{name: "InitWithCommandLineSources",
+			script: `
+				cat > hermit.hcl <<EOF
+init-sources = ["source1", "source2"]
+EOF
+				hermit init --user-config hermit.hcl --sources source3,source4 .
+			`,
+			expectations: exp{
+				filesExist("bin/hermit.hcl"),
+				fileContains("bin/hermit.hcl", `source3`),
+				fileContains("bin/hermit.hcl", `source4`)}},
+		{name: "InitSourcesCommandLineOverridesUserConfig",
+			script: `
+				cat > hermit.hcl <<EOF
+init-sources = ["source1", "source2"]
+EOF
+				hermit init --user-config hermit.hcl --sources source3,source4 .
+				assert test "$(grep -c source1 bin/hermit.hcl)" = "0"
+				assert test "$(grep -c source2 bin/hermit.hcl)" = "0"
+			`,
+			expectations: exp{
+				filesExist("bin/hermit.hcl"),
+				fileContains("bin/hermit.hcl", `source3`),
+				fileContains("bin/hermit.hcl", `source4`)}},
 		{name: "HermitEnvarIsSet",
 			script: `
 				hermit init .

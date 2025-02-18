@@ -156,7 +156,12 @@ func Main(config Config) {
 	if err != nil {
 		log.Fatalf("couldn't get working directory: %s", err) // nolint: gocritic
 	}
-	common := cliBase{Plugins: config.KongPlugins}
+	common := cliBase{
+		Plugins: config.KongPlugins,
+		GlobalState: GlobalState{
+			UserConfig: "~/.hermit.hcl",
+		},
+	}
 
 	// But we activate any environment we find
 	if envDir, err := hermit.FindEnvDir(os.Args[0]); err == nil {
@@ -167,10 +172,13 @@ func Main(config Config) {
 		cli = &unactivated{cliBase: common}
 	}
 
-	userConfig, err := LoadUserConfig()
+	userConfigPath := cli.getGlobalState().UserConfig
+	p.Tracef("Loading user config from: %s", userConfigPath)
+	userConfig, err := LoadUserConfig(userConfigPath)
 	if err != nil {
 		log.Printf("%s: %s", userConfigPath, err)
 	}
+	p.Tracef("Loaded user config: %+v", userConfig)
 
 	githubToken := os.Getenv("HERMIT_GITHUB_TOKEN")
 	if githubToken == "" {

@@ -11,7 +11,8 @@ import (
 
 // GlobalState configurable by user to be passed through to Hermit.
 type GlobalState struct {
-	Env envars.Envars `help:"Extra environment variables to apply to environments."`
+	Env        envars.Envars `help:"Extra environment variables to apply to environments."`
+	UserConfig string        `help:"Path to Hermit user configuration file." default:"~/.hermit.hcl" env:"HERMIT_USER_CONFIG"`
 }
 
 type cliInterface interface {
