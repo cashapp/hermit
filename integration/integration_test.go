@@ -97,10 +97,12 @@ func TestIntegration(t *testing.T) {
 				outputContains("Creating new Hermit environment")}},
 		{name: "InitWithUserConfigSources",
 			script: `
-				cat > hermit.hcl <<EOF
+				cat > ~/.hermit.hcl <<EOF
 init-sources = ["source1", "source2"]
 EOF
-				hermit init --user-config hermit.hcl .
+				hermit init .
+				echo "Generated bin/hermit.hcl content:"
+				cat bin/hermit.hcl
 			`,
 			expectations: exp{
 				filesExist("bin/hermit.hcl"),
@@ -270,7 +272,7 @@ EOF
 			preparations: prep{fixture("testenv1"), activate(".")},
 			script: `
 			hermit manifest add-digests packages/testbin1.hcl
-			assert grep d4f8989a4a6bf56ccc768c094448aa5f42be3b9f0287adc2f4dfd2241f80d2c0 packages/testbin1.hcl 
+			assert grep d4f8989a4a6bf56ccc768c094448aa5f42be3b9f0287adc2f4dfd2241f80d2c0 packages/testbin1.hcl
 			`},
 		{name: "UpgradeTriggersInstallHook",
 			preparations: prep{fixture("testenv1"), activate(".")},
@@ -319,7 +321,7 @@ EOF
 			hermit install binary
 			. child_environment/bin/activate-hermit
 			assert test "$(binary.sh)" = "Running from parent"
-			
+
 			hermit install binary
 			assert test "$(binary.sh)" = "Running from child"
 			`,
