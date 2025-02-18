@@ -22,7 +22,7 @@ type activateCmd struct {
 	ShortPrompt bool   `help:"Use a minimal prompt in active environments." hidden:""`
 }
 
-func (a *activateCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, globalState GlobalState, config Config, defaultClient *http.Client) error {
+func (a *activateCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, globalState GlobalState, config Config, defaultClient *http.Client, userConfig UserConfig) error {
 	realdir, err := resolveActivationDir(a.Dir)
 	if err != nil {
 		return errors.WithStack(err)
@@ -58,7 +58,15 @@ func (a *activateCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, global
 		return errors.WithStack(err)
 	}
 	environ := envars.Parse(os.Environ()).Apply(env.Root(), ops).Changed(true)
-	prompt := a.Prompt
+	// Apply user config settings
+	prompt := userConfig.Prompt
+	if userConfig.ShortPrompt {
+		prompt = "short"
+	}
+	// Apply command line overrides
+	if a.Prompt != "" {
+		prompt = a.Prompt
+	}
 	if a.ShortPrompt {
 		prompt = "short"
 	}
