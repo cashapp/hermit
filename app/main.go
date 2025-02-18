@@ -167,11 +167,6 @@ func Main(config Config) {
 		cli = &unactivated{cliBase: common}
 	}
 
-	userConfig, err := LoadUserConfig()
-	if err != nil {
-		log.Printf("%s: %s", userConfigPath, err)
-	}
-
 	githubToken := os.Getenv("HERMIT_GITHUB_TOKEN")
 	if githubToken == "" {
 		githubToken = os.Getenv("GITHUB_TOKEN")
@@ -185,11 +180,10 @@ func Main(config Config) {
 			"env":    "Environment:\nCommands for creating and managing environments.",
 			"global": "Global:\nCommands for interacting with the shared global Hermit state.",
 		},
-		kong.Resolvers(UserConfigResolver(userConfig)),
 		kong.UsageOnError(),
 		kong.Description(help),
 		kong.BindTo(cli, (*cliInterface)(nil)),
-		kong.Bind(userConfig, config),
+		kong.Bind(config),
 		kong.AutoGroup(func(parent kong.Visitable, flag *kong.Flag) *kong.Group {
 			node, ok := parent.(*kong.Command)
 			if !ok {
@@ -255,6 +249,19 @@ func Main(config Config) {
 	parser.FatalIfErrorf(err)
 	configureLogging(cli, ctx.Command(), p)
 
+	var userConfig UserConfig
+	userConfigPath := cli.getUserConfigFile()
+
+	if userConfigExists := IsUserConfigExists(userConfigPath); userConfigExists {
+		p.Tracef("Loading user config from: %s", userConfigPath)
+		userConfig, err = LoadUserConfig(userConfigPath)
+		if err != nil {
+			log.Printf("%s: %s", userConfigPath, err)
+		}
+	} else {
+		p.Tracef("No user config found at: %s", userConfigPath)
+	}
+
 	config.State.LockTimeout = cli.getLockTimeout()
 	sta, err = state.Open(hermit.UserStateDir, config.State, cache)
 	if err != nil {
@@ -296,7 +303,7 @@ func Main(config Config) {
 		err = pprof.WriteHeapProfile(f)
 		fatalIfError(p, err)
 	}
-	err = ctx.Run(env, p, sta, config, cli.getGlobalState(), ghClient, defaultHTTPClient, cache)
+	err = ctx.Run(env, p, sta, config, cli.getGlobalState(), ghClient, defaultHTTPClient, cache, userConfig)
 	if err != nil && p.WillLog(ui.LevelDebug) {
 		p.Fatalf("%+v", err)
 	} else {
