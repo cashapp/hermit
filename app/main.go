@@ -252,7 +252,7 @@ func Main(config Config) {
 	var userConfig UserConfig
 	userConfigPath := cli.getUserConfigFile()
 
-	if userConfigExists := IsUserConfigExists(userConfigPath); userConfigExists {
+	if IsUserConfigExists(userConfigPath) {
 		p.Tracef("Loading user config from: %s", userConfigPath)
 		userConfig, err = LoadUserConfig(userConfigPath)
 		if err != nil {
