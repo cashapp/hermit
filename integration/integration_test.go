@@ -95,6 +95,73 @@ func TestIntegration(t *testing.T) {
 					"bin/hermit", ".idea/externalDependencies.xml",
 					"bin/activate-hermit", "bin/hermit.hcl"),
 				outputContains("Creating new Hermit environment")}},
+		{name: "InitWithUserConfigDefaults",
+			script: `
+				cat > "$HERMIT_USER_CONFIG" <<EOF
+defaults {
+	sources = ["source1", "source2"]
+	manage-git = false
+	idea = true
+}
+EOF
+				hermit init .
+				echo "Generated bin/hermit.hcl content:"
+				cat bin/hermit.hcl
+			`,
+			expectations: exp{
+				filesExist("bin/hermit.hcl"),
+				fileContains("bin/hermit.hcl", `sources = \["source1", "source2"\]`),
+				fileContains("bin/hermit.hcl", `manage-git = false`),
+				fileContains("bin/hermit.hcl", `idea = true`)}},
+		{name: "InitWithUserConfigTopLevelNoGitAndIdeaOverrideDefaults",
+			script: `
+				cat > "$HERMIT_USER_CONFIG" <<EOF
+no-git = true
+idea = true
+defaults {
+	manage-git = true
+	idea = false
+}
+EOF
+				hermit init .
+				echo "Generated bin/hermit.hcl content:"
+				cat bin/hermit.hcl
+			`,
+			expectations: exp{
+				filesExist("bin/hermit.hcl"),
+				fileContains("bin/hermit.hcl", `manage-git = false`),
+				fileContains("bin/hermit.hcl", `idea = true`)}},
+		{name: "InitWithCommandLineOverridesDefaults",
+			script: `
+				cat > "$HERMIT_USER_CONFIG" <<EOF
+defaults {
+	sources = ["source1", "source2"]
+	manage-git = false
+	idea = false
+}
+EOF
+				hermit init --sources source3,source4 --idea .
+			`,
+			expectations: exp{
+				filesExist("bin/hermit.hcl"),
+				fileContains("bin/hermit.hcl", `sources = \["source3", "source4"\]`),
+				fileContains("bin/hermit.hcl", `manage-git = false`),
+				fileContains("bin/hermit.hcl", `idea = true`)}},
+		{name: "InitSourcesCommandLineOverridesDefaults",
+			script: `
+				cat > "$HERMIT_USER_CONFIG" <<EOF
+defaults {
+	sources = ["source1", "source2"]
+}
+EOF
+				hermit init --sources source3,source4 .
+				cat bin/hermit.hcl
+			`,
+			expectations: exp{
+				filesExist("bin/hermit.hcl"),
+				fileContains("bin/hermit.hcl", `sources = \["source3", "source4"\]`),
+				fileDoesNotContain("bin/hermit.hcl", `\["source1"`),
+				fileDoesNotContain("bin/hermit.hcl", `\["source2"`)}},
 		{name: "HermitEnvarIsSet",
 			script: `
 				hermit init .
@@ -235,7 +302,7 @@ func TestIntegration(t *testing.T) {
 			preparations: prep{fixture("testenv1"), activate(".")},
 			script: `
 			hermit manifest add-digests packages/testbin1.hcl
-			assert grep d4f8989a4a6bf56ccc768c094448aa5f42be3b9f0287adc2f4dfd2241f80d2c0 packages/testbin1.hcl 
+			assert grep d4f8989a4a6bf56ccc768c094448aa5f42be3b9f0287adc2f4dfd2241f80d2c0 packages/testbin1.hcl
 			`},
 		{name: "UpgradeTriggersInstallHook",
 			preparations: prep{fixture("testenv1"), activate(".")},
@@ -284,7 +351,7 @@ func TestIntegration(t *testing.T) {
 			hermit install binary
 			. child_environment/bin/activate-hermit
 			assert test "$(binary.sh)" = "Running from parent"
-			
+
 			hermit install binary
 			assert test "$(binary.sh)" = "Running from child"
 			`,
@@ -328,8 +395,14 @@ func TestIntegration(t *testing.T) {
 					dir := filepath.Join(t.TempDir(), "root")
 					err := os.MkdirAll(dir, 0700)
 					assert.NoError(t, err)
-					testEnvars := make([]string, len(environ), len(environ)+1)
+					testEnvars := make([]string, len(environ), len(environ)+2)
 					copy(testEnvars, environ)
+
+					// Create a unique empty config file for each test
+					userConfigFile := filepath.Join(t.TempDir(), ".hermit.hcl")
+					err = os.WriteFile(userConfigFile, []byte(""), 0600)
+					assert.NoError(t, err)
+					testEnvars = append(testEnvars, "HERMIT_USER_CONFIG="+userConfigFile)
 					testEnvars = append(testEnvars, "HERMIT_STATE_DIR="+stateDir)
 
 					prepScript := ""
@@ -576,6 +649,16 @@ func fileContains(path, regex string) expectation {
 		data, err := os.ReadFile(filepath.Join(dir, path))
 		assert.NoError(t, err)
 		assert.True(t, regexp.MustCompile(regex).Match(data))
+	}
+}
+
+// Verify that the file under the test directory does not contain the given content.
+func fileDoesNotContain(path, regex string) expectation {
+	return func(t *testing.T, dir, stdout string) {
+		t.Helper()
+		data, err := os.ReadFile(filepath.Join(dir, path))
+		assert.NoError(t, err)
+		assert.False(t, regexp.MustCompile(regex).Match(data))
 	}
 }
 

@@ -13,14 +13,33 @@ type initCmd struct {
 	Dir     string   `arg:"" help:"Directory to create environment in (${default})." default:"${env}" predictor:"dir"`
 }
 
-func (i *initCmd) Run(w *ui.UI, config Config) error {
+func (i *initCmd) Run(w *ui.UI, config Config, userConfig UserConfig) error {
 	_, sum, err := GenInstaller(config)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	return hermit.Init(w, i.Dir, config.BaseDistURL, hermit.UserStateDir, hermit.Config{
-		Sources:     i.Sources,
-		ManageGit:   !i.NoGit,
-		AddIJPlugin: i.Idea,
-	}, sum)
+
+	// Load defaults from user config (or zero value)
+	hermitConfig := userConfig.Defaults
+
+	// Apply top-level user config settings
+	if userConfig.NoGit {
+		hermitConfig.ManageGit = false
+	}
+	if userConfig.Idea {
+		hermitConfig.AddIJPlugin = true
+	}
+
+	// Apply command line overrides (these take precedence over everything)
+	if i.Sources != nil {
+		hermitConfig.Sources = i.Sources
+	}
+	if i.NoGit {
+		hermitConfig.ManageGit = false
+	}
+	if i.Idea {
+		hermitConfig.AddIJPlugin = true
+	}
+
+	return hermit.Init(w, i.Dir, config.BaseDistURL, hermit.UserStateDir, hermitConfig, sum)
 }

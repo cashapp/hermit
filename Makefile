@@ -18,6 +18,9 @@ lint: ## run golangci-lint
 test: ## run tests
 	./bin/go test -v ./...
 
+test-integration: ## run integration tests
+	./bin/go test -tags integration -v ./integration
+
 build: ## builds binary and gzips it
 	mkdir -p $(BUILD_DIR)
 	CGO_ENABLED=0 ./bin/go build -ldflags "-X main.version=$(VERSION) -X main.channel=$(CHANNEL)" -o $(BIN) $(ROOT)/cmd/hermit
