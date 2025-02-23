@@ -20,6 +20,7 @@ import (
 	"github.com/cashapp/hermit"
 	"github.com/cashapp/hermit/cache"
 	"github.com/cashapp/hermit/github"
+	"github.com/cashapp/hermit/github/auth"
 	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/state"
 	"github.com/cashapp/hermit/ui"
@@ -170,14 +171,6 @@ func Main(config Config) {
 		cli = &unactivated{cliBase: common}
 	}
 
-	githubToken := os.Getenv("HERMIT_GITHUB_TOKEN")
-	if githubToken == "" {
-		githubToken = os.Getenv("GITHUB_TOKEN")
-		p.Tracef("GitHub token set from GITHUB_TOKEN")
-	} else {
-		p.Tracef("GitHub token set from HERMIT_GITHUB_TOKEN")
-	}
-
 	kongOptions := []kong.Option{
 		kong.Groups{
 			"env":    "Environment:\nCommands for creating and managing environments.",
@@ -212,6 +205,23 @@ func Main(config Config) {
 		log.Fatalf("failed to initialise CLI: %s", err)
 	}
 
+	ctx, err := parser.Parse(os.Args[1:])
+	parser.FatalIfErrorf(err)
+	configureLogging(cli, ctx.Command(), p)
+
+	var userConfig UserConfig
+	userConfigPath := cli.getUserConfigFile()
+
+	if IsUserConfigExists(userConfigPath) {
+		p.Tracef("Loading user config from: %s", userConfigPath)
+		userConfig, err = LoadUserConfig(userConfigPath)
+		if err != nil {
+			log.Printf("%s: %s", userConfigPath, err)
+		}
+	} else {
+		p.Tracef("No user config found at: %s", userConfigPath)
+	}
+
 	var envInfo *hermit.EnvInfo
 	if isActivated {
 		envInfo, err = hermit.LoadEnvInfo(envPath)
@@ -220,12 +230,36 @@ func Main(config Config) {
 		}
 	}
 
+	// Initialize GitHub token
+	var githubToken string
+	if envInfo != nil && len(envInfo.Config.GitHubTokenAuth.Match) > 0 {
+		// Determine provider based on user config
+		providerType := "env"
+		if userConfig.GHCliAuth {
+			providerType = "gh-cli"
+		}
+
+		provider, err := auth.NewProvider(providerType, p)
+		if err != nil {
+			p.Tracef("Failed to create GitHub token provider: %v", err)
+		} else {
+			token, err := provider.GetToken()
+			if err != nil {
+				p.Tracef("Failed to get GitHub token from provider %s: %v", providerType, err)
+			} else {
+				githubToken = token
+				p.Tracef("GitHub token set from provider: %s", providerType)
+			}
+		}
+	}
+
 	getSource := config.PackageSourceSelector
 	if config.PackageSourceSelector == nil {
 		getSource = cache.GetSource
 	}
 	defaultHTTPClient := config.defaultHTTPClient(p)
-	ghClient := github.New(defaultHTTPClient, githubToken)
+
+	ghClient := github.New(p, defaultHTTPClient, githubToken)
 
 	var matcher github.RepoMatcher
 	if envInfo != nil {
