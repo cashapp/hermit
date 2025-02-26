@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -36,15 +37,19 @@ func UpdateDigests(l *ui.UI, client *http.Client, state *state.State, path strin
 	// Dedupe by source, as channels often have the same source as normal packages.
 	pkgsBySource := map[string]pkgAndref{}
 	for _, ref := range mani.References(name) {
-		for _, platform := range platform.Core {
-			config := manifest.Config{Env: ".", State: "/tmp", Platform: platform}
+		for _, p := range slices.Concat(platform.Core, platform.Optional) {
+			config := manifest.Config{Env: ".", State: "/tmp", Platform: p}
 			pkg, err := manifest.Resolve(mani, config, ref)
 			if errors.Is(err, manifest.ErrNoSource) {
-				task.Warnf("No source provided for %s on %s", ref, platform)
+				maybeWarnf(task, p, "No source provided for %s/%s", ref, p)
 				continue
 			}
 			if err != nil {
-				return errors.WithStack(err)
+				if slices.Contains(platform.Core, p) {
+					return errors.WithStack(err)
+				}
+				task.Debugf("Cannot resolve optional digest update for %s/%s, skipping: %s", ref, p, err)
+				continue
 			}
 			// Skip git repos
 			if strings.Contains(pkg.Source, ".git#") || strings.HasSuffix(pkg.Source, ".git") {
@@ -58,7 +63,7 @@ func UpdateDigests(l *ui.UI, client *http.Client, state *state.State, path strin
 			if ok && existing.pkg.SHA256 != "" {
 				continue
 			}
-			pkgsBySource[pkg.Source] = pkgAndref{pkg, ref, platform}
+			pkgsBySource[pkg.Source] = pkgAndref{pkg, ref, p}
 		}
 	}
 
@@ -86,7 +91,11 @@ func UpdateDigests(l *ui.UI, client *http.Client, state *state.State, path strin
 		}
 		digest, err := computeDigest(task, client, state, pkg.pkg)
 		if err != nil {
-			return errors.Wrapf(err, "failed to compute digest for %s/%s", pkg.ref.String(), pkg.platform)
+			if slices.Contains(platform.Core, pkg.platform) {
+				return errors.Wrapf(err, "failed to compute digest for %s/%s", pkg.ref.String(), pkg.platform)
+			}
+			task.Debugf("Cannot compute optional digest update for %s/%s, skipping: %s", pkg.ref.String(), pkg.platform, err)
+			continue
 		}
 		task.Infof("  %s %s", digest, pkg.pkg.Source)
 		updated = append(updated, pkgAndDigest{pkg.pkg.Reference, pkg.pkg.Source, digest})
@@ -273,4 +282,12 @@ func loadAST(path string) (*hcl.AST, error) {
 		return nil, errors.WithStack(err)
 	}
 	return ast, nil
+}
+
+// Only emit a warning for core platforms to keep output from being noisy
+func maybeWarnf(task *ui.Task, p platform.Platform, format string, args ...interface{}) {
+	if slices.Contains(platform.Core, p) {
+		task.Warnf(format, args...)
+	}
+	task.Debugf(format, args...)
 }
