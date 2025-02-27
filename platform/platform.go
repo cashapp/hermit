@@ -33,6 +33,13 @@ var Core = []Platform{
 	{Darwin, Arm64},
 }
 
+// Optional platforms supported on a best-effort basis.
+//
+// Fully compliant packages are not required to support these platforms
+var Optional = []Platform{
+	{Linux, Arm64},
+}
+
 var xarch = map[string]string{
 	Amd64: "x86_64",
 	"386": "i386",
