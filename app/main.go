@@ -230,30 +230,18 @@ func Main(config Config) {
 		}
 	}
 
-	// Initialize GitHub token
-	var githubToken string
+	// Initialize GitHub auth provider if needed
+	var githubAuthProvider auth.Provider
 	if envInfo != nil && len(envInfo.Config.GitHubTokenAuth.Match) > 0 {
-		// Determine provider based on user config
 		providerType := auth.ProviderTypeEnv
 		if userConfig.GHCliAuth {
 			providerType = auth.ProviderTypeGHCli
-			p.Tracef("Using GitHub CLI for token authentication (from user config)")
-		} else {
-			p.Tracef("Using environment variables for token authentication (default)")
 		}
-
 		provider, err := auth.NewProvider(providerType, p)
 		if err != nil {
-			p.Fatalf("Failed to create GitHub token provider: %v", err)
-		} else {
-			token, err := provider.GetToken()
-			if err != nil {
-				p.Fatalf("Failed to get GitHub token from provider %s: %v", providerType, err)
-			} else {
-				githubToken = token
-				p.Tracef("GitHub token set from provider: %s", providerType)
-			}
+			p.Fatalf("Failed to create GitHub auth provider: %v", err)
 		}
+		githubAuthProvider = provider
 	}
 
 	getSource := config.PackageSourceSelector
@@ -262,7 +250,8 @@ func Main(config Config) {
 	}
 	defaultHTTPClient := config.defaultHTTPClient(p)
 
-	ghClient := github.New(p, defaultHTTPClient, githubToken)
+	// Use the auth provider for GitHub client
+	ghClient := github.New(p, defaultHTTPClient, githubAuthProvider)
 
 	var matcher github.RepoMatcher
 	if envInfo != nil {

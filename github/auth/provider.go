@@ -51,7 +51,7 @@ type GHCliProvider struct {
 
 // GetToken returns a token from gh CLI
 func (p *GHCliProvider) GetToken() (string, error) {
-	p.ui.Debugf("Getting GitHub token from gh CLI")
+	p.ui.Debugf("Getting GitHub token from gh")
 	p.tokenLock.Lock()
 	defer p.tokenLock.Unlock()
 
