@@ -70,9 +70,10 @@ func (p *GHCliProvider) GetToken() (string, error) {
 
 	// Run gh auth token
 	cmd := exec.Command("gh", "auth", "token")
-	output, err := cmd.Output()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", errors.Wrap(err, "failed to get token from gh CLI")
+		p.ui.Warnf("gh auth failed: %s", strings.TrimSpace(string(output)))
+		return "", errors.Wrap(err, "gh auth failed")
 	}
 
 	p.token = strings.TrimSpace(string(output))
