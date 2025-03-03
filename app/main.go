@@ -18,6 +18,7 @@ import (
 	"github.com/cashapp/hermit"
 	"github.com/cashapp/hermit/cache"
 	"github.com/cashapp/hermit/github"
+	"github.com/cashapp/hermit/github/auth"
 	"github.com/cashapp/hermit/state"
 	"github.com/cashapp/hermit/ui"
 	"github.com/cashapp/hermit/util/debug"
@@ -167,14 +168,6 @@ func Main(config Config) {
 		cli = &unactivated{cliBase: common}
 	}
 
-	githubToken := os.Getenv("HERMIT_GITHUB_TOKEN")
-	if githubToken == "" {
-		githubToken = os.Getenv("GITHUB_TOKEN")
-		p.Tracef("GitHub token set from GITHUB_TOKEN")
-	} else {
-		p.Tracef("GitHub token set from HERMIT_GITHUB_TOKEN")
-	}
-
 	kongOptions := []kong.Option{
 		kong.Groups{
 			"env":    "Environment:\nCommands for creating and managing environments.",
@@ -209,6 +202,23 @@ func Main(config Config) {
 		log.Fatalf("failed to initialise CLI: %s", err)
 	}
 
+	ctx, err := parser.Parse(os.Args[1:])
+	parser.FatalIfErrorf(err)
+	configureLogging(cli, ctx.Command(), p)
+
+	var userConfig UserConfig
+	userConfigPath := cli.getUserConfigFile()
+
+	if IsUserConfigExists(userConfigPath) {
+		p.Tracef("Loading user config from: %s", userConfigPath)
+		userConfig, err = LoadUserConfig(userConfigPath)
+		if err != nil {
+			log.Printf("%s: %s", userConfigPath, err)
+		}
+	} else {
+		p.Tracef("No user config found at: %s", userConfigPath)
+	}
+
 	var envInfo *hermit.EnvInfo
 	if isActivated {
 		envInfo, err = hermit.LoadEnvInfo(envPath)
@@ -217,13 +227,28 @@ func Main(config Config) {
 		}
 	}
 
+	// Initialize GitHub auth provider if needed
+	var githubAuthProvider auth.Provider
+	if envInfo != nil && len(envInfo.Config.GitHubTokenAuth.Match) > 0 {
+		providerType := auth.ProviderTypeEnv
+		if userConfig.GHCliAuth {
+			providerType = auth.ProviderTypeGHCli
+		}
+		provider, err := auth.NewProvider(providerType, p)
+		if err != nil {
+			p.Fatalf("Failed to create GitHub auth provider: %v", err)
+		}
+		githubAuthProvider = provider
+	}
+
 	getSource := config.PackageSourceSelector
 	if config.PackageSourceSelector == nil {
 		getSource = cache.GetSource
 	}
 	defaultHTTPClient := config.defaultHTTPClient(p)
 
-	ghClient := github.New(defaultHTTPClient, githubToken)
+	// Use the auth provider for GitHub client
+	ghClient := github.New(p, defaultHTTPClient, githubAuthProvider)
 	if envInfo != nil {
 		// If the environment has been configured to use GitHub token
 		// authentication for any patterns, wrap the
@@ -243,23 +268,6 @@ func Main(config Config) {
 	cache, err := cache.Open(hermit.UserStateDir, getSource, defaultHTTPClient, config.fastHTTPClient(p))
 	if err != nil {
 		log.Fatalf("failed to open cache: %s", err)
-	}
-
-	ctx, err := parser.Parse(os.Args[1:])
-	parser.FatalIfErrorf(err)
-	configureLogging(cli, ctx.Command(), p)
-
-	var userConfig UserConfig
-	userConfigPath := cli.getUserConfigFile()
-
-	if IsUserConfigExists(userConfigPath) {
-		p.Tracef("Loading user config from: %s", userConfigPath)
-		userConfig, err = LoadUserConfig(userConfigPath)
-		if err != nil {
-			log.Printf("%s: %s", userConfigPath, err)
-		}
-	} else {
-		p.Tracef("No user config found at: %s", userConfigPath)
 	}
 
 	config.State.LockTimeout = cli.getLockTimeout()
