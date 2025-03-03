@@ -288,6 +288,7 @@ func loadAST(path string) (*hcl.AST, error) {
 func maybeWarnf(task *ui.Task, p platform.Platform, format string, args ...interface{}) {
 	if slices.Contains(platform.Core, p) {
 		task.Warnf(format, args...)
+	} else {
+		task.Debugf(format, args...)
 	}
-	task.Debugf(format, args...)
 }
