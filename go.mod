@@ -34,6 +34,7 @@ require (
 	golang.org/x/net v0.9.0
 	golang.org/x/sys v0.7.0
 	golang.org/x/term v0.7.0
+	gopkg.in/dnaeon/go-vcr.v3 v3.2.0
 	howett.net/plist v1.0.0
 	mvdan.cc/sh v2.6.4+incompatible
 )
@@ -55,4 +56,5 @@ require (
 	golang.org/x/sync v0.3.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
