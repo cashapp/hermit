@@ -18,7 +18,7 @@ import (
 
 type activateCmd struct {
 	Dir         string `arg:"" help:"Directory of environment to activate (${default})" default:"${env}"`
-	Prompt      string `enum:"env,short,none" default:"env" help:"Include hermit environment, just icon or nothing in shell prompt"`
+	Prompt      string `enum:"default,env,short,none" default:"default" help:"Include hermit environment, just icon or nothing in shell prompt"`
 	ShortPrompt bool   `help:"Use a minimal prompt in active environments." hidden:""`
 }
 
@@ -64,7 +64,7 @@ func (a *activateCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, global
 		prompt = "short"
 	}
 	// Apply command line overrides
-	if a.Prompt != "" {
+	if a.Prompt != "default" {
 		prompt = a.Prompt
 	}
 	if a.ShortPrompt {
