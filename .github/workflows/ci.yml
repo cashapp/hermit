@@ -1,12 +1,8 @@
 on:
   push:
-    paths-ignore:
-      - 'docs/**'
     branches:
       - master
   pull_request:
-    paths-ignore:
-      - 'docs/**'
 name: CI
 jobs:
   test:
@@ -35,7 +31,7 @@ jobs:
     name: Package sanity tests
     strategy:
       matrix:
-        os: [ ubuntu-latest, macos-latest ]
+        os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     needs:
       - it
@@ -60,7 +56,7 @@ jobs:
     # The integration tests cannot be run in an active Hermit environment,
     # so we don't activate it here.
     name: Integration Tests
-    runs-on: [ ubuntu-latest ]
+    runs-on: [ubuntu-latest]
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -92,6 +88,7 @@ jobs:
           export PATH=$PWD/build:$PATH
           cd it/full
           ./run.sh
+
 #      - name: Run Backwards Compatibility Integration tests
 #        run: |
 #          export PATH=$PWD/build:$PATH
