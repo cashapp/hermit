@@ -4,10 +4,10 @@ go 1.23
 
 require (
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
-	github.com/alecthomas/assert/v2 v2.6.0
+	github.com/alecthomas/assert/v2 v2.11.0
 	github.com/alecthomas/colour v0.1.0
 	github.com/alecthomas/hcl v0.5.5
-	github.com/alecthomas/kong v0.9.0
+	github.com/alecthomas/kong v1.9.0
 	github.com/alecthomas/participle/v2 v2.0.0-beta.5
 	github.com/alecthomas/repr v0.4.0
 	github.com/andybalholm/cascadia v1.3.2
