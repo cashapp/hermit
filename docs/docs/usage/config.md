@@ -48,6 +48,7 @@ github-token-auth {
 | `manage-git`     | `bool?`            | Whether Hermit should manage Git.                                                                    |
 | `inherit-parent` | `bool?`            | Whether this Hermit environment should inherit an environment from a parent directory.             |
 | `github-token-auth` | `GitHubTokenAuthConfig?` | When to use GitHub token authentication. |
+| `idea`           | `bool?`            | Whether Hermit should automatically add the IntelliJ IDEA plugin. |
 
 ### GitHubTokenAuthConfig
 
