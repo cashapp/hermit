@@ -1,9 +1,8 @@
 ---
-title:  "Configuration"
+title: "Configuration"
 ---
 
-Each Hermit environment contains a `bin/hermit.hcl` file that can be used to
-customise that Hermit environment.
+Each Hermit environment contains a `bin/hermit.hcl` file that can be used to customise that Hermit environment.
 
 ```hcl
 // Extra environment variables to be added to the Hermit environment.
@@ -14,6 +13,7 @@ customise that Hermit environment.
 env = {
   "ENVAR": "VALUE",
 }
+
 // Hermit supports three different manifest sources:
 //
 // 1. Git repositories; any cloneable URI ending with `.git`.
@@ -38,3 +38,28 @@ github-token-auth {
   match = ["ORG/REPO", "ORG/*"]
 }
 ```
+
+## Attributes
+
+| Attribute          | Type               | Description                                                                                          |
+|------------------|--------------------|------------------------------------------------------------------------------------------------------|
+| `env`            | `{string:string}?` | Extra environment variables.                                                                         |
+| `sources`        | `[string]?`        | Package manifest sources in order of preference.                                                     |
+| `manage-git`     | `bool?`            | Whether Hermit should manage Git.                                                                    |
+| `inherit-parent` | `bool?`            | Whether this Hermit environment should inherit an environment from a parent directory.             |
+| `github-token-auth` | `GitHubTokenAuthConfig?` | When to use GitHub token authentication. |
+| `idea`           | `bool?`            | Whether Hermit should automatically add the IntelliJ IDEA plugin. |
+
+### GitHubTokenAuthConfig
+
+| Attribute | Type     | Description                                                                                                           |
+|-----------|----------|-----------------------------------------------------------------------------------------------------------------------|
+| match     | `[string]?` | One or more glob patterns. If any of these match the 'owner/repo' pair of a GitHub repository, the GitHub token from the current environment will be used to fetch their artifacts. |
+
+## Per-environment Sources
+
+Hermit supports three different manifest sources:
+
+1. Git repositories; any cloneable URI ending with `.git`, eg. `https://github.com/cashapp/hermit-packages.git`. An optional `#<tag>` suffix can be added to checkout a specific tag.
+2. Local filesystem, eg. `file:///home/user/my-packages`. This is mostly only useful for local development and testing.
+3. Environment relative, eg. `env:///my-packages`. This will search for package manifests in the directory `${HERMIT_ENV}/my-packages`. Useful for local overrides.

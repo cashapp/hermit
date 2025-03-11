@@ -49,7 +49,7 @@ var (
 	//go:embed "files/install.sh.tmpl"
 	InstallerTemplateSource string
 
-	// UserStateDir should be passed to OpenEnv()/Init() in most cases.
+	// UserStateDir should be passed to Open()/Init() in most cases.
 	UserStateDir = func() string {
 		// Check if state dir is explicitly set
 		explicit := os.Getenv("HERMIT_STATE_DIR")
@@ -114,7 +114,6 @@ type Env struct {
 	configFile      string
 	httpClient      *http.Client
 	scriptSums      []string
-	activated       bool
 	sourceRewriters []sources.URLRewriter
 
 	// Lazily initialized fields
@@ -353,7 +352,6 @@ func OpenEnv(
 		ephemeralEnvars: envars.Infer(ephemeral.System()),
 		httpClient:      httpClient,
 		scriptSums:      scriptSums,
-		activated:       os.Getenv("DEACTIVATED_HERMIT") == "",
 		sourceRewriters: sourceRewriters,
 	}, nil
 }
@@ -789,21 +787,10 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 		return errors.WithStack(err)
 	}
 
-	var installed []*manifest.Package
-
-	// If we are activated, the parent shell already has
-	// already passed us all necessary environment variables.
-	// This may not be the case if the user manually ran
-	// e.g. ./bin/go
-	// We still need to call e.allEnvarOpsForPackages to ensure
-	// the selected package's env vars take precedence.
-	if !e.activated {
-		installed, err = e.ListInstalled(l)
-		if err != nil {
-			return errors.WithStack(err)
-		}
+	installed, err := e.ListInstalled(l)
+	if err != nil {
+		return errors.WithStack(err)
 	}
-
 	ops := e.allEnvarOpsForPackages(runtimeDeps, pkg, installed...)
 	packageHermitBin, err := e.getPackageRuntimeEnvops(pkg)
 	if err != nil {
@@ -814,6 +801,9 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 	}
 	env := e.envarsFromOps(true, ops)
 
+	if err != nil {
+		return errors.WithStack(err)
+	}
 	for _, bin := range binaries {
 		if filepath.Base(bin) != filepath.Base(binary) {
 			continue
