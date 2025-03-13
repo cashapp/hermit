@@ -114,6 +114,7 @@ type Env struct {
 	configFile      string
 	httpClient      *http.Client
 	scriptSums      []string
+	sourceRewriters []sources.URLRewriter
 
 	// Lazily initialized fields
 	lazyResolver  *manifest.Resolver
@@ -256,12 +257,13 @@ func FindEnvDir(binary string) (envDir string, err error) {
 	return
 }
 
-func getSources(l *ui.UI, envDir string, config *Config, state *state.State, defaultSources []string) (*sources.Sources, error) {
+func getSources(l *ui.UI, envDir string, config *Config, state *state.State, defaultSources []string, sourceRewriters ...sources.URLRewriter) (*sources.Sources, error) {
 	configuredSources := config.Sources
 	if config.Sources == nil {
 		configuredSources = defaultSources
 	}
-	ss, err := sources.ForURIs(l, state.SourcesDir(), envDir, configuredSources)
+
+	ss, err := sources.ForURIs(l, state.SourcesDir(), envDir, configuredSources, sourceRewriters...)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -332,6 +334,7 @@ func OpenEnv(
 	ephemeral envars.Envars,
 	httpClient *http.Client,
 	scriptSums []string,
+	sourceRewriters ...sources.URLRewriter,
 ) (*Env, error) {
 	useGit := info.Config.ManageGit && isEnvAGitRepo(info.Root)
 	if len(scriptSums) == 0 {
@@ -349,6 +352,7 @@ func OpenEnv(
 		ephemeralEnvars: envars.Infer(ephemeral.System()),
 		httpClient:      httpClient,
 		scriptSums:      scriptSums,
+		sourceRewriters: sourceRewriters,
 	}, nil
 }
 
@@ -823,7 +827,7 @@ func (e *Env) getPackageRuntimeEnvops(pkg *manifest.Package) (envars.Op, error) 
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	pkgEnv, err := OpenEnv(pkgEnvInfo, e.state, e.packageSource, nil, e.httpClient, e.scriptSums)
+	pkgEnv, err := OpenEnv(pkgEnvInfo, e.state, e.packageSource, nil, e.httpClient, e.scriptSums, e.sourceRewriters...)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -1466,7 +1470,7 @@ func (e *Env) sources(l *ui.UI) (*sources.Sources, error) {
 	if e.lazySources != nil {
 		return e.lazySources, nil
 	}
-	sources, err := getSources(l, e.envDir, e.config, e.state, e.state.Config().Sources)
+	sources, err := getSources(l, e.envDir, e.config, e.state, e.state.Config().Sources, e.sourceRewriters...)
 	if err != nil {
 		return nil, errors.Wrap(err, e.configFile)
 	}
@@ -1515,7 +1519,7 @@ func (e *Env) openParent() (*Env, error) {
 			if err != nil {
 				return nil, errors.WithStack(err)
 			}
-			return OpenEnv(parentEnvInfo, e.state, e.packageSource, nil, e.httpClient, e.scriptSums)
+			return OpenEnv(parentEnvInfo, e.state, e.packageSource, nil, e.httpClient, e.scriptSums, e.sourceRewriters...)
 		} else if !errors.Is(err, os.ErrNotExist) {
 			return nil, err
 		}

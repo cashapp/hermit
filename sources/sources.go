@@ -69,11 +69,24 @@ func (s *Sources) Sync(p *ui.UI, force bool) error {
 	return nil
 }
 
+// URLRewriter is a function that can transform a source URI
+type URLRewriter func(uri string) (string, error)
+
 // ForURIs returns Source instances for given uri strings
-func ForURIs(b *ui.UI, dir, env string, uris []string) (*Sources, error) {
+func ForURIs(b *ui.UI, dir, env string, uris []string, rewriters ...URLRewriter) (*Sources, error) {
 	sources := make([]Source, 0, len(uris))
 	for _, uri := range uris {
-		s, err := getSource(b, uri, dir, env)
+		// Apply each rewriter in sequence
+		transformedURI := uri
+		for _, rewrite := range rewriters {
+			rewritten, err := rewrite(transformedURI)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+			transformedURI = rewritten
+		}
+
+		s, err := getSource(b, transformedURI, dir, env)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
