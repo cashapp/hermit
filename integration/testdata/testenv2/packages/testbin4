@@ -1,0 +1,3 @@
+#!/bin/bash
+
+echo "env[$TESTBIN1VERSION] exec[$(${TESTBIN4_ROOT}/testbin1)]"

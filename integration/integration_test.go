@@ -279,6 +279,14 @@ EOF
 				. testenv1/bin/activate-hermit
 				assert test "$(./testenv2/bin/testbin1)" = "testbin1 1.0.1"
 			`},
+		{name: "ExecuteFromOtherEnvironmentLoadsDependentEnvars",
+			preparations: prep{allFixtures("testenv1", "testenv2")},
+			script: `
+				testenv2/bin/hermit install testbin1-1.0.0 testbin4
+				. testenv1/bin/activate-hermit
+				hermit install testbin1-1.0.1
+				assert test "$(./testenv2/bin/testbin4)" = "env[1.0.0] exec[testbin1 1.0.0]"
+			`},
 		{name: "StubFromOtherEnvironmentHasItsOwnEnvars",
 			preparations: prep{allFixtures("testenv1", "testenv2")},
 			script: `
