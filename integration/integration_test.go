@@ -281,8 +281,11 @@ EOF
 			`},
 		{name: "ExecuteFromOtherEnvironmentLoadsDependentEnvars",
 			preparations: prep{allFixtures("testenv1", "testenv2")},
+			// Due to https://github.com/cashapp/hermit/issues/203 testbin4 and testbin1
+			// must be installed separately.
 			script: `
-				testenv2/bin/hermit install testbin1-1.0.0 testbin4
+				testenv2/bin/hermit install testbin4
+				testenv2/bin/hermit install testbin1-1.0.0
 				. testenv1/bin/activate-hermit
 				hermit install testbin1-1.0.1
 				assert test "$(./testenv2/bin/testbin4)" = "env[1.0.0] exec[testbin1 1.0.0]"
