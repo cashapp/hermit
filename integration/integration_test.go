@@ -80,13 +80,16 @@ func TestIntegration(t *testing.T) {
 		fails        bool // The script will exit with a non-zero exit status.
 		expectations exp
 	}{
-		{name: "UsingCustomHermit",
+		{
+			name: "UsingCustomHermit",
 			script: `
 				which hermit
 				hermit --version
 			`,
-			expectations: exp{outputContains("/hermit-local/hermit"), outputContains("devel (canary)")}},
-		{name: "Init",
+			expectations: exp{outputContains("/hermit-local/hermit"), outputContains("devel (canary)")},
+		},
+		{
+			name: "Init",
 			script: `
 				hermit init --idea .
 			`,
@@ -94,8 +97,11 @@ func TestIntegration(t *testing.T) {
 				filesExist(
 					"bin/hermit", ".idea/externalDependencies.xml",
 					"bin/activate-hermit", "bin/hermit.hcl"),
-				outputContains("Creating new Hermit environment")}},
-		{name: "InitWithUserConfigDefaults",
+				outputContains("Creating new Hermit environment"),
+			},
+		},
+		{
+			name: "InitWithUserConfigDefaults",
 			script: `
 				cat > "$HERMIT_USER_CONFIG" <<EOF
 defaults {
@@ -112,8 +118,11 @@ EOF
 				filesExist("bin/hermit.hcl"),
 				fileContains("bin/hermit.hcl", `sources = \["source1", "source2"\]`),
 				fileContains("bin/hermit.hcl", `manage-git = false`),
-				fileContains("bin/hermit.hcl", `idea = true`)}},
-		{name: "InitWithUserConfigTopLevelNoGitAndIdeaOverrideDefaults",
+				fileContains("bin/hermit.hcl", `idea = true`),
+			},
+		},
+		{
+			name: "InitWithUserConfigTopLevelNoGitAndIdeaOverrideDefaults",
 			script: `
 				cat > "$HERMIT_USER_CONFIG" <<EOF
 no-git = true
@@ -130,8 +139,11 @@ EOF
 			expectations: exp{
 				filesExist("bin/hermit.hcl"),
 				fileContains("bin/hermit.hcl", `manage-git = false`),
-				fileContains("bin/hermit.hcl", `idea = true`)}},
-		{name: "InitWithCommandLineOverridesDefaults",
+				fileContains("bin/hermit.hcl", `idea = true`),
+			},
+		},
+		{
+			name: "InitWithCommandLineOverridesDefaults",
 			script: `
 				cat > "$HERMIT_USER_CONFIG" <<EOF
 defaults {
@@ -146,8 +158,11 @@ EOF
 				filesExist("bin/hermit.hcl"),
 				fileContains("bin/hermit.hcl", `sources = \["source3", "source4"\]`),
 				fileContains("bin/hermit.hcl", `manage-git = false`),
-				fileContains("bin/hermit.hcl", `idea = true`)}},
-		{name: "InitSourcesCommandLineOverridesDefaults",
+				fileContains("bin/hermit.hcl", `idea = true`),
+			},
+		},
+		{
+			name: "InitSourcesCommandLineOverridesDefaults",
 			script: `
 				cat > "$HERMIT_USER_CONFIG" <<EOF
 defaults {
@@ -161,29 +176,38 @@ EOF
 				filesExist("bin/hermit.hcl"),
 				fileContains("bin/hermit.hcl", `sources = \["source3", "source4"\]`),
 				fileDoesNotContain("bin/hermit.hcl", `\["source1"`),
-				fileDoesNotContain("bin/hermit.hcl", `\["source2"`)}},
-		{name: "HermitEnvarIsSet",
+				fileDoesNotContain("bin/hermit.hcl", `\["source2"`),
+			},
+		},
+		{
+			name: "HermitEnvarIsSet",
 			script: `
 				hermit init .
 				. bin/activate-hermit
 				assert test -n "$HERMIT_ENV"
-			`},
-		{name: "CannotBeActivatedTwice",
+			`,
+		},
+		{
+			name: "CannotBeActivatedTwice",
 			script: `
 				hermit init .
 				. bin/activate-hermit
 				. bin/activate-hermit
 			`,
 			fails:        true,
-			expectations: exp{outputContains("This Hermit environment has already been activated. Skipping")}},
-		{name: "PackageEnvarsAreSetAutomatically",
+			expectations: exp{outputContains("This Hermit environment has already been activated. Skipping")},
+		},
+		{
+			name:         "PackageEnvarsAreSetAutomatically",
 			preparations: prep{fixture("testenv1"), activate(".")},
 			script: `
 				assert test -z "$(hermit env FOO)"
 				with-prompt-hooks hermit install testbin1
 				assert test "${FOO:-}" = "bar"
-			`},
-		{name: "HermitEnvCommandSetsAutomatically",
+			`,
+		},
+		{
+			name:         "HermitEnvCommandSetsAutomatically",
 			preparations: prep{fixture("testenv1")},
 			script: `
 				hermit init .
@@ -191,13 +215,17 @@ EOF
 				assert test -z "$(hermit env FOO)"
 				with-prompt-hooks hermit env FOO bar
 				assert test "${FOO:-}" = "bar"
-			`},
-		{name: "EnvEnvarsAreSetDuringActivation",
+			`,
+		},
+		{
+			name: "EnvEnvarsAreSetDuringActivation",
 			script: `
 				assert test "${BAR:-}" = "waz"
 			`,
-			preparations: prep{fixture("testenv1"), activate(".")}},
-		{name: "InstallingPackageCreatesSymlinks",
+			preparations: prep{fixture("testenv1"), activate(".")},
+		},
+		{
+			name:         "InstallingPackageCreatesSymlinks",
 			preparations: prep{fixture("testenv1"), activate(".")},
 			script: `
 				assert test ! -L bin/testbin1
@@ -209,24 +237,30 @@ EOF
 				hermit install testbin1-1.0.0
 				assert test "$(readlink bin/testbin1)" = ".testbin1-1.0.0.pkg"
 				assert test "$(readlink bin/.testbin1-1.0.0.pkg)" = "hermit"
-			`},
-		{name: "UninstallingRemovesSymlinks",
+			`,
+		},
+		{
+			name:         "UninstallingRemovesSymlinks",
 			preparations: prep{fixture("testenv1"), activate(".")},
 			script: `
 				hermit install testbin1-1.0.1
 				assert test "$(readlink bin/testbin1)" = ".testbin1-1.0.1.pkg"
 				hermit uninstall testbin1
 				assert test ! -L bin/testbin1
-			`},
-		{name: "DowngradingPackageWorks",
+			`,
+		},
+		{
+			name:         "DowngradingPackageWorks",
 			preparations: prep{fixture("testenv1"), activate(".")},
 			script: `
 				hermit install testbin1-1.0.1
 				assert test "$(testbin1)" = "testbin1 1.0.1"
 				hermit install testbin1-1.0.0
 				assert test "$(testbin1)" = "testbin1 1.0.0"
-			`},
-		{name: "UpgradingPackageWorks",
+			`,
+		},
+		{
+			name:         "UpgradingPackageWorks",
 			preparations: prep{fixture("testenv1"), activate(".")},
 			script: `
 				hermit install testbin1-1.0.0
@@ -235,7 +269,8 @@ EOF
 				assert test "$(testbin1)" = "testbin1 1.0.1"
 			`,
 		},
-		{name: "InstallingPackageSetsEnvarsInShell",
+		{
+			name:         "InstallingPackageSetsEnvarsInShell",
 			preparations: prep{fixture("testenv1"), activate(".")},
 			script: `
 				with-prompt-hooks hermit install testbin1-1.0.0
@@ -243,19 +278,25 @@ EOF
 
 				with-prompt-hooks hermit install testbin1-1.0.1
 				assert test "${TESTBIN1VERSION:-}" = "1.0.1"
-			`},
-		{name: "InstallingEnvPackagesIsaNoop",
+			`,
+		},
+		{
+			name:         "InstallingEnvPackagesIsaNoop",
 			preparations: prep{fixture("testenv1"), activate(".")},
 			script: `
 				hermit install
-			`},
-		{name: "DeactivatingRemovesHermitEnvars",
+			`,
+		},
+		{
+			name:         "DeactivatingRemovesHermitEnvars",
 			preparations: prep{fixture("testenv1"), activate(".")},
 			script: `
 				deactivate-hermit
 				assert test -z "${HERMIT_ENV:-}"
-			`},
-		{name: "DeactivatingRestoresEnvars",
+			`,
+		},
+		{
+			name:         "DeactivatingRestoresEnvars",
 			preparations: prep{fixture("testenv1")},
 			script: `
 				export BAR="foo"
@@ -263,48 +304,75 @@ EOF
 				assert test "${BAR:-}" = "waz"
 				deactivate-hermit
 				assert test "${BAR:-}" = "foo"
-			`},
-		{name: "SwitchingEnvironmentsWorks",
+			`,
+		},
+		{
+			name:         "SwitchingEnvironmentsWorks",
 			preparations: prep{allFixtures("testenv1", "testenv2")},
 			script: `
 				. testenv1/bin/activate-hermit
 				assert test "${HERMIT_ENV:-}" = "$PWD/testenv1"
 				. testenv2/bin/activate-hermit
 				assert test "${HERMIT_ENV:-}" = "$PWD/testenv2"
-			`},
-		{name: "ExecuteFromAnotherEnvironmentWorks",
+			`,
+		},
+		{
+			name:         "ExecuteFromAnotherEnvironmentWorks",
 			preparations: prep{allFixtures("testenv1", "testenv2")},
 			script: `
 				testenv2/bin/hermit install testbin1
 				. testenv1/bin/activate-hermit
 				assert test "$(./testenv2/bin/testbin1)" = "testbin1 1.0.1"
-			`},
-		{name: "StubFromOtherEnvironmentHasItsOwnEnvars",
+			`,
+		},
+		{
+			name:         "ExecuteFromOtherEnvironmentLoadsDependentEnvars",
+			preparations: prep{allFixtures("testenv1", "testenv2")},
+			// Due to https://github.com/cashapp/hermit/issues/203 testbin4 and testbin1
+			// must be installed separately.
+			script: `
+				testenv2/bin/hermit install testbin4
+				testenv2/bin/hermit install testbin1-1.0.0
+				. testenv1/bin/activate-hermit
+				hermit install testbin1-1.0.1
+				assert test "$(./testenv2/bin/testbin4)" = "env[1.0.0] exec[testbin1 1.0.0]"
+			`,
+		},
+		{
+			name:         "StubFromOtherEnvironmentHasItsOwnEnvars",
 			preparations: prep{allFixtures("testenv1", "testenv2")},
 			script: `
 				testenv2/bin/hermit install testbin1
 				. testenv1/bin/activate-hermit
 				assert test "$(testenv2/bin/hermit env TESTENV2)" = "yes"
-			`},
-		{name: "InstallDirectScriptPackage",
+			`,
+		},
+		{
+			name:         "InstallDirectScriptPackage",
 			preparations: prep{fixture("testenv2"), activate(".")},
 			script: `
 				hermit install testbin2
 				assert test "$(testbin2)" = "testbin2 2.0.1"
-			`},
-		{name: "InstallNonExecutablePackage",
+			`,
+		},
+		{
+			name:         "InstallNonExecutablePackage",
 			preparations: prep{fixture("testenv2"), activate(".")},
 			script: `
 				hermit install testbin3
 				assert test "$(testbin3)" = "testbin3 3.0.1"
-			`},
-		{name: "AddDigests",
+			`,
+		},
+		{
+			name:         "AddDigests",
 			preparations: prep{fixture("testenv1"), activate(".")},
 			script: `
 			hermit manifest add-digests packages/testbin1.hcl
 			assert grep d4f8989a4a6bf56ccc768c094448aa5f42be3b9f0287adc2f4dfd2241f80d2c0 packages/testbin1.hcl
-			`},
-		{name: "UpgradeTriggersInstallHook",
+			`,
+		},
+		{
+			name:         "UpgradeTriggersInstallHook",
 			preparations: prep{fixture("testenv1"), activate(".")},
 			script: `
 			hermit install testbin1-1.0.0
@@ -312,7 +380,8 @@ EOF
 			`,
 			expectations: exp{outputContains("testbin1-1.0.0 hook"), outputContains("testbin1-1.0.1 hook")},
 		},
-		{name: "SymlinkAndMkdirActionsWork",
+		{
+			name:         "SymlinkAndMkdirActionsWork",
 			preparations: prep{fixture("testenv3"), activate(".")},
 			script: `
 			hermit install testbin1
@@ -322,7 +391,8 @@ EOF
 			`,
 			expectations: exp{outputContains("testbin1 1.0.1")},
 		},
-		{name: "RuntimeDepsEnvOverridesUnrelatedPackageEnv",
+		{
+			name:         "RuntimeDepsEnvOverridesUnrelatedPackageEnv",
 			preparations: prep{fixture("testenv4"), activate(".")},
 			script: `
 			hermit install testbin1
@@ -330,8 +400,10 @@ EOF
 			hermit install other
 			assert test "$(testbin1.sh)" = "FOO=runtimefoo"
 			assert test "$(testbin2.sh)" = "BAR=hermitbar"
-			`},
-		{name: "EnvironmentsWithOverlappingEnvVariablesCanBeSwitched",
+			`,
+		},
+		{
+			name:         "EnvironmentsWithOverlappingEnvVariablesCanBeSwitched",
 			preparations: prep{fixture("overlapping_envs")},
 			script: `
 			. env1/bin/activate-hermit
@@ -339,13 +411,16 @@ EOF
 
 			. env2/bin/activate-hermit
 			assert test "$FOO" = "BAR"
-			`},
-		{name: "InheritsEnvVariables",
+			`,
+		},
+		{
+			name:         "InheritsEnvVariables",
 			preparations: prep{fixture("environment_inheritance"), activate("child_environment")},
 			script:       `echo "${OVERWRITTEN} - ${NOT_OVERWRITTEN}"`,
 			expectations: exp{outputContains("child - parent")},
 		},
-		{name: "InheritanceOverwritesBinaries",
+		{
+			name:         "InheritanceOverwritesBinaries",
 			preparations: prep{fixture("environment_inheritance"), activate(".")},
 			script: `
 			hermit install binary
@@ -354,6 +429,28 @@ EOF
 
 			hermit install binary
 			assert test "$(binary.sh)" = "Running from child"
+			`,
+		},
+		{
+			name:         "IndirectExecutionFromParentEnvLoadsCorrectEnvVars",
+			preparations: prep{fixture("environment_inheritance"), activate(".")},
+			// This test covers the nested environment case wherein:
+			//  - a binary executed in a parent environment relies on environment
+			//    variables set by a separate package Foo
+			//  - package Foo is provided by both the parent and child
+			//    environments
+			script: `
+			hermit install envprovider-1.0.0
+			hermit install parentbin
+
+      # Install before activating because automatic env var updates
+      # only work when at least one second has passed since the HERMIT_ENV
+      # dir was modified.
+      ./child_environment/bin/hermit install envprovider-1.0.1
+			. child_environment/bin/activate-hermit
+
+      assert test "$VARIABLE" = "1.0.1"
+      assert test "$(parentbin.sh)" = "parentenv: envprovider-1.0.0"
 			`,
 		},
 		{
@@ -536,8 +633,10 @@ func buildEnviron(t *testing.T) (environ []string) {
 // Preparation applied to the test directory before running the test.
 //
 // Extra setup script fragments can be returned.
-type preparation func(t *testing.T, dir string) string
-type prep []preparation
+type (
+	preparation func(t *testing.T, dir string) string
+	prep        []preparation
+)
 
 func addFile(name, content string) preparation {
 	return func(t *testing.T, dir string) string {
@@ -628,8 +727,10 @@ func fixtureToDir(relSource string, relDest string) preparation {
 }
 
 // An expectation that must be met after running a test.
-type expectation func(t *testing.T, dir, stdout string)
-type exp []expectation
+type (
+	expectation func(t *testing.T, dir, stdout string)
+	exp         []expectation
+)
 
 // Verify that the given paths exist in the test directory.
 func filesExist(paths ...string) expectation {
