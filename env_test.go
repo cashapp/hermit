@@ -155,9 +155,7 @@ func TestEnsureUpToDate(t *testing.T) {
 
 // Test that files referred in the Files map are copied correctly
 func TestCopyFiles(t *testing.T) {
-	dir, err := os.MkdirTemp("", "")
-	assert.NoError(t, err)
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	f, err := os.Create(filepath.Join(dir, "from"))
 	assert.NoError(t, err)
@@ -181,9 +179,7 @@ func TestCopyFiles(t *testing.T) {
 
 // Test that files referred in the Files map are copied correctly
 func TestCopyFilesAction(t *testing.T) {
-	dir, err := os.MkdirTemp("", "")
-	assert.NoError(t, err)
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	f, err := os.Create(filepath.Join(dir, "from"))
 	assert.NoError(t, err)
@@ -212,9 +208,7 @@ func TestCopyFilesAction(t *testing.T) {
 }
 
 func TestTriggers(t *testing.T) {
-	dir, err := os.MkdirTemp("", "")
-	assert.NoError(t, err)
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	file := filepath.Join(dir, "test.sh")
 	target := filepath.Join(dir, "success")

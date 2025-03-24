@@ -34,11 +34,7 @@ func TestExtract(t *testing.T) {
 		t.Run(test.file, func(t *testing.T) {
 			p, _ := ui.NewForTesting()
 
-			dest, err := os.MkdirTemp("", "")
-			assert.NoError(t, err)
-			defer os.RemoveAll(dest)
-
-			dest = filepath.Join(dest, "extracted")
+			dest := filepath.Join(t.TempDir(), "extracted")
 			finalise, err := Extract(
 				p.Task("extract"),
 				filepath.Join("testdata", test.file),

@@ -48,10 +48,9 @@ func TestAutoVersion(t *testing.T) {
 	for _, input := range inputs {
 		t.Run(strings.Title(strings.TrimSuffix(filepath.Base(input), ".input.hcl")), func(t *testing.T) {
 			// Copy input manifest to a temporary path.
-			tmpFile, err := os.CreateTemp("", "*.hcl")
+			tmpFile, err := os.CreateTemp(t.TempDir(), "*.hcl")
 			assert.NoError(t, err)
 			defer tmpFile.Close() // nolint
-			defer os.Remove(tmpFile.Name())
 
 			inputContent, err := os.ReadFile(input)
 			assert.NoError(t, err)

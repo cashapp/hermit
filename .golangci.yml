@@ -19,7 +19,6 @@ linters:
     - godox
     - wsl
     - dogsled
-    - gomnd
     - gocognit
     - gocyclo
     - godot
@@ -47,7 +46,7 @@ linters:
     - errchkjson
     - mnd      # overly sensitive to any number
     - tagalign # don't care about struct tag alignment (help:".." tends to be long)
-    - execinquery
+    - tenv     # deprecated, replaced by usetesting
 
 linters-settings:
   govet:
