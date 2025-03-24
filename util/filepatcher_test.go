@@ -81,9 +81,7 @@ foobar
 `,
 	}}
 
-	dir, err := os.MkdirTemp("", "")
-	assert.NoError(t, err)
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

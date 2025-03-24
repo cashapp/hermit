@@ -12,6 +12,15 @@ import (
 	"github.com/cashapp/hermit/ui"
 )
 
+func makeWritable(path string) error {
+	return filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		return os.Chmod(path, info.Mode()|0200) // Add write permission
+	})
+}
+
 func TestExtract(t *testing.T) {
 	tests := []struct {
 		file     string
@@ -34,11 +43,12 @@ func TestExtract(t *testing.T) {
 		t.Run(test.file, func(t *testing.T) {
 			p, _ := ui.NewForTesting()
 
-			dest, err := os.MkdirTemp("", "")
-			assert.NoError(t, err)
-			defer os.RemoveAll(dest)
+			tmpDir := t.TempDir()
+			dest := filepath.Join(tmpDir, "extracted")
+			t.Cleanup(func() {
+				_ = makeWritable(tmpDir)
+			})
 
-			dest = filepath.Join(dest, "extracted")
 			finalise, err := Extract(
 				p.Task("extract"),
 				filepath.Join("testdata", test.file),

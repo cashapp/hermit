@@ -19,6 +19,15 @@ import (
 	"github.com/cashapp/hermit/vfs"
 )
 
+func makeWritable(path string) error {
+	return filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		return os.Chmod(path, info.Mode()|0200) // Add write permission
+	})
+}
+
 // EnvTestFixture encapsulates the directories used by Env and the Env itself
 type EnvTestFixture struct {
 	State   *state.State
@@ -35,15 +44,12 @@ type EnvTestFixture struct {
 // A test handler can be given to be used as an test http server for testing http interactions
 func NewEnvTestFixture(t *testing.T, handler http.Handler) *EnvTestFixture {
 	t.Helper()
-	envDir, err := os.MkdirTemp("", "")
-	assert.NoError(t, err)
-
-	stateDir, err := os.MkdirTemp("", "")
-	assert.NoError(t, err)
+	envDir := t.TempDir()
+	stateDir := t.TempDir()
 
 	log, buf := ui.NewForTesting()
 
-	err = hermit.Init(log, envDir, "", stateDir, hermit.Config{}, "BYPASS")
+	err := hermit.Init(log, envDir, "", stateDir, hermit.Config{}, "BYPASS")
 	assert.NoError(t, err)
 
 	server := httptest.NewServer(handler)
@@ -60,7 +66,7 @@ func NewEnvTestFixture(t *testing.T, handler http.Handler) *EnvTestFixture {
 	env, err := hermit.OpenEnv(info, sta, cache.GetSource, envars.Envars{}, server.Client(), nil)
 	assert.NoError(t, err)
 
-	return &EnvTestFixture{
+	fixture := &EnvTestFixture{
 		Cache:   cache,
 		State:   sta,
 		EnvDirs: []string{envDir},
@@ -70,6 +76,14 @@ func NewEnvTestFixture(t *testing.T, handler http.Handler) *EnvTestFixture {
 		t:       t,
 		P:       log,
 	}
+
+	// Register cleanup function that makes files writable before removal
+	t.Cleanup(func() {
+		_ = makeWritable(fixture.RootDir())
+		fixture.Clean()
+	})
+
+	return fixture
 }
 
 // RootDir returns the directory to the environment package root
@@ -95,10 +109,9 @@ func (f *EnvTestFixture) Clean() {
 
 // NewEnv returns a new environment using the state directory from this fixture
 func (f *EnvTestFixture) NewEnv() *hermit.Env {
-	envDir, err := os.MkdirTemp("", "")
-	assert.NoError(f.t, err)
+	envDir := f.t.TempDir()
 	log, _ := ui.NewForTesting()
-	err = hermit.Init(log, envDir, "", f.State.Root(), hermit.Config{}, "BYPASS")
+	err := hermit.Init(log, envDir, "", f.State.Root(), hermit.Config{}, "BYPASS")
 	assert.NoError(f.t, err)
 	info, err := hermit.LoadEnvInfo(envDir)
 	assert.NoError(f.t, err)

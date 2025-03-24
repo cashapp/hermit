@@ -13,11 +13,8 @@ import (
 )
 
 func Test_GitTagsAutoVersion(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "")
-	defer os.RemoveAll(tmpDir)
-	assert.NoError(t, err, "could not create temp dir")
-
-	err = runCommandInDir(tmpDir, "git", "init", ".")
+	tmpDir := t.TempDir()
+	err := runCommandInDir(tmpDir, "git", "init", ".")
 	assert.NoError(t, err)
 
 	err = os.WriteFile(path.Join(tmpDir, "README.md"), []byte("readme"), 0600)

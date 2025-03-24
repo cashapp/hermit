@@ -22,7 +22,6 @@ import (
 // with an existing package, we get an error
 func TestConflictingBinariesError(t *testing.T) {
 	fixture := hermittest.NewEnvTestFixture(t, nil)
-	defer fixture.Clean()
 
 	pkg1 := manifesttest.NewPkgBuilder(fixture.RootDir()).
 		WithSource("archive/testdata/archive.tar.gz").
@@ -53,7 +52,6 @@ func TestUpdateTimestampOnInstall(t *testing.T) {
 		calls++
 	})
 	fixture := hermittest.NewEnvTestFixture(t, handler)
-	defer fixture.Clean()
 
 	pkg := manifesttest.NewPkgBuilder(fixture.RootDir()).
 		WithName("test").
@@ -93,7 +91,6 @@ func TestEnsureUpToDate(t *testing.T) {
 		}
 	})
 	fixture := hermittest.NewEnvTestFixture(t, handler)
-	defer fixture.Clean()
 	dao := fixture.DAO()
 
 	pkg := manifesttest.NewPkgBuilder(fixture.RootDir()).
@@ -155,9 +152,7 @@ func TestEnsureUpToDate(t *testing.T) {
 
 // Test that files referred in the Files map are copied correctly
 func TestCopyFiles(t *testing.T) {
-	dir, err := os.MkdirTemp("", "")
-	assert.NoError(t, err)
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	f, err := os.Create(filepath.Join(dir, "from"))
 	assert.NoError(t, err)
@@ -165,7 +160,6 @@ func TestCopyFiles(t *testing.T) {
 	assert.NoError(t, err)
 
 	fixture := hermittest.NewEnvTestFixture(t, nil)
-	defer fixture.Clean()
 
 	pkg := manifesttest.NewPkgBuilder(fixture.RootDir()).
 		WithSource("archive/testdata/archive.tar.gz").
@@ -181,9 +175,7 @@ func TestCopyFiles(t *testing.T) {
 
 // Test that files referred in the Files map are copied correctly
 func TestCopyFilesAction(t *testing.T) {
-	dir, err := os.MkdirTemp("", "")
-	assert.NoError(t, err)
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	f, err := os.Create(filepath.Join(dir, "from"))
 	assert.NoError(t, err)
@@ -191,7 +183,6 @@ func TestCopyFilesAction(t *testing.T) {
 	assert.NoError(t, err)
 
 	fixture := hermittest.NewEnvTestFixture(t, nil)
-	defer fixture.Clean()
 
 	pkg := manifesttest.NewPkgBuilder(fixture.RootDir()).
 		WithSource("archive/testdata/archive.tar.gz").
@@ -212,9 +203,7 @@ func TestCopyFilesAction(t *testing.T) {
 }
 
 func TestTriggers(t *testing.T) {
-	dir, err := os.MkdirTemp("", "")
-	assert.NoError(t, err)
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	file := filepath.Join(dir, "test.sh")
 	target := filepath.Join(dir, "success")
@@ -227,7 +216,6 @@ func TestTriggers(t *testing.T) {
 	assert.NoError(t, err)
 
 	fixture := hermittest.NewEnvTestFixture(t, nil)
-	defer fixture.Clean()
 
 	pkg := manifesttest.NewPkgBuilder(fixture.RootDir()).
 		WithSource("archive/testdata/archive.tar.gz").

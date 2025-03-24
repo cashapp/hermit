@@ -1,6 +1,5 @@
 run:
   tests: true
-  max-same-issues: 50
 
 output:
   print-issued-lines: false
@@ -19,7 +18,6 @@ linters:
     - godox
     - wsl
     - dogsled
-    - gomnd
     - gocognit
     - gocyclo
     - godot
@@ -47,11 +45,12 @@ linters:
     - errchkjson
     - mnd      # overly sensitive to any number
     - tagalign # don't care about struct tag alignment (help:".." tends to be long)
-    - execinquery
+    - tenv     # deprecated, replaced by usetesting
+    - gomnd    # deprecated, replaced by mnd
+    - execinquery # deprecated, repository archived
+    - exportloopref # deprecated since Go 1.22, replaced by copyloopvar
 
 linters-settings:
-  govet:
-    use-installed-packages: true
   dupl:
     threshold: 100
   goconst:
@@ -77,10 +76,7 @@ linters-settings:
       - '^fmt.Errorf'
       - '^os.User.*Dir'
 
-
 issues:
-  max-per-linter: 0
-  max-same-issues: 0
   exclude-use-default: false
   exclude-files:
     - cmd/protopkg/main.go
