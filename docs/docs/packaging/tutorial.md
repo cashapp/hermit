@@ -150,6 +150,16 @@ binaries = ["jq"]
 The `binaries` attribute supports globs, which will be expanded at unpack time.
 {{< /hint >}}
 
+## Adding SHA256 Sums
+
+Populating sha256 checksums for each of your package downloads allows Hermit to validate the integrity after downloading. (provided in the `sha256sums` field)
+
+You can use Hermit to automatically generate them for you:
+
+```shell
+hermit add-digests jq.hcl
+```
+
 ## Testing the Package
 
 Hermit packages can include a `testing` attribute which is a command to run to
