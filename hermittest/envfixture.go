@@ -19,6 +19,15 @@ import (
 	"github.com/cashapp/hermit/vfs"
 )
 
+func makeWritable(path string) error {
+	return filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		return os.Chmod(path, info.Mode()|0200) // Add write permission
+	})
+}
+
 // EnvTestFixture encapsulates the directories used by Env and the Env itself
 type EnvTestFixture struct {
 	State   *state.State
@@ -57,7 +66,7 @@ func NewEnvTestFixture(t *testing.T, handler http.Handler) *EnvTestFixture {
 	env, err := hermit.OpenEnv(info, sta, cache.GetSource, envars.Envars{}, server.Client(), nil)
 	assert.NoError(t, err)
 
-	return &EnvTestFixture{
+	fixture := &EnvTestFixture{
 		Cache:   cache,
 		State:   sta,
 		EnvDirs: []string{envDir},
@@ -67,6 +76,14 @@ func NewEnvTestFixture(t *testing.T, handler http.Handler) *EnvTestFixture {
 		t:       t,
 		P:       log,
 	}
+
+	// Register cleanup function that makes files writable before removal
+	t.Cleanup(func() {
+		_ = makeWritable(fixture.RootDir())
+		fixture.Clean()
+	})
+
+	return fixture
 }
 
 // RootDir returns the directory to the environment package root

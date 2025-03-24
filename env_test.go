@@ -22,7 +22,6 @@ import (
 // with an existing package, we get an error
 func TestConflictingBinariesError(t *testing.T) {
 	fixture := hermittest.NewEnvTestFixture(t, nil)
-	defer fixture.Clean()
 
 	pkg1 := manifesttest.NewPkgBuilder(fixture.RootDir()).
 		WithSource("archive/testdata/archive.tar.gz").
@@ -53,7 +52,6 @@ func TestUpdateTimestampOnInstall(t *testing.T) {
 		calls++
 	})
 	fixture := hermittest.NewEnvTestFixture(t, handler)
-	defer fixture.Clean()
 
 	pkg := manifesttest.NewPkgBuilder(fixture.RootDir()).
 		WithName("test").
@@ -93,7 +91,6 @@ func TestEnsureUpToDate(t *testing.T) {
 		}
 	})
 	fixture := hermittest.NewEnvTestFixture(t, handler)
-	defer fixture.Clean()
 	dao := fixture.DAO()
 
 	pkg := manifesttest.NewPkgBuilder(fixture.RootDir()).
@@ -163,7 +160,6 @@ func TestCopyFiles(t *testing.T) {
 	assert.NoError(t, err)
 
 	fixture := hermittest.NewEnvTestFixture(t, nil)
-	defer fixture.Clean()
 
 	pkg := manifesttest.NewPkgBuilder(fixture.RootDir()).
 		WithSource("archive/testdata/archive.tar.gz").
@@ -187,7 +183,6 @@ func TestCopyFilesAction(t *testing.T) {
 	assert.NoError(t, err)
 
 	fixture := hermittest.NewEnvTestFixture(t, nil)
-	defer fixture.Clean()
 
 	pkg := manifesttest.NewPkgBuilder(fixture.RootDir()).
 		WithSource("archive/testdata/archive.tar.gz").
@@ -221,7 +216,6 @@ func TestTriggers(t *testing.T) {
 	assert.NoError(t, err)
 
 	fixture := hermittest.NewEnvTestFixture(t, nil)
-	defer fixture.Clean()
 
 	pkg := manifesttest.NewPkgBuilder(fixture.RootDir()).
 		WithSource("archive/testdata/archive.tar.gz").
