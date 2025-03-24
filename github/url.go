@@ -9,7 +9,7 @@ import (
 
 // isGitHubHTTPSURL checks if a URL is a GitHub HTTPS URL and returns owner/repo if it is
 func isGitHubHTTPSURL(u *url.URL) (owner, repo string, ok bool) {
-	if u.Scheme != "https" || u.Host != "github.com" {
+	if u.Scheme != "https" || u.Host != gitHubHost {
 		return "", "", false
 	}
 
