@@ -18,6 +18,7 @@ import (
 	"github.com/cashapp/hermit"
 	"github.com/cashapp/hermit/cache"
 	"github.com/cashapp/hermit/github"
+	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/state"
 	"github.com/cashapp/hermit/ui"
 	"github.com/cashapp/hermit/util/debug"
@@ -222,8 +223,9 @@ func Main(config Config) {
 		getSource = cache.GetSource
 	}
 	defaultHTTPClient := config.defaultHTTPClient(p)
-
 	ghClient := github.New(defaultHTTPClient, githubToken)
+
+	var matcher github.RepoMatcher
 	if envInfo != nil {
 		// If the environment has been configured to use GitHub token
 		// authentication for any patterns, wrap the
@@ -231,7 +233,7 @@ func Main(config Config) {
 		// patterns.
 		ghTokenAuth := envInfo.Config.GitHubTokenAuth
 		if len(ghTokenAuth.Match) > 0 {
-			matcher, err := cache.GlobRepoMatcher(ghTokenAuth.Match)
+			matcher, err = github.GlobRepoMatcher(ghTokenAuth.Match)
 			if err != nil {
 				log.Fatalf("Environment configuration has a bad github-auth-token.match: %v", err)
 			}
@@ -269,8 +271,12 @@ func Main(config Config) {
 	}
 
 	if isActivated {
-		// envInfo is guaranteed to be non-nil here
-		env, err = hermit.OpenEnv(envInfo, sta, cache.GetSource, cli.getGlobalState().Env, defaultHTTPClient, config.SHA256Sums)
+		var sourceRewriters []sources.URLRewriter
+		if matcher != nil {
+			sourceRewriters = append(sourceRewriters, github.AuthenticatedURLRewriter(githubToken, matcher))
+		}
+
+		env, err = hermit.OpenEnv(envInfo, sta, cache.GetSource, cli.getGlobalState().Env, defaultHTTPClient, config.SHA256Sums, sourceRewriters...)
 		if err != nil {
 			log.Fatalf("failed to open environment: %s", err)
 		}
