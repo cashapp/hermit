@@ -15,6 +15,11 @@ import (
 	"github.com/cashapp/hermit/errors"
 )
 
+const (
+	// gitHubHost is the hostname for GitHub
+	gitHubHost = "github.com"
+)
+
 // Repo information.
 type Repo struct {
 	Description string `json:"description"`
@@ -62,7 +67,7 @@ func (a *Client) ProjectForURL(sourceURL string) string {
 	if err != nil {
 		return ""
 	}
-	if u.Host != "github.com" {
+	if u.Host != gitHubHost {
 		return ""
 	}
 	parts := strings.Split(u.Path, "/")

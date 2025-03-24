@@ -337,8 +337,8 @@ func TestResolver_Resolve(t *testing.T) {
 					gotPkg.FS = nil
 				}
 				assert.Equal(t,
-					repr.String(tt.wantPkg, repr.Indent("  "), repr.Hide(hcl.Position{})),
-					repr.String(gotPkg, repr.Indent("  "), repr.Hide(hcl.Position{})))
+					repr.String(tt.wantPkg, repr.Indent("  "), repr.Hide[hcl.Position]()),
+					repr.String(gotPkg, repr.Indent("  "), repr.Hide[hcl.Position]()))
 			}
 			wantErrors := tt.manifestErrors
 			if wantErrors == nil {
