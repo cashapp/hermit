@@ -7,23 +7,23 @@ jobs:
     name: Full Sanity Test
     strategy:
       matrix:
-        os: [ ubuntu-latest, macos-latest ]
+        os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Install Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.16.x
-    - name: Checkout code
-      uses: actions/checkout@v2
-      with:
-        ref: "master"
-    - name: Test packages
-      run: |
-        cd it/sanity
-        CHANGES=$(git log master --raw --since="25 hours ago" | wc -l)
-        if [ $CHANGES != "0" ]; then
-          ./run.sh -a
-        else
-          echo "No changes in 25 hours to Hermit. Skipping test"
-        fi
+      - name: Install Go
+        uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 # ratchet:actions/setup-go@v2
+        with:
+          go-version: 1.16.x
+      - name: Checkout code
+        uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # ratchet:actions/checkout@v2
+        with:
+          ref: "master"
+      - name: Test packages
+        run: |
+          cd it/sanity
+          CHANGES=$(git log master --raw --since="25 hours ago" | wc -l)
+          if [ $CHANGES != "0" ]; then
+            ./run.sh -a
+          else
+            echo "No changes in 25 hours to Hermit. Skipping test"
+          fi

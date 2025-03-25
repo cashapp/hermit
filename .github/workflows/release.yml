@@ -11,8 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+        uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # ratchet:actions/checkout@v2
+      - uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 # ratchet:actions/setup-go@v2
         with:
           go-version: '^1.16.3'
       - name: Build Hermit
@@ -24,13 +24,13 @@ jobs:
           INSTALLER_VERSION=$(go run -ldflags "-X main.channel=stable" ./cmd/hermit gen-installer --dest=build/install.sh)
           cp build/install.sh build/install-"${INSTALLER_VERSION}".sh
       - name: Release versioned
-        uses: ncipollo/release-action@v1
+        uses: ncipollo/release-action@440c8c1cb0ed28b9f43e4d1d670870f059653174 # ratchet:ncipollo/release-action@v1
         with:
           allowUpdates: true
           artifacts: "build/*"
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Release stable
-        uses: ncipollo/release-action@v1
+        uses: ncipollo/release-action@440c8c1cb0ed28b9f43e4d1d670870f059653174 # ratchet:ncipollo/release-action@v1
         with:
           tag: stable
           name: Stable
