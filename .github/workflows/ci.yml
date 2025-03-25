@@ -12,9 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # ratchet:actions/checkout@v2
       - name: Init Hermit
-        uses: cashapp/activate-hermit@v1
+        uses: cashapp/activate-hermit@e49f5cb4dd64ff0b0b659d1d8df499595451155a # ratchet:cashapp/activate-hermit@v1
       - name: Test
         run: go test ./...
   lint:
@@ -22,9 +22,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # ratchet:actions/checkout@v2
       - name: Init Hermit
-        uses: cashapp/activate-hermit@v1
+        uses: cashapp/activate-hermit@e49f5cb4dd64ff0b0b659d1d8df499595451155a # ratchet:cashapp/activate-hermit@v1
       - name: Shell check
         run: ./bin/lint-shell-scripts
       - name: golangci-lint
@@ -33,13 +33,13 @@ jobs:
     name: Package sanity tests
     strategy:
       matrix:
-        os: [ ubuntu-latest, macos-latest ]
+        os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     needs:
       - it
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # ratchet:actions/checkout@v2
       - name: Test packages
         run: |
           cd it/sanity
@@ -49,19 +49,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # ratchet:actions/checkout@v2
       - name: Init Hermit
-        uses: cashapp/activate-hermit@v1
+        uses: cashapp/activate-hermit@e49f5cb4dd64ff0b0b659d1d8df499595451155a # ratchet:cashapp/activate-hermit@v1
       - name: Test
         run: make -C docs schema
   it:
     # The integration tests cannot be run in an active Hermit environment,
     # so we don't activate it here.
     name: Integration Tests
-    runs-on: [ ubuntu-latest ]
+    runs-on: [ubuntu-latest]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # ratchet:actions/checkout@v2
       - name: geninstaller Cross Check
         run: |
           BASE_DIST_URL="https://github.com/cashapp/hermit/releases/download"
