@@ -15,6 +15,11 @@
   ],
   packageRules: [
     {
+      matchManagers: ['hermit'],
+      "matchPackageNames": ['go'],
+      "versioning": 'regex:^v?1.(?<major>\d+)\.(?<minor>\d+)(?:\.(?<patch>\d+))?$'
+    },
+    {
       matchCategories: [
         'js',
       ],
