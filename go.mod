@@ -32,7 +32,7 @@ require (
 	github.com/willabides/kongplete v0.4.0
 	github.com/willdonnelly/passwd v0.0.0-20141013001024-7935dab3074c
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
-	golang.org/x/net v0.37.0
+	golang.org/x/net v0.38.0
 	golang.org/x/sync v0.12.0
 	golang.org/x/sys v0.31.0
 	golang.org/x/term v0.30.0
