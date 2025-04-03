@@ -52,6 +52,19 @@ type UI struct {
 	state              uint64
 	minlevel           Level
 	progressBarEnabled bool
+	exit               func(int)
+}
+
+func (w *UI) SetExit(f func(int)) {
+	w.exit = f
+}
+
+func (w *UI) Exit(c int) {
+	if w.exit == nil {
+		os.Exit(c)
+	} else {
+		w.exit(c)
+	}
 }
 
 var _ Logger = &UI{}
@@ -211,7 +224,7 @@ func (w *UI) logf(level Level, label string, format string, args ...interface{})
 	if level == LevelFatal {
 		defer func() {
 			_ = w.stderr.Sync()
-			os.Exit(1)
+			w.Exit(1)
 		}()
 	} else {
 		w.writeProgress(w.width)
