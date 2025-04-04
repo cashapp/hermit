@@ -10,6 +10,7 @@ github.com/alecthomas/colour v0.1.0 h1:nOE9rJm6dsZ66RGWYSFrXw461ZIt9A6+nHgL7FRrD
 github.com/alecthomas/colour v0.1.0/go.mod h1:QO9JBoKquHd+jz9nshCh40fOfO+JzsoXy8qTHF68zU0=
 github.com/alecthomas/hcl v0.5.5 h1:NvSiDRO6IvzZp+cfGVost6l6BAjYtWH++G2zZd5sqk4=
 github.com/alecthomas/hcl v0.5.5/go.mod h1:XAFzM7e+MoxvgApYUKiw0+C5hm22BYep3rWpAXJUT+M=
+github.com/alecthomas/hcl/v2 v2.0.0/go.mod h1:wIwWDX2WYyyZhYuqVYQdCFxGQbz4jA9pf0egbkZ8ahY=
 github.com/alecthomas/kong v1.10.0 h1:8K4rGDpT7Iu+jEXCIJUeKqvpwZHbsFRoebLbnzlmrpw=
 github.com/alecthomas/kong v1.10.0/go.mod h1:p2vqieVMeTAnaC83txKtXe8FLke2X07aruPWXyMPQrU=
 github.com/alecthomas/participle/v2 v2.1.4 h1:W/H79S8Sat/krZ3el6sQMvMaahJ+XcM9WSI2naI7w2U=
