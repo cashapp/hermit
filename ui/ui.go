@@ -52,6 +52,11 @@ type UI struct {
 	state              uint64
 	minlevel           Level
 	progressBarEnabled bool
+	exit               func(int)
+}
+
+func (w *UI) SetExit(f func(int)) {
+	w.exit = f
 }
 
 var _ Logger = &UI{}
@@ -74,6 +79,7 @@ func New(level Level, stdout, stderr SyncWriter, stdoutIsTTY, stderrIsTTY bool) 
 		stderrIsTTY:        stderrIsTTY,
 		minlevel:           level,
 		progressBarEnabled: true,
+		exit:               os.Exit,
 	}
 	w.loggingMixin = &loggingMixin{
 		logWriter: logWriter{
@@ -211,7 +217,7 @@ func (w *UI) logf(level Level, label string, format string, args ...interface{})
 	if level == LevelFatal {
 		defer func() {
 			_ = w.stderr.Sync()
-			os.Exit(1)
+			w.exit(1)
 		}()
 	} else {
 		w.writeProgress(w.width)
