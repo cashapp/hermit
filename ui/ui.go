@@ -59,14 +59,6 @@ func (w *UI) SetExit(f func(int)) {
 	w.exit = f
 }
 
-func (w *UI) Exit(c int) {
-	if w.exit == nil {
-		os.Exit(c)
-	} else {
-		w.exit(c)
-	}
-}
-
 var _ Logger = &UI{}
 
 // NewForTesting returns a new UI that writes all output to the returned bytes.Buffer.
@@ -87,6 +79,7 @@ func New(level Level, stdout, stderr SyncWriter, stdoutIsTTY, stderrIsTTY bool) 
 		stderrIsTTY:        stderrIsTTY,
 		minlevel:           level,
 		progressBarEnabled: true,
+		exit:               os.Exit,
 	}
 	w.loggingMixin = &loggingMixin{
 		logWriter: logWriter{
@@ -224,7 +217,7 @@ func (w *UI) logf(level Level, label string, format string, args ...interface{})
 	if level == LevelFatal {
 		defer func() {
 			_ = w.stderr.Sync()
-			w.Exit(1)
+			w.exit(1)
 		}()
 	} else {
 		w.writeProgress(w.width)
