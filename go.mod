@@ -26,6 +26,7 @@ require (
 	github.com/mitchellh/go-ps v1.0.0
 	github.com/otiai10/copy v1.14.1
 	github.com/posener/complete v1.2.3
+	github.com/posener/complete/v2 v2.1.0
 	github.com/qdm12/reprint v0.0.0-20200326205758-722754a53494
 	github.com/saracen/go7z v0.0.0-20191010121135-9c09b6bd7fda
 	github.com/sassoftware/go-rpmutils v0.4.0
