@@ -2,7 +2,7 @@ module github.com/cashapp/hermit
 
 go 1.23.0
 
-toolchain go1.24.1
+toolchain go1.24.2
 
 require (
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
@@ -14,7 +14,7 @@ require (
 	github.com/alecthomas/repr v0.4.0
 	github.com/andybalholm/cascadia v1.3.3
 	github.com/antchfx/htmlquery v1.3.4
-	github.com/antchfx/xpath v1.3.3
+	github.com/antchfx/xpath v1.3.4
 	github.com/avvmoto/buf-readerat v0.0.0-20171115124131-a17c8cb89270
 	github.com/blakesmith/ar v0.0.0-20190502131153-809d4375e1fb
 	github.com/creack/pty v1.1.24
@@ -32,10 +32,10 @@ require (
 	github.com/willabides/kongplete v0.4.0
 	github.com/willdonnelly/passwd v0.0.0-20141013001024-7935dab3074c
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
-	golang.org/x/net v0.38.0
-	golang.org/x/sync v0.12.0
-	golang.org/x/sys v0.31.0
-	golang.org/x/term v0.30.0
+	golang.org/x/net v0.39.0
+	golang.org/x/sync v0.13.0
+	golang.org/x/sys v0.32.0
+	golang.org/x/term v0.31.0
 	howett.net/plist v1.0.1
 	mvdan.cc/sh v2.6.4+incompatible
 )
@@ -54,6 +54,6 @@ require (
 	github.com/saracen/go7z-fixtures v0.0.0-20190623165746-aa6b8fba1d2f // indirect
 	github.com/saracen/solidblock v0.0.0-20190426153529-45df20abab6f // indirect
 	github.com/ulikunitz/xz v0.5.12 // indirect
-	golang.org/x/crypto v0.36.0 // indirect
-	golang.org/x/text v0.23.0 // indirect
+	golang.org/x/crypto v0.37.0 // indirect
+	golang.org/x/text v0.24.0 // indirect
 )
