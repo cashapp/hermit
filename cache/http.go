@@ -137,7 +137,7 @@ func downloadHTTP(b *ui.Task, response *http.Response, checksum string, uri stri
 	// We finally have the checksummed file, move it into place.
 	err = os.Rename(w.Name(), cachePath)
 	if err != nil {
-		return "", "", "", errors.WithStack(err)
+		return "", "", "", Error{err: errors.WithStack(err), code: 82}
 	}
 	return cachePath, etag, actualChecksum, nil
 }

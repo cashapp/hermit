@@ -2,6 +2,7 @@ package app
 
 import (
 	"bufio"
+	"errors"
 	"log"
 	"net"
 	"net/http"
@@ -310,11 +311,7 @@ func Main(config Config) {
 		fatalIfError(p, err)
 	}
 	err = ctx.Run(env, p, sta, config, cli.getGlobalState(), ghClient, defaultHTTPClient, cache, userConfig)
-	if err != nil && p.WillLog(ui.LevelDebug) {
-		p.Fatalf("%+v", err)
-	} else {
-		fatalIfError(p, err)
-	}
+	fatalIfError(p, err)
 }
 
 func configureLogging(cli cliInterface, ctx *kong.Context, p *ui.UI) {
@@ -354,6 +351,10 @@ func (b *bufioSyncer) Sync() error { return b.Flush() }
 
 func fatalIfError(logger *ui.UI, err error) {
 	if err != nil {
-		logger.Task("hermit").Fatalf("%s", err)
+		logger.Task("hermit").Errorf("%s", err)
+		var exiter kong.ExitCoder
+		if errors.As(err, &exiter) {
+			kctx.Exit(exiter.ExitCode())
+		}
 	}
 }
