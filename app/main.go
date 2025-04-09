@@ -10,6 +10,8 @@ import (
 	"runtime/pprof"
 	"time"
 
+	"github.com/square/exit"
+
 	"github.com/alecthomas/kong"
 	"github.com/mattn/go-isatty"
 	"github.com/posener/complete"
@@ -17,7 +19,6 @@ import (
 
 	"github.com/cashapp/hermit"
 	"github.com/cashapp/hermit/cache"
-	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/github"
 	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/state"
@@ -349,6 +350,6 @@ func (b *bufioSyncer) Sync() error { return b.Flush() }
 func fatalIfError(logger *ui.UI, ctx *kong.Context, err error) {
 	if err != nil {
 		logger.Task("hermit").Fatalf("%s", err)
-		ctx.Exit(errors.ExitCodeFromError(err))
+		ctx.Exit(exit.FromError(err))
 	}
 }

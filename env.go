@@ -377,10 +377,10 @@ next:
 				// Fish support was added later. Older hermit envs won't have it.
 				continue next
 			}
-			return errors.WithExitCode(
+			return exit.Wrap(
 				errors.Wrapf(err, "%s is missing, not a Hermit environment?", path),
-				exit.RequirementNotMet,
-			)
+				exit.RequirementNotMet)
+
 		} else if err != nil {
 			return errors.WithStack(err)
 		}
