@@ -2,6 +2,9 @@ package hermittest
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -84,6 +87,25 @@ func NewEnvTestFixture(t *testing.T, handler http.Handler) *EnvTestFixture {
 	})
 
 	return fixture
+}
+
+func (f *EnvTestFixture) ScriptSums() []string {
+	var sums []string
+	for _, file := range []string{"activate-hermit", "activate-hermit.fish", "hermit"} {
+		path := filepath.Join(f.Env.BinDir(), file)
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			continue
+		}
+		hasher := sha256.New()
+		r, err := os.Open(path)
+		if err != nil {
+			continue
+		}
+		_, _ = io.Copy(hasher, r)
+		_ = r.Close()
+		sums = append(sums, hex.EncodeToString(hasher.Sum(nil)))
+	}
+	return sums
 }
 
 // RootDir returns the directory to the environment package root
