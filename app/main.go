@@ -10,6 +10,8 @@ import (
 	"runtime/pprof"
 	"time"
 
+	"github.com/square/exit"
+
 	"github.com/alecthomas/kong"
 	"github.com/mattn/go-isatty"
 	"github.com/posener/complete"
@@ -294,34 +296,27 @@ func Main(config Config) {
 
 	if pprofPath := cli.getCPUProfile(); pprofPath != "" {
 		f, err := os.Create(pprofPath)
-		fatalIfError(p, err)
+		fatalIfError(p, ctx, err)
 		defer f.Close() // nolint: gosec
 		err = pprof.StartCPUProfile(f)
-		fatalIfError(p, err)
+		fatalIfError(p, ctx, err)
 		defer pprof.StopCPUProfile()
 
 	}
 	if pprofPath := cli.getMemProfile(); pprofPath != "" {
 		f, err := os.Create(pprofPath)
-		fatalIfError(p, err)
+		fatalIfError(p, ctx, err)
 		defer f.Close() // nolint: gosec
 		runtime.GC()    // get up-to-date statistics
 		err = pprof.WriteHeapProfile(f)
-		fatalIfError(p, err)
+		fatalIfError(p, ctx, err)
 	}
 	err = ctx.Run(env, p, sta, config, cli.getGlobalState(), ghClient, defaultHTTPClient, cache, userConfig)
-	if err != nil && p.WillLog(ui.LevelDebug) {
-		p.Fatalf("%+v", err)
-	} else {
-		fatalIfError(p, err)
-	}
+	fatalIfError(p, ctx, err)
 }
 
 func configureLogging(cli cliInterface, ctx *kong.Context, p *ui.UI) {
 	cmd := ctx.Command()
-
-	p.SetExit(ctx.Exit)
-
 	// This is set to avoid logging in environments where quiet flag is not used
 	// in the "hermit" script. This is fragile, and should be removed when we know that all the
 	// environments are using a script with executions done with --quiet
@@ -352,8 +347,9 @@ type bufioSyncer struct{ *bufio.Writer }
 
 func (b *bufioSyncer) Sync() error { return b.Flush() }
 
-func fatalIfError(logger *ui.UI, err error) {
+func fatalIfError(logger *ui.UI, ctx *kong.Context, err error) {
 	if err != nil {
 		logger.Task("hermit").Fatalf("%s", err)
+		ctx.Exit(exit.FromError(err))
 	}
 }

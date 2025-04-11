@@ -188,7 +188,7 @@ func (l *loggingMixin) Errorf(format string, args ...interface{}) {
 	l.logf(LevelError, l.label(), format, args...)
 }
 
-// Fatalf logs a fatal message and exits with a non-zero status.
+// Fatalf logs a message at fatal message
 //
 // Additionally, log output will not be cleared.
 func (l *loggingMixin) Fatalf(format string, args ...interface{}) {

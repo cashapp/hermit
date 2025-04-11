@@ -18,6 +18,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/square/exit"
+
 	"github.com/alecthomas/hcl"
 	"github.com/kballard/go-shellquote"
 
@@ -375,7 +377,10 @@ next:
 				// Fish support was added later. Older hermit envs won't have it.
 				continue next
 			}
-			return errors.Wrapf(err, "%s is missing, not a Hermit environment?", path)
+			return exit.Wrap(
+				errors.Wrapf(err, "%s is missing, not a Hermit environment?", path),
+				exit.RequirementNotMet)
+
 		} else if err != nil {
 			return errors.WithStack(err)
 		}

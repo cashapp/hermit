@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/square/exit"
+
 	"github.com/alecthomas/assert/v2"
 	"github.com/cashapp/hermit"
 	"github.com/cashapp/hermit/envars"
@@ -457,6 +459,36 @@ func TestLoadEnvInfo(t *testing.T) {
 			assert.Equal(t, binDir, info.BinDir)
 		})
 	}
+}
+
+func TestVerify_HermitEnv(t *testing.T) {
+	fixture := hermittest.NewEnvTestFixture(t, nil)
+	defer fixture.Clean()
+
+	info, err := hermit.LoadEnvInfo(fixture.Env.EnvDir())
+	assert.NoError(t, err)
+
+	// Get script checksums from fixture
+	scriptSums := fixture.ScriptSums()
+
+	env, err := hermit.OpenEnv(info, fixture.State, nil, nil, nil, scriptSums)
+	assert.NoError(t, err)
+
+	err = env.Verify()
+	assert.NoError(t, err)
+}
+
+func TestVerify_NonHermitEnv(t *testing.T) {
+	fixture := hermittest.NewEnvTestFixture(t, nil)
+	defer fixture.Clean()
+
+	// Remove hermit binary which is required
+	err := os.Remove(filepath.Join(fixture.Env.BinDir(), "hermit"))
+	assert.NoError(t, err)
+
+	err = fixture.Env.Verify()
+	assert.Error(t, err)
+	assert.Equal(t, exit.RequirementNotMet, exit.FromError(err))
 }
 
 func opsContains[T any](t *testing.T, slice []T, needle T) {
