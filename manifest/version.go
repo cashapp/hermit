@@ -8,10 +8,7 @@ import (
 	"unicode"
 )
 
-var (
-	versionRe      = regexp.MustCompile(`^([^-+a-zA-Z]+)(?:([-]?)([a-zA-Z][^+]*))?(?:(\+)(.+))?$`)
-	versionPartsRe = regexp.MustCompile(`[._]`)
-)
+var versionRe = regexp.MustCompile(`^([^-+a-zA-Z]+)(?:([-]?)([a-zA-Z][^+]*))?(?:(\+)(.+))?$`)
 
 // Version of a package.
 //
@@ -43,11 +40,14 @@ func ParseVersion(version string) Version {
 	if parts == nil {
 		parts = []string{version, version, "", ""}
 	}
+	isSep := func(r rune) bool {
+		return r == '.' || r == '_'
+	}
 	if parts[1] != "" {
-		components = versionPartsRe.Split(parts[1], -1)
+		components = strings.FieldsFunc(parts[1], isSep)
 	}
 	if parts[3] != "" {
-		prerelease = versionPartsRe.Split(parts[3], -1)
+		prerelease = strings.FieldsFunc(parts[3], isSep)
 	}
 	for len(parts) < 6 {
 		parts = append(parts, "")
