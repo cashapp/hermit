@@ -27,10 +27,10 @@ Describe "Hermit"
         The stderr should not be blank
         The variable HERMIT_ENV should equal "$(pwd)"
       End
-      It "fails to activate twice"
+      It "cannot be activated twice"
         . ./bin/activate-hermit
         When call source ./bin/activate-hermit
-        The status should be failure
+        The status should be success
         The stderr should eq "This Hermit environment has already been activated. Skipping"
       End
       It "loads environment variables from the local hermit.hcl"

@@ -194,7 +194,6 @@ EOF
 				. bin/activate-hermit
 				. bin/activate-hermit
 			`,
-			fails:        true,
 			expectations: exp{outputContains("This Hermit environment has already been activated. Skipping")},
 		},
 		{
