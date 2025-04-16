@@ -433,3 +433,91 @@ func TestSearchVersionsAndChannelsCoexist(t *testing.T) {
 	}
 	assert.Equal(t, repr.String(expected, repr.Indent("  ")), repr.String(pkgs, repr.Indent("  ")))
 }
+
+func TestManifestImmutability(t *testing.T) {
+	// Some data from the manifest is copied to newly created Packages. Some
+	// of this data is modified (e.g., for environment variable expansion).
+	// This test ensures that the original manifest is not modified. It
+	// uses a smattering of expansions all over the place in different areas
+	// to try to catch corner cases.
+	files := map[string]string{
+		"test.hcl": `
+			description = "a package"
+			binaries = ["bin-${os}"]
+			env = { "FOO_ENV": "BAR_${version}" }
+			vars = { "FOO_VAR": "something" }
+			dest = "/tmp/foo/${version}"
+			root = "/tmp/foo/${os}"
+			source = "www.example.com/${version}/${os}/2"
+			provides = ["bar-${version}"]
+			on "unpack" {
+				delete {
+					files = ["/tmp/test-${os}"]
+				}
+			}
+
+			version "1.0.0" "1.0.5" {
+				source = "www.example.com/${version}/${os}"
+				requires = ["foo-${os}"]
+				on "activate" {
+					chmod {
+						file = "${root}/foo-${version}"
+						mode = 493
+					}
+				}
+			}
+
+			platform "Linux" {
+				mirrors = ["www.example.com/linux/${version}"]
+				on "install" {
+					mkdir {
+						dir = "${FOO_VAR}"
+					}
+				}
+			}
+			platform "darwin" {
+				mirrors = ["www.example.com/bsd/${version}"]
+			}
+
+			channel stable {
+				source = "www.example.com"
+				version = "*"
+				update = "24h"
+			}
+
+			channel canary {
+				source = "www.example.com/${os}-${arch}"
+				update = "24h"
+				version = "*"
+				on "unpack" {
+					rename {
+						from = "/tmp/bar-${os}"
+						to = "/tmp/test-canary-${version}"
+					}
+				}
+			}
+		`,
+	}
+	config := Config{
+		Env:   "/home/user/project",
+		State: "/home/user/.cache/hermit",
+		Platform: platform.Platform{
+			OS:   "Linux",
+			Arch: "x86_64",
+		},
+	}
+	ffs := vfs.InMemoryFS(files)
+	mft, err := LoadManifestFile(ffs, "test.hcl")
+	assert.NoError(t, err)
+
+	mftCopy, err := LoadManifestFile(ffs, "test.hcl")
+	assert.NoError(t, err)
+
+	refs := mft.References("test")
+
+	for _, ref := range refs {
+		_, err := Resolve(mft, config, ref)
+		assert.NoError(t, err)
+		assert.Equal(t, mft, mftCopy)
+	}
+}
