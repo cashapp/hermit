@@ -5,7 +5,7 @@ set -gx HERMIT_ENV {{.Root}}
 if set -q ACTIVE_HERMIT
     if test "$ACTIVE_HERMIT" = "$HERMIT_ENV"
         echo "This Hermit environment has already been activated. Skipping" >&2
-        return 34
+        return 0
     else if functions -q deactivate-hermit
         set -lx HERMIT_CURRENT_ENV $HERMIT_ENV
         set -gx HERMIT_ENV $ACTIVE_HERMIT

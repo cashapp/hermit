@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+reserved_exit_codes=(
+  34 # previously used for "already activated" hermit environments
+)
+
+fails=false
+
+for file in $@; do
+  for code in "${reserved_exit_codes[@]}"; do
+    if grep -Hn -E "^\s*(exit|return)\s+$code(\s|$)" "$file"; then
+      fails=true
+    fi
+  done
+done
+
+if $fails; then
+  echo -e "\n❌ Reserved exit codes found. Please update with alternative codes."
+  exit 1
+fi
