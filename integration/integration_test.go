@@ -188,7 +188,7 @@ EOF
 			`,
 		},
 		{
-			name: "CannotBeActivatedTwice",
+			name: "ConsidersASecondActivationANoop",
 			script: `
 				hermit init .
 				. bin/activate-hermit

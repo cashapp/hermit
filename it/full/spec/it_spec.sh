@@ -27,7 +27,7 @@ Describe "Hermit"
         The stderr should not be blank
         The variable HERMIT_ENV should equal "$(pwd)"
       End
-      It "cannot be activated twice"
+      It "considers a second activation a noop"
         . ./bin/activate-hermit
         When call source ./bin/activate-hermit
         The status should be success
