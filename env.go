@@ -833,7 +833,7 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 		err = syscall.Exec(bin, argsCopy, env)
 		return errors.Wrapf(err, "%s: failed to execute %q", pkg, bin)
 	}
-	return errors.Errorf("%s: could not find binary %q", pkg, binary)
+	return errors.Errorf("%s: failed to resolve binary %q in installed package - this may indicate a corrupted installation, try removing %s and hermit will reinstall it (may required sudo)", pkg, filepath.Base(binary), pkg.Dest)
 }
 
 func (e *Env) getPackageRuntimeEnvops(pkg *manifest.Package) (envars.Op, error) {
