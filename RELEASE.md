@@ -16,6 +16,7 @@ The following documents the steps taken to create a new release.
 5. Click "Publish Release" to create the release
    - This will trigger the release workflow
    - The workflow will handle building and publishing the release artifacts
+6. Check that the [release workflow](https://github.com/cashapp/hermit/actions/workflows/release.yml) is successful
 
 ## Rolling Back a Release
 
