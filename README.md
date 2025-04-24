@@ -11,6 +11,10 @@ See https://cashapp.github.io/hermit for full documentation.
 
 ![hermit intro screen cast](docs/docs/static/screencasts/using.svg)
 
+## Releasing new versions
+
+For information about the release process, see [RELEASE.md](RELEASE.md).
+
 ---
 
 Copyright 2021 Square, Inc.
