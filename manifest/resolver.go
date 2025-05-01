@@ -3,18 +3,19 @@ package manifest
 import (
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/alecthomas/participle/v2"
 	"github.com/gobwas/glob"
-	"github.com/qdm12/reprint"
 
 	"github.com/cashapp/hermit/envars"
 	"github.com/cashapp/hermit/errors"
@@ -350,8 +351,6 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 		}
 	}
 
-	// Clone the entire manifest, as we mutate stuff.
-	manifest = reprint.This(manifest).(*AnnotatedManifest)
 	// Resolve version in manifest from ref.
 	var foundUpdateInterval time.Duration
 	// Search versions first.
@@ -384,11 +383,9 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 		sort.Strings(knownChannels)
 		if strings.Contains(selector.String(), "@") {
 			tryVersion := strings.ReplaceAll(selector.String(), "@", "-")
-			for _, ver := range knownVersions {
-				if ver == tryVersion {
-					return nil, errors.Wrapf(ErrUnknownPackage, "%s: no channel %s found, did you mean version %s?",
-						manifest.Path, selector, tryVersion)
-				}
+			if slices.Contains(knownVersions, tryVersion) {
+				return nil, errors.Wrapf(ErrUnknownPackage, "%s: no channel %s found, did you mean version %s?",
+					manifest.Path, selector, tryVersion)
 			}
 			return nil, errors.Wrapf(ErrUnknownPackage, "%s: no channel %s found in channels (%s) or versions (%s)",
 				manifest.Path, selector, strings.Join(knownChannels, ", "), strings.Join(knownVersions, ", "))
@@ -437,13 +434,13 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 
 	vars := map[string]string{}
 	layerEnvars := make([]envars.Envars, 0, len(layers))
+	// Because the layers are pointers belonging to the manifest, any data
+	// that may be modified (i.e. environment expansion) must be copied.
 	for _, layer := range layers {
 		if len(layer.Env) > 0 {
-			layerEnvars = append(layerEnvars, layer.Env)
+			layerEnvars = append(layerEnvars, layer.Env.Clone())
 		}
-		for k, v := range layer.Vars {
-			vars[k] = v
-		}
+		maps.Copy(vars, layer.Vars)
 		if layer.Arch != "" {
 			p.Arch = layer.Arch
 		}
@@ -463,7 +460,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 			p.DontExtract = layer.DontExtract
 		}
 		if len(layer.Mirrors) > 0 {
-			p.Mirrors = layer.Mirrors
+			p.Mirrors = append(p.Mirrors, layer.Mirrors...)
 		}
 		if layer.Root != "" {
 			p.Root = layer.Root
@@ -494,9 +491,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 				p.RuntimeDeps = append(p.RuntimeDeps, ref)
 			}
 		}
-		for k, v := range layer.Files {
-			files[k] = v
-		}
+		maps.Copy(files, layer.Files)
 	}
 	// Verify.
 	if len(p.Binaries) == 0 && len(p.Apps) == 0 {
@@ -574,7 +569,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 		}
 	}
 
-	// Expand envars in "s". If "ignoreMissing is true then unknown variable references will be
+	// Expand envars in "s". If "ignoreMissing" is true then unknown variable references will be
 	// passed through unaltered.
 	expand := func(s string, ignoreMissing bool) string {
 		last := ""
@@ -598,6 +593,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 		sort.Slice(ops, func(i, j int) bool { return ops[i].Envar() < ops[j].Envar() })
 		p.Env = append(p.Env, ops...)
 	}
+
 	p.Strip = layers.field("Strip", 0).(int)
 	p.Dest = expand(p.Dest, false)
 	p.Root = expand(p.Root, false)
@@ -616,6 +612,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	for i, mirror := range p.Mirrors {
 		p.Mirrors[i] = expand(mirror, false)
 	}
+
 	// Get sha256 checksum after variable expansion for source, taking care of
 	// autoversion
 	for _, layer := range layers {
@@ -626,6 +623,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 		}
 	}
 	inferPackageRepository(p, manifest.Manifest)
+
 	for _, actions := range p.Triggers {
 		for _, action := range actions {
 			switch action := action.(type) {
@@ -703,6 +701,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+
 	return p, err
 }
 
