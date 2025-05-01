@@ -144,7 +144,10 @@ func (c *Cache) Download(b *ui.Task, checksum, uri string, mirrors ...string) (p
 			time.Sleep(time.Second)
 		}
 	}
-	return "", "", "", errors.Wrap(lastError, uris[len(uris)-1])
+	return "", "", "", &UnavailableError{
+		URI: uris[len(uris)-1],
+		Err: lastError,
+	}
 }
 
 // ETag fetches the etag from given URI if available.
@@ -190,4 +193,24 @@ func (c *Cache) Clean() error {
 func (c *Cache) Path(checksum, uri string) string {
 	base := BasePath(checksum, uri)
 	return filepath.Join(c.root, base)
+}
+
+// UnavailableError returns 101 for the exit code.
+type UnavailableError struct {
+	URI string
+	Err error
+}
+
+// Error returns the error string for the unavailable error
+func (e *UnavailableError) Error() string {
+	msg := e.URI + "%s is unavailable"
+	if e.Err != nil {
+		return fmt.Sprintf("%s: %v", msg, e.Err)
+	}
+	return msg
+}
+
+// ExitCode returns 101 as its exit code
+func (e *UnavailableError) ExitCode() int {
+	return 101
 }
