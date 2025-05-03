@@ -3,7 +3,6 @@ package manifest
 import (
 	"fmt"
 	"io/fs"
-	"os"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -506,92 +505,63 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 		return p, errors.Wrapf(ErrNoSource, "%s: %s", manifest.Path, found)
 	}
 
-	// Expand variables.
-	//
-	// If "ignoreMissing" is false, any referenced variables that are unknown will result in an error.
-	//
-	// TODO: Factor this out (there's a lot of captured state though).
 	home, err := system.UserHomeDir()
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	mapping := func(ignoreMissing bool) func(s string) string {
-		return func(key string) string {
-			switch key {
-			case "name":
-				return found.Name
 
-			case "version":
-				return found.Version.String()
+	// Expand variables.
+	baseMapping := envars.Mapping(config.Env, home, config.Platform)
+	pkgMapping := func(key string) string {
+		val := baseMapping(key)
+		if val != "" {
+			return val
+		}
 
-			case "dest":
-				return layers.field("Dest", p.Dest).(string)
+		switch key {
+		case "name":
+			return found.Name
 
-			case "root":
-				return layers.field("Root", p.Root).(string)
+		case "version":
+			return found.Version.String()
 
-			case "HERMIT_ENV", "env":
-				return config.Env
+		case "dest":
+			return layers.field("Dest", p.Dest).(string)
 
-			case "HERMIT_BIN":
-				return filepath.Join(config.Env, "bin")
+		case "root":
+			return layers.field("Root", p.Root).(string)
 
-			case "os":
-				return config.OS
-
-			case "arch":
-				return config.Arch
-
-			case "xarch":
-				if xarch := platform.ArchToXArch(config.Arch); xarch != "" {
-					return xarch
-				}
-				return config.Arch
-
-			case "HOME":
-				return home
-
-			case "YYYY":
-				return fmt.Sprintf("%04d", time.Now().Year())
-
-			case "MM":
-				return fmt.Sprintf("%02d", time.Now().Month())
-
-			case "DD":
-				return fmt.Sprintf("%02d", time.Now().Day())
-
-			default:
-				value, ok := vars[key]
-				if ok {
-					return value
-				}
-				if ignoreMissing {
-					return "${" + key + "}"
-				}
-				err = errors.Errorf("unknown variable $%s", key)
-				return ""
-			}
+		default:
+			// TODO: Should these extra vars go in envars.Mapping?
+			return vars[key]
 		}
 	}
 
-	// Expand envars in "s". If "ignoreMissing is true then unknown variable references will be
-	// passed through unaltered.
-	expand := func(s string, ignoreMissing bool) string {
-		last := ""
-		for strings.Contains(s, "${") && last != s {
-			last = s
-			s = os.Expand(s, mapping(ignoreMissing))
-			if ignoreMissing {
-				err = nil
-			}
+	// Wrap mapping to handle cases where the varable is undefined.
+	// weakMapping passes unknown variable references through
+	// unaltered.
+	weakMapping := func(key string) string {
+		val := pkgMapping(key)
+		if val == "" {
+			return "${" + key + "}"
 		}
-		return s
+		return val
+	}
+	// mapping sets err when unknown variables are found. This error
+	// is eventually returned by the current function.
+	mapping := func(key string) string {
+		val := pkgMapping(key)
+		if val == "" {
+			err = errors.Errorf("unknown variable $%s", key)
+			return ""
+		}
+		return val
 	}
 
 	for _, env := range layerEnvars {
-		// Expand manifest variables but keep other variable references.
 		for k, v := range env {
-			env[k] = expand(v, true)
+			// Expand manifest variables but keep other variable references.
+			env[k] = envars.Expand(v, weakMapping)
 		}
 		ops := envars.Infer(env.System())
 		// Sort each layer of ops.
@@ -599,22 +569,22 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 		p.Env = append(p.Env, ops...)
 	}
 	p.Strip = layers.field("Strip", 0).(int)
-	p.Dest = expand(p.Dest, false)
-	p.Root = expand(p.Root, false)
-	p.Test = expand(p.Test, false)
+	p.Dest = envars.Expand(p.Dest, mapping)
+	p.Root = envars.Expand(p.Root, mapping)
+	p.Test = envars.Expand(p.Test, mapping)
 	for i, bin := range p.Binaries {
-		p.Binaries[i] = expand(bin, false)
+		p.Binaries[i] = envars.Expand(bin, mapping)
 	}
 	for i, requires := range p.Requires {
-		p.Requires[i] = expand(requires, false)
+		p.Requires[i] = envars.Expand(requires, mapping)
 	}
 	for i, provides := range p.Provides {
-		p.Provides[i] = expand(provides, false)
+		p.Provides[i] = envars.Expand(provides, mapping)
 	}
-	p.Source = expand(p.Source, false)
-	p.SHA256Source = expand(p.SHA256Source, false)
+	p.Source = envars.Expand(p.Source, mapping)
+	p.SHA256Source = envars.Expand(p.SHA256Source, mapping)
 	for i, mirror := range p.Mirrors {
-		p.Mirrors[i] = expand(mirror, false)
+		p.Mirrors[i] = envars.Expand(mirror, mapping)
 	}
 	// Get sha256 checksum after variable expansion for source, taking care of
 	// autoversion
@@ -631,60 +601,60 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 			switch action := action.(type) {
 			case *RunAction:
 				for i, env := range action.Env {
-					action.Env[i] = expand(env, false)
+					action.Env[i] = envars.Expand(env, mapping)
 				}
 				for i, arg := range action.Args {
-					action.Args[i] = expand(arg, false)
+					action.Args[i] = envars.Expand(arg, mapping)
 				}
-				action.Command = expand(action.Command, false)
+				action.Command = envars.Expand(action.Command, mapping)
 				if err := mustAbs(action, action.Command); err != nil {
 					return nil, err
 				}
-				action.Dir = expand(action.Dir, false)
+				action.Dir = envars.Expand(action.Dir, mapping)
 				if err := mustAbs(action, action.Dir); err != nil {
 					return nil, err
 				}
 
 			case *CopyAction:
-				action.From = expand(action.From, false)
-				action.To = expand(action.To, false)
+				action.From = envars.Expand(action.From, mapping)
+				action.To = envars.Expand(action.To, mapping)
 				if err := mustAbs(action, action.To); err != nil {
 					return nil, err
 				}
 
 			case *ChmodAction:
-				action.File = expand(action.File, false)
+				action.File = envars.Expand(action.File, mapping)
 				if err := mustAbs(action, action.File); err != nil {
 					return nil, err
 				}
 
 			case *RenameAction:
-				action.From = expand(action.From, false)
+				action.From = envars.Expand(action.From, mapping)
 				if err := mustAbs(action, action.From); err != nil {
 					return nil, err
 				}
-				action.To = expand(action.To, false)
+				action.To = envars.Expand(action.To, mapping)
 				if err := mustAbs(action, action.To); err != nil {
 					return nil, err
 				}
 
 			case *DeleteAction:
 				for i := range action.Files {
-					action.Files[i] = expand(action.Files[i], false)
+					action.Files[i] = envars.Expand(action.Files[i], mapping)
 					if err := mustAbs(action, action.Files[i]); err != nil {
 						return nil, err
 					}
 				}
 
 			case *MessageAction:
-				action.Text = expand(action.Text, false)
+				action.Text = envars.Expand(action.Text, mapping)
 
 			case *SymlinkAction:
-				action.From = expand(action.From, false)
-				action.To = expand(action.To, false)
+				action.From = envars.Expand(action.From, mapping)
+				action.To = envars.Expand(action.To, mapping)
 
 			case *MkdirAction:
-				action.Dir = expand(action.Dir, false)
+				action.Dir = envars.Expand(action.Dir, mapping)
 
 			default:
 				panic(fmt.Sprintf("unsupported action %T", action))
@@ -697,7 +667,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	}
 
 	for k, v := range files {
-		files[k] = expand(v, false)
+		files[k] = envars.Expand(v, mapping)
 	}
 	err = resolveFiles(manifest, p, files)
 	if err != nil {
