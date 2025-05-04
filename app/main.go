@@ -307,9 +307,11 @@ func Main(config Config) {
 		f, err := os.Create(pprofPath)
 		fatalIfError(p, ctx, err)
 		defer f.Close() // nolint: gosec
-		runtime.GC()    // get up-to-date statistics
-		err = pprof.WriteHeapProfile(f)
-		fatalIfError(p, ctx, err)
+		defer func() {
+			runtime.GC() // get up-to-date statistics
+			err = pprof.Lookup("allocs").WriteTo(f, 0)
+			fatalIfError(p, ctx, err)
+		}()
 	}
 	err = ctx.Run(env, p, sta, config, cli.getGlobalState(), ghClient, defaultHTTPClient, cache, userConfig)
 	fatalIfError(p, ctx, err)
