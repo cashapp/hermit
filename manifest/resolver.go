@@ -126,10 +126,10 @@ func (p *Package) ResolveBinaries() ([]string, error) {
 		bin = path.Join(p.Root, bin)
 		bins, err := filepath.Glob(bin)
 		if err != nil {
-			return nil, errors.Wrapf(err, "%s: failed to find the bin directory - this may indicate a corrupted installation, try removing %s and hermit will reinstall it (may require sudo)", p, p.Dest)
+			return nil, errors.Wrapf(err, "%s: no binaries found matching %q - this may indicate a corrupted or misconfigured package, try removing %s and hermit will reinstall it (may require sudo)", p, bin, p.Dest)
 		}
 		if len(bins) == 0 {
-			return nil, errors.Errorf("%s: failed any binaries in the bin directory - this may indicate a corrupted installation, try removing %s and hermit will reinstall it (may require sudo)", p, p.Dest)
+			return nil, errors.Errorf("%s: no binaries found matching %q - this may indicate a corrupted or misconfigured package, try removing %s and hermit will reinstall it (may require sudo)", p, bin, p.Dest)
 		}
 		binaries = append(binaries, bins...)
 	}
