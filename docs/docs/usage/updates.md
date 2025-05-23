@@ -9,7 +9,7 @@ package definitions every 24 hours. _If you notice a pause when using Hermit,
 this is often the cause._
 
 You can read more about the implications of this on package maintenance
-in the [packaging introduction](../../packaging/introduction#update-policy).
+in the [packaging introduction](../../packaging/reference/#update-policy).
 
 In addition, some packages may define [channels](../../packaging/schema/channel)
 which allow packages to be kept up to date automatically with upstream releases.
