@@ -317,6 +317,25 @@ func TestResolver_Resolve(t *testing.T) {
 			WithVersion("1.0.0").
 			WithSource("www.example.com/foo/bar").
 			Result(),
+	}, {
+		name: "Returns an error when expanding version if channel has no version range",
+		files: map[string]string{
+			`test.hcl`: `
+			description = "test package"
+			binaries = ["bin-${version}"]
+
+			version "1.0.0" {
+				source = "www.example.com"
+			}
+
+			channel "edge" {
+				update = "5h"
+				source = "www.example.com/channels/${version}/test"
+			}
+			`,
+		},
+		reference: "test@edge",
+		wantErr:   "failed to expand ${version} (hint: make sure all channels set a version range)",
 	},
 	}
 	for _, tt := range tests {
