@@ -1,6 +1,7 @@
 package manifest
 
 import (
+	"cmp"
 	"fmt"
 	"io/fs"
 	"path"
@@ -523,7 +524,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 			return found.Name
 
 		case "version":
-			return found.Version.String()
+			return cmp.Or(found.Version.String(), found.Channel)
 
 		case "dest":
 			return layers.field("Dest", p.Dest).(string)

@@ -317,6 +317,31 @@ func TestResolver_Resolve(t *testing.T) {
 			WithVersion("1.0.0").
 			WithSource("www.example.com/foo/bar").
 			Result(),
+	}, {
+		name: "Expands version to channel name if version is not set",
+		files: map[string]string{
+			`test.hcl`: `
+			description = ""
+			binaries = ["bin-${version}"]
+
+			version "1.0.0" {
+				source = "www.example.com"
+			}
+
+			channel "edge" {
+				update = "5h"
+				source = "www.example.com/channels/${version}/test"
+			}
+			`,
+		},
+		reference: "test@edge",
+		wantPkg: manifesttest.NewPkgBuilder(config.State + "/pkg/test@edge").
+			WithName("test").
+			WithBinaries("bin-edge").
+			WithChannel("edge").
+			WithSource("www.example.com/channels/edge/test").
+			WithUpdateInterval(5 * time.Hour).
+			Result(),
 	},
 	}
 	for _, tt := range tests {
