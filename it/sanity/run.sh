@@ -46,6 +46,7 @@ trap afterAll EXIT
 beforeAll
 
 testSubset() {
+  ./bin/hermit update
   ./bin/hermit test openjdk --level=debug
   ./bin/hermit test hermit --level=debug
 }
