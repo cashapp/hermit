@@ -249,6 +249,45 @@ func (s *State) WritePackageState(p *manifest.Package) error {
 	return s.dao.UpdatePackage(p.Reference.String(), pkg)
 }
 
+func (s *State) renameRecursive(b *ui.Task, src, dest string) error {
+	_, err := os.Stat(src)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	// If destination path exists, remove it first
+	if _, err := os.Stat(dest); err == nil {
+		if err := s.removeRecursive(b, dest); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+
+	// Start our renaming task
+	task := b.SubTask("rename")
+	release, err := s.acquireLock(b, "recursively renaming %s to %s", src, dest)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer release() //nolint:errcheck
+
+	task.Debugf("chmod -R +w %s", src)
+	_ = filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		err = os.Chmod(path, info.Mode()|0200)
+
+		if errors.Is(err, os.ErrNotExist) {
+			task.Debugf("file did not exist during removal %q", path)
+			return nil
+		}
+		return errors.WithStack(err)
+	})
+
+	task.Debugf("mv %s %s", src, dest)
+	return errors.WithStack(os.Rename(src, dest))
+}
+
 func (s *State) removeRecursive(b *ui.Task, dest string) error {
 	_, err := os.Stat(dest)
 	if errors.Is(err, os.ErrNotExist) {
@@ -543,16 +582,9 @@ func (s *State) removePackage(task *ui.Task, pkg *manifest.Package) error {
 	}
 	// Evicting the current executing package may cause issues on certain filesystems (ex: NFS)
 	// while the binary is in use. Instead of removing, we rename the package directory instead.
-	if strings.HasPrefix(filepath.Base(pkg.Dest), "hermit@") {
+	if pkg.Reference.Name == "hermit" {
 		newPath := filepath.Join(filepath.Dir(pkg.Dest), fmt.Sprintf(".%s.old", filepath.Base(pkg.Dest)))
-		// If new path exists, remove it first
-		if _, err := os.Stat(newPath); err == nil {
-			if err := s.removeRecursive(task, newPath); err != nil {
-				return errors.WithStack(err)
-			}
-		}
-		task.Debugf("mv %s %s", pkg.Dest, newPath)
-		return errors.WithStack(os.Rename(pkg.Dest, newPath))
+		return errors.WithStack(s.renameRecursive(task, pkg.Dest, newPath))
 	}
 	err = s.removeRecursive(task, pkg.Dest)
 	if err != nil {
