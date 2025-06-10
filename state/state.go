@@ -544,10 +544,12 @@ func (s *State) removePackage(task *ui.Task, pkg *manifest.Package) error {
 	// Evicting the current executing package may cause issues on certain filesystems (ex: NFS)
 	// while the binary is in use. Instead of removing, we rename the package directory instead.
 	if strings.HasPrefix(filepath.Base(pkg.Dest), "hermit@") {
-		newPath := filepath.Join(s.pkgDir, fmt.Sprintf("%s.old", filepath.Base(pkg.Dest)))
+		newPath := filepath.Join(filepath.Dir(pkg.Dest), fmt.Sprintf(".%s.old", filepath.Base(pkg.Dest)))
 		// If new path exists, remove it first
 		if _, err := os.Stat(newPath); err == nil {
-			s.removeRecursive(task, newPath)
+			if err := s.removeRecursive(task, newPath); err != nil {
+				return errors.WithStack(err)
+			}
 		}
 		task.Debugf("mv %s %s", pkg.Dest, newPath)
 		return errors.WithStack(os.Rename(pkg.Dest, newPath))
