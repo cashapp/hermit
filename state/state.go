@@ -262,7 +262,6 @@ func (s *State) renameRecursive(b *ui.Task, src, dest string) error {
 		}
 	}
 
-	// Start our renaming task
 	task := b.SubTask("rename")
 	release, err := s.acquireLock(b, "recursively renaming %s to %s", src, dest)
 	if err != nil {
