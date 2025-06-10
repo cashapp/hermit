@@ -580,8 +580,10 @@ func (s *State) removePackage(task *ui.Task, pkg *manifest.Package) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	// Evicting the current executing package may cause issues on certain filesystems (ex: NFS)
-	// while the binary is in use. Instead of removing, we rename the package directory instead.
+	// When removing hermit itself, we avoid removing the package directory and instead rename it
+	// to avoid issues with the active hermit binary being in use. This is because in certain
+	// environments (like NFSv3), removing a directory that contains an open file
+	// can lead to undefined behavior, such as the directory not being removed until the file is closed.
 	if pkg.Reference.Name == "hermit" {
 		newPath := filepath.Join(filepath.Dir(pkg.Dest), fmt.Sprintf(".%s.old", filepath.Base(pkg.Dest)))
 		return errors.WithStack(s.renameRecursive(task, pkg.Dest, newPath))
