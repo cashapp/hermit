@@ -332,7 +332,10 @@ func (w *UI) Confirmation(message string, args ...interface{}) (bool, error) {
 	w.lock.Lock()
 	defer w.lock.Unlock()
 
-	fmt.Fprintf(w.stdout, "hermit: "+message+"\n", args...)
+	fmt.Fprintf(w.stdout, "hermit: "+message+" ", args...)
+	if err := w.stdout.Sync(); err != nil {
+		return false, errors.WithStack(err)
+	}
 	s := ""
 	if _, err := fmt.Scan(&s); err != nil {
 		return false, errors.WithStack(err)
