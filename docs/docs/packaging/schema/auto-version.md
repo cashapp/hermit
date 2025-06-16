@@ -12,6 +12,7 @@ Used by: [version](../version#blocks)
 | Block  | Description |
 |--------|-------------|
 | [`html { … }`](../html) | Extract version information from a HTML URL using XPath. |
+| [`json { … }`](../json) | Extract version information from a JSON URL using JSONPath. |
 
 ## Attributes
 

@@ -54,6 +54,9 @@ require (
 	github.com/riywo/loginshell v0.0.0-20200815045211-7d26008be1ab // indirect
 	github.com/saracen/go7z-fixtures v0.0.0-20190623165746-aa6b8fba1d2f // indirect
 	github.com/saracen/solidblock v0.0.0-20190426153529-45df20abab6f // indirect
+	github.com/tidwall/gjson v1.18.0 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/ulikunitz/xz v0.5.12 // indirect
 	golang.org/x/crypto v0.39.0 // indirect
 	golang.org/x/text v0.26.0 // indirect
