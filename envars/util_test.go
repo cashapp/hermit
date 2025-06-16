@@ -56,6 +56,24 @@ func TestExpandMapping(t *testing.T) {
 				"${os}-${arch}-${xarch}": "foo-bar-bar",
 			},
 		},
+		{
+			name: "escaped vars",
+			mapping: func(s string) string {
+				switch s {
+				case "$":
+					return "$$"
+				case "foo":
+					return "bar"
+				default:
+					return ""
+				}
+			},
+			wantExpand: map[string]string{
+				"$foo ${foo}":             "bar bar",
+				"$$foo $${foo} ${$}{foo}": "$foo ${foo} ${foo}",
+				"$$$foo":                  "$bar",
+			},
+		},
 	}
 
 	for _, tc := range cases {
@@ -65,6 +83,19 @@ func TestExpandMapping(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExpandNoEscape(t *testing.T) {
+	assert.Equal(t, "$$foo", ExpandNoEscape("$$foo", func(s string) string {
+		switch s {
+		case "$":
+			return "$$"
+		case "foo":
+			return "bar"
+		default:
+			return ""
+		}
+	}))
 }
 
 func TestExpandDateTime(t *testing.T) {

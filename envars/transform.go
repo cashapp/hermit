@@ -51,6 +51,10 @@ func (t *Transform) To(env Envars) {
 
 // get a value.
 func (t *Transform) get(key string) (string, bool) {
+	// Escape "$$" to "$".
+	if key == "$" {
+		return "$", true
+	}
 	if v, ok := t.dest[key]; ok {
 		return v, ok
 	}

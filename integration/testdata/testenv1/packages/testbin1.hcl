@@ -1,5 +1,9 @@
 description = "Test package one"
-env = {FOO: "bar", TESTBIN1VERSION: "${version}"}
+env = {
+  FOO: "bar",
+  TESTBIN1VERSION: "${version}",
+  MY_TEMPLATE: "$$FOO"
+}
 source = "${env}/packages/testbin1.tgz"
 binaries = ["testbin1"]
 on install {

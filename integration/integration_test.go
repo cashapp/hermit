@@ -442,22 +442,30 @@ EOF
 			hermit install envprovider-1.0.0
 			hermit install parentbin
 
-      # Install before activating because automatic env var updates
-      # only work when at least one second has passed since the HERMIT_ENV
-      # dir was modified.
-      ./child_environment/bin/hermit install envprovider-1.0.1
+			# Install before activating because automatic env var updates
+			# only work when at least one second has passed since the HERMIT_ENV
+			# dir was modified.
+			./child_environment/bin/hermit install envprovider-1.0.1
 			. child_environment/bin/activate-hermit
 
-      assert test "$VARIABLE" = "1.0.1"
-      assert test "$(parentbin.sh)" = "parentenv: envprovider-1.0.0"
+			assert test "$VARIABLE" = "1.0.1"
+			assert test "$(parentbin.sh)" = "parentenv: envprovider-1.0.0"
 			`,
 		},
 		{
 			name:         "MissingActivateFishShellFileIsValidEnv",
 			preparations: prep{fixture("testenv1"), activate(".")},
+			script: `hermit validate env .`,
+		},
+		{
+			name: "owie",
+			preparations: prep{fixture("testenv1")},
 			script: `
-            hermit validate env .
-`,
+			./bin/hermit install testbin1
+			. bin/activate-hermit
+			assert test "$ESCAPED" = '${DONT_EXPAND_ME}'
+			assert test "$MY_TEMPLATE" = '$FOO'
+			`,
 		},
 	}
 
