@@ -160,3 +160,28 @@ func TestJSONHeaders(t *testing.T) {
 	})
 	assert.NoError(t, err)
 }
+
+func TestJSONVariableExtraction(t *testing.T) {
+	client := &http.Client{
+		Transport: testHTTPClient{
+			path: "testdata/gke.http",
+		},
+	}
+
+	result, err := extractFromJSON(client, &manifest.AutoVersionBlock{
+		JSON: &manifest.JSONAutoVersionBlock{
+			URL:  "http://example.com/gke.http",
+			Path: "components.#(id==\"gke-gcloud-auth-plugin-linux-x86_64\").version.version_string",
+			Vars: map[string]string{
+				"build_number": "components.#(id==\"gke-gcloud-auth-plugin-linux-x86_64\").version.build_number",
+			},
+			SHA256Path: "components.#(id==\"gke-gcloud-auth-plugin-linux-x86_64\").data.checksum",
+		},
+		VersionPattern: "(.*)",
+	})
+
+	assert.NoError(t, err)
+	assert.Equal(t, "0.5.12", result.Version)
+	assert.Equal(t, "20250117151628", result.Variables["build_number"])
+	assert.Equal(t, "a1b2c3d4e5f6789012345678901234567890123456789012345678901234567890", result.SHA256)
+}

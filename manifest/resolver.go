@@ -1,8 +1,11 @@
 package manifest
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"io/fs"
+	"net/http"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -14,6 +17,7 @@ import (
 	"github.com/alecthomas/participle/v2"
 	"github.com/gobwas/glob"
 	"github.com/qdm12/reprint"
+	"github.com/tidwall/gjson"
 
 	"github.com/cashapp/hermit/envars"
 	"github.com/cashapp/hermit/errors"
@@ -38,6 +42,8 @@ type Config struct {
 	Env string
 	// State path where packages are installed.
 	State string
+	// HTTP client for JSON auto-version requests.
+	HTTPClient *http.Client
 	platform.Platform
 }
 
@@ -87,6 +93,7 @@ type Package struct {
 	Dest                 string
 	Test                 string
 	Strip                int
+	Vars                 map[string]string
 	Triggers             map[Event][]Action  `json:"-"` // Triggers keyed by event.
 	UpdateInterval       time.Duration       // How often should we check for updates? 0, if never
 	Files                []*ResolvedFileRef  `json:"-"`
@@ -419,6 +426,20 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 		return nil, errors.WithStack(err)
 	}
 
+	// Find auto-version configuration for JSON variable resolution.
+	var autoVersionConfig *AutoVersionBlock
+	for _, v := range manifest.Versions {
+		for _, version := range v.Version {
+			if version == found.Version.String() && v.AutoVersion != nil && v.AutoVersion.JSON != nil {
+				autoVersionConfig = v.AutoVersion
+				break
+			}
+		}
+		if autoVersionConfig != nil {
+			break
+		}
+	}
+
 	if found.IsChannel() {
 		channel := manifest.ChannelByName(found.Channel)
 		if channel != nil && channel.Version != "" {
@@ -532,6 +553,13 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 			return layers.field("Root", p.Root).(string)
 
 		default:
+			// Handle JSON variable extraction
+			if strings.HasPrefix(key, "json:") && autoVersionConfig != nil && autoVersionConfig.JSON != nil && config.HTTPClient != nil {
+				jsonPath := key[5:] // Remove "json:" prefix
+				if value, err := resolveJSONVariable(config.HTTPClient, autoVersionConfig.JSON, jsonPath); err == nil {
+					return value
+				}
+			}
 			// TODO: Should these extra vars go in envars.Mapping?
 			return vars[key]
 		}
@@ -590,7 +618,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	// autoversion
 	for _, layer := range layers {
 		if layer.SHA256 != "" {
-			p.SHA256 = layer.SHA256
+			p.SHA256 = envars.Expand(layer.SHA256, mapping)
 		} else if sum, ok := manifest.SHA256Sums[p.Source]; ok {
 			p.SHA256 = sum
 		}
@@ -673,6 +701,13 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+	
+	// Populate resolved variables for package
+	p.Vars = make(map[string]string)
+	for k, v := range vars {
+		p.Vars[k] = envars.Expand(v, mapping)
+	}
+	
 	return p, err
 }
 
@@ -796,4 +831,55 @@ func mustAbs(action Action, path string) error {
 		return nil
 	}
 	return participle.Errorf(action.position(), "%q must be an absolute path", path)
+}
+
+// resolveJSONVariable fetches JSON data and extracts a value using JSONPath.
+func resolveJSONVariable(client *http.Client, jsonConfig *JSONAutoVersionBlock, path string) (string, error) {
+	req, err := http.NewRequestWithContext(context.Background(), "GET", jsonConfig.URL, nil)
+	if err != nil {
+		return "", errors.Wrapf(err, "could not create request for JSON variable")
+	}
+
+	// Add custom headers if specified
+	for key, value := range jsonConfig.Headers {
+		req.Header.Set(key, value)
+	}
+
+	// Set default Accept header if not specified
+	if req.Header.Get("Accept") == "" {
+		req.Header.Set("Accept", "application/json")
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", errors.Wrapf(err, "could not retrieve JSON data")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", errors.Errorf("%s: HTTP %d", jsonConfig.URL, resp.StatusCode)
+	}
+
+	// Read the entire response body for gjson parsing
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", errors.Wrapf(err, "could not read response body")
+	}
+
+	// Validate that it's valid JSON
+	if !gjson.ValidBytes(body) {
+		return "", errors.Errorf("invalid JSON response from %s", jsonConfig.URL)
+	}
+
+	// Extract the value using JSONPath
+	result := gjson.GetBytes(body, path)
+	if !result.Exists() {
+		return "", errors.Errorf("JSONPath query %s matched no results", path)
+	}
+
+	if result.Type == gjson.String {
+		return result.String(), nil
+	}
+	// For non-string values, use the raw JSON
+	return result.Raw, nil
 }

@@ -30,6 +30,7 @@ require (
 	github.com/saracen/go7z v0.0.0-20191010121135-9c09b6bd7fda
 	github.com/sassoftware/go-rpmutils v0.4.0
 	github.com/square/exit v1.3.0
+	github.com/tidwall/gjson v1.18.0
 	github.com/willabides/kongplete v0.4.0
 	github.com/willdonnelly/passwd v0.0.0-20141013001024-7935dab3074c
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
@@ -54,7 +55,6 @@ require (
 	github.com/riywo/loginshell v0.0.0-20200815045211-7d26008be1ab // indirect
 	github.com/saracen/go7z-fixtures v0.0.0-20190623165746-aa6b8fba1d2f // indirect
 	github.com/saracen/solidblock v0.0.0-20190426153529-45df20abab6f // indirect
-	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/ulikunitz/xz v0.5.12 // indirect
