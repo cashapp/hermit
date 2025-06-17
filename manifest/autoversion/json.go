@@ -20,7 +20,7 @@ type JSONExtractionResult struct {
 	SHA256    string
 }
 
-// Auto-version by extracting version information from a JSON URL using JSONPath.
+// Auto-version by extracting version information from a JSON URL using gjson path syntax.
 func jsonAutoVersion(client *http.Client, autoVersion *manifest.AutoVersionBlock) (version string, err error) {
 	result, err := extractFromJSON(client, autoVersion)
 	if err != nil {
@@ -128,11 +128,11 @@ func extractFromJSON(client *http.Client, autoVersion *manifest.AutoVersionBlock
 	return result, nil
 }
 
-// extractVersions extracts version strings from JSON data using gjson JSONPath.
+// extractVersions extracts version strings from JSON data using gjson path syntax.
 func extractVersions(data []byte, path string) ([]string, error) {
 	result := gjson.GetBytes(data, path)
 	if !result.Exists() {
-		return nil, errors.Errorf("JSONPath query %s matched no results", path)
+		return nil, errors.Errorf("gjson path query %s matched no results", path)
 	}
 
 	var candidates []string
@@ -155,11 +155,11 @@ func extractVersions(data []byte, path string) ([]string, error) {
 	return candidates, nil
 }
 
-// extractValues extracts arbitrary values from JSON data using gjson JSONPath.
+// extractValues extracts arbitrary values from JSON data using gjson path syntax.
 func extractValues(data []byte, path string) ([]string, error) {
 	result := gjson.GetBytes(data, path)
 	if !result.Exists() {
-		return nil, errors.Errorf("JSONPath query %s matched no results", path)
+		return nil, errors.Errorf("gjson path query %s matched no results", path)
 	}
 
 	var candidates []string

@@ -91,7 +91,7 @@ func (c *Layer) match(arch string) bool {
 type AutoVersionBlock struct {
 	GitHubRelease string                `hcl:"github-release,optional" help:"GitHub <user>/<repo> to retrieve and update versions from the releases API."`
 	HTML          *HTMLAutoVersionBlock `hcl:"html,block" help:"Extract version information from a HTML URL using XPath."`
-	JSON          *JSONAutoVersionBlock `hcl:"json,block" help:"Extract version information from a JSON URL using JSONPath."`
+	JSON          *JSONAutoVersionBlock `hcl:"json,block" help:"Extract version information from a JSON URL using gjson path syntax."`
 	GitTags       string                `hcl:"git-tags,optional" help:"Git remote URL to fetch git tags for version extraction."`
 
 	VersionPattern        string `hcl:"version-pattern,optional" help:"Regex with one capture group to extract the version number from the origin." default:"v?(.*)"`
@@ -108,10 +108,10 @@ type HTMLAutoVersionBlock struct {
 // JSONAutoVersionBlock defines how version numbers can be extracted from JSON.
 type JSONAutoVersionBlock struct {
 	URL        string            `hcl:"url" help:"URL to retrieve JSON from."`
-	Path       string            `hcl:"path" help:"JSONPath expression for selecting versions from JSON."`
+	Path       string            `hcl:"path" help:"gjson path expression for selecting versions from JSON."`
 	Headers    map[string]string `hcl:"headers,optional" help:"HTTP headers to send with the request."`
-	Vars       map[string]string `hcl:"vars,optional" help:"Additional variables to extract from JSON using JSONPath expressions."`
-	SHA256Path string            `hcl:"sha256-path,optional" help:"JSONPath expression for extracting SHA256 checksum."`
+	Vars       map[string]string `hcl:"vars,optional" help:"Additional variables to extract from JSON using gjson path expressions."`
+	SHA256Path string            `hcl:"sha256-path,optional" help:"gjson path expression for extracting SHA256 checksum."`
 }
 
 // PlatformBlock matches a set of attributes describing a platform (eg. CPU, OS, etc.)

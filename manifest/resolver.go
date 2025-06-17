@@ -833,7 +833,7 @@ func mustAbs(action Action, path string) error {
 	return participle.Errorf(action.position(), "%q must be an absolute path", path)
 }
 
-// resolveJSONVariable fetches JSON data and extracts a value using JSONPath.
+// resolveJSONVariable fetches JSON data and extracts a value using gjson path syntax.
 func resolveJSONVariable(client *http.Client, jsonConfig *JSONAutoVersionBlock, path string) (string, error) {
 	req, err := http.NewRequestWithContext(context.Background(), "GET", jsonConfig.URL, nil)
 	if err != nil {
@@ -871,10 +871,10 @@ func resolveJSONVariable(client *http.Client, jsonConfig *JSONAutoVersionBlock, 
 		return "", errors.Errorf("invalid JSON response from %s", jsonConfig.URL)
 	}
 
-	// Extract the value using JSONPath
+	// Extract the value using gjson path syntax
 	result := gjson.GetBytes(body, path)
 	if !result.Exists() {
-		return "", errors.Errorf("JSONPath query %s matched no results", path)
+		return "", errors.Errorf("gjson path query %s matched no results", path)
 	}
 
 	if result.Type == gjson.String {
