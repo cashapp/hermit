@@ -58,7 +58,7 @@ version "1.0.0" {
 	// Create a temporary file for testing
 	tmpDir := t.TempDir()
 	manifestPath := filepath.Join(tmpDir, "test.hcl")
-	err := os.WriteFile(manifestPath, []byte(manifestContent), 0644)
+	err := os.WriteFile(manifestPath, []byte(manifestContent), 0600)
 	assert.NoError(t, err)
 
 	// Run auto-version
@@ -94,14 +94,14 @@ version "1.0.0" {
 	// Check that vars and sha256 were written back
 	var varsFound bool
 	var sha256Found bool
-	
+
 	for _, entry := range versionBlock.Body {
 		if entry.Attribute != nil {
 			switch entry.Attribute.Key {
 			case "vars":
 				varsFound = true
 				assert.True(t, entry.Attribute.Value.HaveMap, "vars should be a map")
-				
+
 				// Check that the expected variables are present
 				varMap := make(map[string]string)
 				for _, mapEntry := range entry.Attribute.Value.Map {
@@ -111,7 +111,7 @@ version "1.0.0" {
 				}
 				assert.Equal(t, "20250117151628", varMap["build_number"])
 				assert.Equal(t, "abc123def456", varMap["commit_sha"])
-				
+
 			case "sha256":
 				sha256Found = true
 				assert.True(t, entry.Attribute.Value.Str != nil)
@@ -119,7 +119,7 @@ version "1.0.0" {
 			}
 		}
 	}
-	
+
 	assert.True(t, varsFound, "vars should be written back to the manifest")
 	assert.True(t, sha256Found, "sha256 should be written back to the manifest")
 }

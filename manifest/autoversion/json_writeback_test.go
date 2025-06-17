@@ -56,7 +56,7 @@ version "1.0.0" {
 	// Create a temporary file for testing
 	tmpDir := t.TempDir()
 	manifestPath := filepath.Join(tmpDir, "test.hcl")
-	err := os.WriteFile(manifestPath, []byte(manifestContent), 0644)
+	err := os.WriteFile(manifestPath, []byte(manifestContent), 0600)
 	assert.NoError(t, err)
 
 	// Run auto-version
@@ -67,7 +67,6 @@ version "1.0.0" {
 	// Read the updated manifest
 	updatedContent, err := os.ReadFile(manifestPath)
 	assert.NoError(t, err)
-	
 
 	// Parse the updated manifest to verify the changes
 	ast, err := hcl.ParseBytes(updatedContent)
@@ -92,18 +91,15 @@ version "1.0.0" {
 
 	// Check that sha256 was written back
 	var sha256Found bool
-	
+
 	for _, entry := range versionBlock.Body {
-		if entry.Attribute != nil {
-			switch entry.Attribute.Key {
-			case "sha256":
-				sha256Found = true
-				assert.True(t, entry.Attribute.Value.Str != nil)
-				assert.Equal(t, "a1b2c3d4e5f6", *entry.Attribute.Value.Str)
-			}
+		if entry.Attribute != nil && entry.Attribute.Key == "sha256" {
+			sha256Found = true
+			assert.True(t, entry.Attribute.Value.Str != nil)
+			assert.Equal(t, "a1b2c3d4e5f6", *entry.Attribute.Value.Str)
 		}
 	}
-	
+
 	assert.True(t, sha256Found, "sha256 should be written back to the manifest")
 }
 

@@ -420,7 +420,6 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 		return nil, errors.WithStack(err)
 	}
 
-
 	if found.IsChannel() {
 		channel := manifest.ChannelByName(found.Channel)
 		if channel != nil && channel.Version != "" {
@@ -675,13 +674,13 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	
+
 	// Populate resolved variables for package
 	p.Vars = make(map[string]string)
 	for k, v := range vars {
 		p.Vars[k] = envars.Expand(v, mapping)
 	}
-	
+
 	return p, err
 }
 
@@ -806,4 +805,3 @@ func mustAbs(action Action, path string) error {
 	}
 	return participle.Errorf(action.position(), "%q must be an absolute path", path)
 }
-

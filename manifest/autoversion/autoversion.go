@@ -102,13 +102,10 @@ blocks:
 
 		foundLatestVersion = true
 		block.version.Labels = append(block.version.Labels, result.Version)
-		
+
 		// Write back variables and SHA256 for JSON auto-version
 		if block.autoVersion.JSON != nil {
-			err = writeBackJSONData(block.version, result)
-			if err != nil {
-				return "", errors.Wrap(err, block.version.Pos.String())
-			}
+			writeBackJSONData(block.version, result)
 		}
 	}
 
@@ -160,28 +157,21 @@ func parseVersionBlockFromManifest(ast *hcl.AST) ([]versionBlock, error) {
 }
 
 // writeBackJSONData writes variables and SHA256 from JSON auto-version extraction back to the version block.
-func writeBackJSONData(versionBlock *hcl.Block, result *AutoVersionResult) error {
+func writeBackJSONData(versionBlock *hcl.Block, result *AutoVersionResult) {
 	// Write variables if any were extracted
 	if len(result.Variables) > 0 {
-		err := upsertVarsInBlock(versionBlock, result.Variables)
-		if err != nil {
-			return errors.WithStack(err)
-		}
+		upsertVarsInBlock(versionBlock, result.Variables)
 	}
-	
+
 	// Write SHA256 if extracted
 	if result.SHA256 != "" {
-		err := upsertSHA256InBlock(versionBlock, result.SHA256)
-		if err != nil {
-			return errors.WithStack(err)
-		}
+		upsertSHA256InBlock(versionBlock, result.SHA256)
 	}
-	
-	return nil
+
 }
 
 // upsertVarsInBlock adds or updates the vars map in a version block.
-func upsertVarsInBlock(block *hcl.Block, variables map[string]string) error {
+func upsertVarsInBlock(block *hcl.Block, variables map[string]string) {
 	// Find existing vars entry
 	var varsEntry *hcl.Entry
 	for _, entry := range block.Body {
@@ -190,7 +180,7 @@ func upsertVarsInBlock(block *hcl.Block, variables map[string]string) error {
 			break
 		}
 	}
-	
+
 	// Create vars map value
 	varsMap := &hcl.Value{HaveMap: true}
 	for key, value := range variables {
@@ -199,7 +189,7 @@ func upsertVarsInBlock(block *hcl.Block, variables map[string]string) error {
 			Value: &hcl.Value{Str: &value},
 		})
 	}
-	
+
 	if varsEntry == nil {
 		// Create new vars entry
 		varsEntry = &hcl.Entry{
@@ -235,12 +225,10 @@ func upsertVarsInBlock(block *hcl.Block, variables map[string]string) error {
 			varsEntry.Attribute.Value = varsMap
 		}
 	}
-	
-	return nil
 }
 
 // upsertSHA256InBlock adds or updates the sha256 field in a version block.
-func upsertSHA256InBlock(block *hcl.Block, sha256 string) error {
+func upsertSHA256InBlock(block *hcl.Block, sha256 string) {
 	// Find existing sha256 entry
 	var sha256Entry *hcl.Entry
 	for _, entry := range block.Body {
@@ -249,7 +237,7 @@ func upsertSHA256InBlock(block *hcl.Block, sha256 string) error {
 			break
 		}
 	}
-	
+
 	if sha256Entry == nil {
 		// Create new sha256 entry
 		sha256Entry = &hcl.Entry{
@@ -263,6 +251,4 @@ func upsertSHA256InBlock(block *hcl.Block, sha256 string) error {
 		// Update existing sha256
 		sha256Entry.Attribute.Value = &hcl.Value{Str: &sha256}
 	}
-	
-	return nil
 }
