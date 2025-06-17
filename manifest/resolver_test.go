@@ -316,6 +316,7 @@ func TestResolver_Resolve(t *testing.T) {
 			WithBinaries("bin").
 			WithVersion("1.0.0").
 			WithSource("www.example.com/foo/bar").
+			WithVars(map[string]string{"path": "foo/bar"}).
 			Result(),
 	},
 	}
