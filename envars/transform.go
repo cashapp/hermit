@@ -51,7 +51,10 @@ func (t *Transform) To(env Envars) {
 
 // get a value.
 func (t *Transform) get(key string) (string, bool) {
-	// Escape "$$" to "$".
+	// [os.Expand] does not allow you to escape "$", so we handle
+	// it here. If a string contains e.g. "$${foo}", we will receive
+	// "$" as an argument here. Simply return "$" to have that end
+	// up expanding to "${foo}".
 	if key == "$" {
 		return "$", true
 	}
