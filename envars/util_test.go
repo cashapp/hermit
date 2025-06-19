@@ -69,7 +69,7 @@ func TestExpandMapping(t *testing.T) {
 				}
 			},
 			wantExpand: map[string]string{
-				"$foo ${foo}":             "bar bar",
+				"$foo ${foo}":             "bar bar", //nolint:dupword
 				"$$foo $${foo} ${$}{foo}": "$foo ${foo} ${foo}",
 				"$$$foo":                  "$bar",
 			},
