@@ -538,9 +538,9 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	}
 
 	// Wrap mapping to handle cases where the varable is undefined.
-	// weakMapping passes unknown variable references through
+	// envarMapping passes unknown variable references through
 	// unaltered.
-	weakMapping := func(key string) string {
+	envarMapping := func(key string) string {
 		val := pkgMapping(key)
 		if val == "" {
 			return "${" + key + "}"
@@ -561,7 +561,9 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	for _, env := range layerEnvars {
 		for k, v := range env {
 			// Expand manifest variables but keep other variable references.
-			env[k] = envars.Expand(v, weakMapping)
+			// Envars are expanded again while applying envar Ops, so we need to
+			// preserve any instances of "$$" to be escaped later.
+			env[k] = envars.ExpandNoEscape(v, envarMapping)
 		}
 		ops := envars.Infer(env.System())
 		// Sort each layer of ops.
