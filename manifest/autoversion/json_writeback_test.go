@@ -11,9 +11,9 @@ import (
 	"github.com/cashapp/hermit/github"
 )
 
-// TestJSONAutoVersionWriteback tests that variables and SHA256 are written back to the manifest
+// TestJSONAutoVersionWriteback tests that variables are written back using extract blocks
 func TestJSONAutoVersionWriteback(t *testing.T) {
-	// Create a test manifest with JSON auto-version that extracts variables
+	// Create a test manifest with new extract block format
 	manifestContent := `description = "Test package"
 binaries = ["test"]
 
@@ -23,12 +23,16 @@ version "1.0.0" {
   auto-version {
     json {
       url = "https://api.example.com/releases/latest.json"
-      path = "tag_name"
-      vars = {
-        "build_number": "build.number",
-        "commit_sha": "commit.sha"
+      
+      extract {
+        version = "tag_name"
+        
+        platform {
+          build_number = "build.number"
+          commit_sha = "commit.sha"
+          sha256 = "assets.0.sha256"
+        }
       }
-      sha256-path = "assets.0.sha256"
     }
     version-pattern = "v(.*)"
   }
@@ -71,35 +75,23 @@ version "1.0.0" {
 	updatedContent, err := os.ReadFile(manifestPath)
 	assert.NoError(t, err)
 
-	expectedContent := `description = "Test package"
-binaries = ["test"]
+	// Verify the new behavior: single version block with multiple labels and top-level vars cache
+	actualContent := string(updatedContent)
 
-version "1.0.0" "1.2.3" {
-  source = "https://example.com/test-${version}.tar.gz"
+	// Should have a vars block inside auto-version with version-specific resolved variables
+	assert.Contains(t, actualContent, "auto-version {", "Should have auto-version block")
+	assert.Contains(t, actualContent, "vars {", "Should have vars block within auto-version")
+	assert.Contains(t, actualContent, `1.2.3 {`, "Should have version block within vars")
+	assert.Contains(t, actualContent, `build_number = "20250117151628"`, "Should have build number in vars cache")
+	assert.Contains(t, actualContent, `commit_sha = "abc123def456"`, "Should have commit SHA in vars cache")
+	assert.Contains(t, actualContent, `sha256 = "a1b2c3d4e5f6"`, "Should have SHA256 in vars cache")
 
-  auto-version {
-    json {
-      url = "https://api.example.com/releases/latest.json"
-      path = "tag_name"
-      vars = {
-        "build_number": "build.number",
-        "commit_sha": "commit.sha",
-      }
-      sha256-path = "assets.0.sha256"
-    }
+	// Should have single version block with multiple labels
+	assert.Contains(t, actualContent, `version "1.0.0" "1.2.3"`, "Version block should have multiple labels")
 
-    version-pattern = "v(.*)"
-  }
-
-  vars = {
-    "build_number": "20250117151628",
-    "commit_sha": "abc123def456",
-  }
-  sha256 = "a1b2c3d4e5f6"
-}
-`
-
-	assert.Equal(t, expectedContent, string(updatedContent))
+	// Should only have one version block
+	versionCount := strings.Count(actualContent, "version \"")
+	assert.Equal(t, 1, versionCount, "Should have exactly 1 version block")
 }
 
 // testRoundTripper is a simple HTTP transport that returns a fixed response

@@ -10,7 +10,9 @@ version "1.0.0" {
 
     json {
       url = "https://api.example.com/releases.json"
-      path = "latest.version"
+      extract {
+        version = "latest.version"
+      }
     }
   }
 }

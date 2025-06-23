@@ -1,15 +1,19 @@
 package autoversion
 
 import (
+	"context"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 
 	"github.com/alecthomas/hcl"
+	"github.com/tidwall/gjson"
 
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/github"
-	hmanifest "github.com/cashapp/hermit/manifest"
+	"github.com/cashapp/hermit/manifest"
 )
 
 // GitHubClient is the GitHub API subset that we need for auto-versioning.
@@ -19,7 +23,7 @@ type GitHubClient interface {
 }
 
 type versionBlock struct {
-	autoVersion *hmanifest.AutoVersionBlock
+	autoVersion *manifest.AutoVersionBlock
 	version     *hcl.Block
 }
 
@@ -66,15 +70,10 @@ blocks:
 				result = &AutoVersionResult{Version: latestVersion}
 			}
 		case block.autoVersion.JSON != nil:
-			jsonResult, jsonErr := extractFromJSON(httpClient, block.autoVersion)
-			err = jsonErr
-			if err == nil && jsonResult != nil {
-				latestVersion = jsonResult.Version
-				result = &AutoVersionResult{
-					Version:   jsonResult.Version,
-					Variables: jsonResult.Variables,
-					SHA256:    jsonResult.SHA256,
-				}
+			// New extract block approach only
+			latestVersion, err = extractVersionFromExtractBlock(httpClient, block.autoVersion)
+			if err == nil && latestVersion != "" {
+				result = &AutoVersionResult{Version: latestVersion}
 			}
 		case block.autoVersion.GitTags != "":
 			latestVersion, err = gitTagsAutoVersion(block.autoVersion)
@@ -101,11 +100,20 @@ blocks:
 		}
 
 		foundLatestVersion = true
+
+		// Add new version label (consistent with other auto-version types)
 		block.version.Labels = append(block.version.Labels, result.Version)
 
-		// Write back variables and SHA256 for JSON auto-version
+		// For JSON auto-version, extract variables and write vars cache to auto-version block
 		if block.autoVersion.JSON != nil {
-			writeBackJSONData(block.version, result)
+			// Extract all variables from the extract block
+			versionData, err := extractJSONVariablesFromExtractBlock(httpClient, block.autoVersion.JSON, result.Version)
+			if err != nil {
+				return "", errors.Wrap(err, block.version.Pos.String())
+			}
+
+			// Write vars cache to the auto-version block in AST
+			writeAutoVersionVarsCache(block.version, result.Version, versionData)
 		}
 	}
 
@@ -140,7 +148,7 @@ func parseVersionBlockFromManifest(ast *hcl.AST) ([]versionBlock, error) {
 	// Find auto-version info if any.
 	err := hcl.Visit(ast, func(node hcl.Node, next func() error) error {
 		if node, ok := node.(*hcl.Block); ok && node.Name == "auto-version" {
-			autoVersion := &hmanifest.AutoVersionBlock{}
+			autoVersion := &manifest.AutoVersionBlock{}
 			if err := hcl.UnmarshalBlock(node, autoVersion); err != nil {
 				return errors.WithStack(err)
 			}
@@ -156,99 +164,284 @@ func parseVersionBlockFromManifest(ast *hcl.AST) ([]versionBlock, error) {
 	return blocks, nil
 }
 
-// writeBackJSONData writes variables and SHA256 from JSON auto-version extraction back to the version block.
-func writeBackJSONData(versionBlock *hcl.Block, result *AutoVersionResult) {
-	// Write variables if any were extracted
-	if len(result.Variables) > 0 {
-		upsertVarsInBlock(versionBlock, result.Variables)
+// extractVersionFromExtractBlock extracts the version using the extract.version path
+func extractVersionFromExtractBlock(client *http.Client, autoVersion *manifest.AutoVersionBlock) (string, error) {
+	if autoVersion.JSON == nil || autoVersion.JSON.Extract == nil {
+		return "", errors.New("extract block not found in JSON auto-version configuration")
 	}
 
-	// Write SHA256 if extracted
-	if result.SHA256 != "" {
-		upsertSHA256InBlock(versionBlock, result.SHA256)
+	// Fetch JSON data
+	req, err := http.NewRequestWithContext(context.Background(), "GET", autoVersion.JSON.URL, nil)
+	if err != nil {
+		return "", errors.Wrapf(err, "could not create request for auto-version information")
 	}
 
+	// Add custom headers
+	for key, value := range autoVersion.JSON.Headers {
+		req.Header.Set(key, value)
+	}
+
+	// Set default Accept header if not specified
+	if req.Header.Get("Accept") == "" {
+		req.Header.Set("Accept", "application/json")
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", errors.Wrapf(err, "could not retrieve auto-version information")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", errors.Errorf("HTTP %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", errors.Wrapf(err, "could not read response body")
+	}
+
+	// Parse JSON and extract version
+	if !gjson.ValidBytes(body) {
+		return "", errors.Errorf("invalid JSON response")
+	}
+
+	result := gjson.GetBytes(body, autoVersion.JSON.Extract.Version)
+	if !result.Exists() {
+		return "", errors.Errorf("version path %q matched no results", autoVersion.JSON.Extract.Version)
+	}
+
+	version := result.String()
+
+	// Apply version pattern if specified
+	if autoVersion.VersionPattern != "" {
+		versionRe, err := regexp.Compile(autoVersion.VersionPattern)
+		if err != nil {
+			return "", errors.WithStack(err)
+		}
+		groups := versionRe.FindStringSubmatch(version)
+		if groups == nil {
+			return "", errors.Errorf("version %q does not match pattern %q", version, autoVersion.VersionPattern)
+		}
+		version = groups[1]
+	}
+
+	return version, nil
 }
 
-// upsertVarsInBlock adds or updates the vars map in a version block.
-func upsertVarsInBlock(block *hcl.Block, variables map[string]string) {
-	// Find existing vars entry
-	var varsEntry *hcl.Entry
-	for _, entry := range block.Body {
-		if entry.Attribute != nil && entry.Attribute.Key == "vars" {
-			varsEntry = entry
+// extractJSONVariablesFromExtractBlock extracts all variables from the extract block
+func extractJSONVariablesFromExtractBlock(client *http.Client, jsonConfig *manifest.JSONAutoVersionBlock, _ string) (map[string]map[string]string, error) {
+	if jsonConfig.Extract == nil {
+		return make(map[string]map[string]string), nil
+	}
+
+	// Fetch JSON data
+	req, err := http.NewRequestWithContext(context.Background(), "GET", jsonConfig.URL, nil)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not create request for variable extraction")
+	}
+
+	// Add custom headers
+	for key, value := range jsonConfig.Headers {
+		req.Header.Set(key, value)
+	}
+
+	// Set default Accept header if not specified
+	if req.Header.Get("Accept") == "" {
+		req.Header.Set("Accept", "application/json")
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not retrieve JSON for variable extraction")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.Errorf("HTTP %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not read response body")
+	}
+
+	// Parse JSON and extract variables for each platform
+	if !gjson.ValidBytes(body) {
+		return nil, errors.Errorf("invalid JSON response")
+	}
+
+	result := make(map[string]map[string]string)
+
+	// Extract Darwin variables
+	if jsonConfig.Extract.Darwin != nil {
+		platformVars := make(map[string]string)
+		if jsonConfig.Extract.Darwin.BuildNumber != "" {
+			value := gjson.GetBytes(body, jsonConfig.Extract.Darwin.BuildNumber)
+			if value.Exists() {
+				platformVars["build_number"] = value.String()
+			}
+		}
+		if jsonConfig.Extract.Darwin.SHA256 != "" {
+			value := gjson.GetBytes(body, jsonConfig.Extract.Darwin.SHA256)
+			if value.Exists() {
+				platformVars["sha256"] = value.String()
+			}
+		}
+		if jsonConfig.Extract.Darwin.CommitSHA != "" {
+			value := gjson.GetBytes(body, jsonConfig.Extract.Darwin.CommitSHA)
+			if value.Exists() {
+				platformVars["commit_sha"] = value.String()
+			}
+		}
+		if len(platformVars) > 0 {
+			result["darwin"] = platformVars
+		}
+	}
+
+	// Extract Linux variables
+	if jsonConfig.Extract.Linux != nil {
+		platformVars := make(map[string]string)
+		if jsonConfig.Extract.Linux.BuildNumber != "" {
+			value := gjson.GetBytes(body, jsonConfig.Extract.Linux.BuildNumber)
+			if value.Exists() {
+				platformVars["build_number"] = value.String()
+			}
+		}
+		if jsonConfig.Extract.Linux.SHA256 != "" {
+			value := gjson.GetBytes(body, jsonConfig.Extract.Linux.SHA256)
+			if value.Exists() {
+				platformVars["sha256"] = value.String()
+			}
+		}
+		if jsonConfig.Extract.Linux.CommitSHA != "" {
+			value := gjson.GetBytes(body, jsonConfig.Extract.Linux.CommitSHA)
+			if value.Exists() {
+				platformVars["commit_sha"] = value.String()
+			}
+		}
+		if len(platformVars) > 0 {
+			result["linux"] = platformVars
+		}
+	}
+
+	// Extract Platform variables
+	for _, platformBlock := range jsonConfig.Extract.Platform {
+		platformVars := make(map[string]string)
+		if platformBlock.BuildNumber != "" {
+			value := gjson.GetBytes(body, platformBlock.BuildNumber)
+			if value.Exists() {
+				platformVars["build_number"] = value.String()
+			}
+		}
+		if platformBlock.SHA256 != "" {
+			value := gjson.GetBytes(body, platformBlock.SHA256)
+			if value.Exists() {
+				platformVars["sha256"] = value.String()
+			}
+		}
+		if platformBlock.CommitSHA != "" {
+			value := gjson.GetBytes(body, platformBlock.CommitSHA)
+			if value.Exists() {
+				platformVars["commit_sha"] = value.String()
+			}
+		}
+		if len(platformVars) > 0 {
+			// For platform blocks, we need to determine the platform name
+			// For now, we'll use "platform" as the key - this might need refinement
+			result["platform"] = platformVars
+		}
+	}
+
+	return result, nil
+}
+
+// writeAutoVersionVarsCache writes a vars block inside the auto-version block
+func writeAutoVersionVarsCache(versionBlock *hcl.Block, version string, versionData map[string]map[string]string) {
+	if len(versionData) == 0 {
+		return
+	}
+
+	// Find the auto-version block within the version block
+	var autoVersionBlock *hcl.Block
+	for _, entry := range versionBlock.Body {
+		if entry.Block != nil && entry.Block.Name == "auto-version" {
+			autoVersionBlock = entry.Block
 			break
 		}
 	}
 
-	// Create vars map value
-	varsMap := &hcl.Value{HaveMap: true}
-	for key, value := range variables {
-		varsMap.Map = append(varsMap.Map, &hcl.MapEntry{
-			Key:   &hcl.Value{Str: &key},
-			Value: &hcl.Value{Str: &value},
+	if autoVersionBlock == nil {
+		return // No auto-version block found
+	}
+
+	// Find or create vars block within auto-version
+	var varsBlock *hcl.Block
+	for _, entry := range autoVersionBlock.Body {
+		if entry.Block != nil && entry.Block.Name == "vars" {
+			varsBlock = entry.Block
+			break
+		}
+	}
+
+	if varsBlock == nil {
+		// Create new vars block
+		varsBlock = &hcl.Block{
+			Name: "vars",
+			Body: []*hcl.Entry{},
+		}
+		autoVersionBlock.Body = append(autoVersionBlock.Body, &hcl.Entry{
+			Block: varsBlock,
 		})
 	}
 
-	if varsEntry == nil {
-		// Create new vars entry
-		varsEntry = &hcl.Entry{
-			Attribute: &hcl.Attribute{
-				Key:   "vars",
-				Value: varsMap,
-			},
+	// Create version block within vars
+	newVersionBlock := &hcl.Block{
+		Name:   version,
+		Labels: []string{},
+		Body:   []*hcl.Entry{},
+	}
+
+	// Add platform blocks or top-level vars
+	for platform, vars := range versionData {
+		if len(vars) == 0 {
+			continue
 		}
-		block.Body = append(block.Body, varsEntry)
-	} else {
-		// Update existing vars - merge with existing variables
-		if varsEntry.Attribute.Value.HaveMap {
-			// Merge new variables with existing ones
-			for key, value := range variables {
-				// Check if variable already exists
-				found := false
-				for _, mapEntry := range varsEntry.Attribute.Value.Map {
-					if mapEntry.Key.Str != nil && *mapEntry.Key.Str == key {
-						mapEntry.Value = &hcl.Value{Str: &value}
-						found = true
-						break
-					}
-				}
-				if !found {
-					varsEntry.Attribute.Value.Map = append(varsEntry.Attribute.Value.Map, &hcl.MapEntry{
-						Key:   &hcl.Value{Str: &key},
+
+		if platform == "" {
+			// Top-level variables (no platform block)
+			for key, value := range vars {
+				newVersionBlock.Body = append(newVersionBlock.Body, &hcl.Entry{
+					Attribute: &hcl.Attribute{
+						Key:   key,
 						Value: &hcl.Value{Str: &value},
-					})
-				}
+					},
+				})
 			}
 		} else {
-			// Replace with new vars map
-			varsEntry.Attribute.Value = varsMap
-		}
-	}
-}
+			// Platform-specific variables
+			platformBlock := &hcl.Block{
+				Name: platform,
+				Body: []*hcl.Entry{},
+			}
 
-// upsertSHA256InBlock adds or updates the sha256 field in a version block.
-func upsertSHA256InBlock(block *hcl.Block, sha256 string) {
-	// Find existing sha256 entry
-	var sha256Entry *hcl.Entry
-	for _, entry := range block.Body {
-		if entry.Attribute != nil && entry.Attribute.Key == "sha256" {
-			sha256Entry = entry
-			break
+			for key, value := range vars {
+				platformBlock.Body = append(platformBlock.Body, &hcl.Entry{
+					Attribute: &hcl.Attribute{
+						Key:   key,
+						Value: &hcl.Value{Str: &value},
+					},
+				})
+			}
+
+			newVersionBlock.Body = append(newVersionBlock.Body, &hcl.Entry{
+				Block: platformBlock,
+			})
 		}
 	}
 
-	if sha256Entry == nil {
-		// Create new sha256 entry
-		sha256Entry = &hcl.Entry{
-			Attribute: &hcl.Attribute{
-				Key:   "sha256",
-				Value: &hcl.Value{Str: &sha256},
-			},
-		}
-		block.Body = append(block.Body, sha256Entry)
-	} else {
-		// Update existing sha256
-		sha256Entry.Attribute.Value = &hcl.Value{Str: &sha256}
-	}
+	// Add version block to vars
+	varsBlock.Body = append(varsBlock.Body, &hcl.Entry{
+		Block: newVersionBlock,
+	})
 }
