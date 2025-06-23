@@ -87,6 +87,7 @@ type Package struct {
 	Dest                 string
 	Test                 string
 	Strip                int
+	Vars                 map[string]string
 	Triggers             map[Event][]Action  `json:"-"` // Triggers keyed by event.
 	UpdateInterval       time.Duration       // How often should we check for updates? 0, if never
 	Files                []*ResolvedFileRef  `json:"-"`
@@ -592,7 +593,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	// autoversion
 	for _, layer := range layers {
 		if layer.SHA256 != "" {
-			p.SHA256 = layer.SHA256
+			p.SHA256 = envars.Expand(layer.SHA256, mapping)
 		} else if sum, ok := manifest.SHA256Sums[p.Source]; ok {
 			p.SHA256 = sum
 		}
@@ -675,6 +676,13 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+
+	// Populate resolved variables for package
+	p.Vars = make(map[string]string)
+	for k, v := range vars {
+		p.Vars[k] = envars.Expand(v, mapping)
+	}
+
 	return p, err
 }
 
