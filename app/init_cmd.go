@@ -7,8 +7,8 @@ import (
 )
 
 type initCmd struct {
-	NoGit   bool     `help:"Disable Hermit's automatic management of Git'"`
-	Idea    bool     `help:"Enable Hermit's automatic addition of its IntelliJ IDEA plugin"`
+	Git     bool     `negatable:"" help:"Disable Hermit's automatic management of Git'"`
+	Idea    bool     `negatable:"" help:"Enable Hermit's automatic addition of its IntelliJ IDEA plugin"`
 	Sources []string `help:"Sources to sync package manifests from."`
 	Dir     string   `arg:"" help:"Directory to create environment in (${default})." default:"${env}" predictor:"dir"`
 }
@@ -34,7 +34,7 @@ func (i *initCmd) Run(w *ui.UI, config Config, userConfig UserConfig) error {
 	if i.Sources != nil {
 		hermitConfig.Sources = i.Sources
 	}
-	if i.NoGit {
+	if !i.Git {
 		hermitConfig.ManageGit = false
 	}
 	if i.Idea {
