@@ -126,10 +126,10 @@ func (p *Package) ResolveBinaries() ([]string, error) {
 		bin = path.Join(p.Root, bin)
 		bins, err := filepath.Glob(bin)
 		if err != nil {
-			return nil, errors.Wrapf(err, "%s: failed to find the bin directory - this may indicate a corrupted installation, try removing %s and hermit will reinstall it (may require sudo)", p, p.Dest)
+			return nil, errors.Wrapf(err, "%s: no binaries found matching %q - this may indicate a corrupted or misconfigured package, try removing %s and hermit will reinstall it (may require sudo)", p, bin, p.Dest)
 		}
 		if len(bins) == 0 {
-			return nil, errors.Errorf("%s: failed any binaries in the bin directory - this may indicate a corrupted installation, try removing %s and hermit will reinstall it (may require sudo)", p, p.Dest)
+			return nil, errors.Errorf("%s: no binaries found matching %q - this may indicate a corrupted or misconfigured package, try removing %s and hermit will reinstall it (may require sudo)", p, bin, p.Dest)
 		}
 		binaries = append(binaries, bins...)
 	}
@@ -538,9 +538,9 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	}
 
 	// Wrap mapping to handle cases where the varable is undefined.
-	// weakMapping passes unknown variable references through
+	// envarMapping passes unknown variable references through
 	// unaltered.
-	weakMapping := func(key string) string {
+	envarMapping := func(key string) string {
 		val := pkgMapping(key)
 		if val == "" {
 			return "${" + key + "}"
@@ -561,7 +561,9 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	for _, env := range layerEnvars {
 		for k, v := range env {
 			// Expand manifest variables but keep other variable references.
-			env[k] = envars.Expand(v, weakMapping)
+			// Envars are expanded again while applying envar Ops, so we need to
+			// preserve any instances of "$$" to be escaped later.
+			env[k] = envars.ExpandNoEscape(v, envarMapping)
 		}
 		ops := envars.Infer(env.System())
 		// Sort each layer of ops.

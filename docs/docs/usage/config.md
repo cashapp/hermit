@@ -7,7 +7,9 @@ Each Hermit environment contains a `bin/hermit.hcl` file that can be used to cus
 ```hcl
 // Extra environment variables to be added to the Hermit environment.
 //
-// Can prepend/append to existing variables, eg. "$PATH:${HERMIT_ENV}/scripts"
+// Other variables can be expanded, allowing you to prepend/append to
+// existing variables, eg. "$PATH:${HERMIT_ENV}/scripts". To prevent
+// undesired expansion, escape using $$, eg. "TEMPLATE": "foo-$${bar}".
 //
 // These values are managed by the `hermit env` command.
 env = {
