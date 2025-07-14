@@ -31,6 +31,14 @@ type UserConfig struct {
 	Defaults    hermit.Config `hcl:"defaults,block,optional" help:"Default configuration values for new Hermit environments."`
 }
 
+func NewUserConfigWithDefaults() UserConfig {
+	return UserConfig{
+		Defaults: hermit.Config{
+			ManageGit: true,
+		},
+	}
+}
+
 // IsUserConfigExists checks if the user config file exists at the given path.
 func IsUserConfigExists(configPath string) bool {
 	_, err := os.Stat(kong.ExpandPath(configPath))
@@ -39,7 +47,7 @@ func IsUserConfigExists(configPath string) bool {
 
 // LoadUserConfig from disk.
 func LoadUserConfig(configPath string) (UserConfig, error) {
-	config := UserConfig{}
+	config := NewUserConfigWithDefaults()
 	// always return a valid config on error, with defaults set.
 	_ = hcl.Unmarshal([]byte{}, &config)
 	data, err := os.ReadFile(kong.ExpandPath(configPath))

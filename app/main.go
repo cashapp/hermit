@@ -253,7 +253,7 @@ func Main(config Config) {
 	parser.FatalIfErrorf(err)
 	configureLogging(cli, ctx, p)
 
-	var userConfig UserConfig
+	userConfig := NewUserConfigWithDefaults()
 	userConfigPath := cli.getUserConfigFile()
 
 	if IsUserConfigExists(userConfigPath) {
