@@ -272,8 +272,8 @@ func Main(config Config) {
 		log.Fatalf("failed to open state: %s", err)
 	}
 
+	var sourceRewriters []sources.URLRewriter
 	if isActivated {
-		var sourceRewriters []sources.URLRewriter
 		if matcher != nil {
 			sourceRewriters = append(sourceRewriters, github.AuthenticatedURLRewriter(githubToken, matcher))
 		}
@@ -313,7 +313,7 @@ func Main(config Config) {
 			fatalIfError(p, ctx, err)
 		}()
 	}
-	err = ctx.Run(env, p, sta, config, cli.getGlobalState(), ghClient, defaultHTTPClient, cache, userConfig)
+	err = ctx.Run(env, p, sta, config, cli.getGlobalState(), ghClient, defaultHTTPClient, cache, userConfig, sourceRewriters)
 	fatalIfError(p, ctx, err)
 }
 
