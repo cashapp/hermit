@@ -9,9 +9,9 @@ require (
 	github.com/alecthomas/assert/v2 v2.11.0
 	github.com/alecthomas/colour v0.1.0
 	github.com/alecthomas/hcl v0.5.5
-	github.com/alecthomas/kong v1.12.0
+	github.com/alecthomas/kong v1.12.1
 	github.com/alecthomas/participle/v2 v2.1.4
-	github.com/alecthomas/repr v0.4.0
+	github.com/alecthomas/repr v0.5.1
 	github.com/andybalholm/cascadia v1.3.3
 	github.com/antchfx/htmlquery v1.3.4
 	github.com/antchfx/xpath v1.3.4
