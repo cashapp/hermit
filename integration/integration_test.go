@@ -101,6 +101,36 @@ func TestIntegration(t *testing.T) {
 			},
 		},
 		{
+			name: "InitBasicDefaultsToTrue",
+			script: `
+				# Remove the user config file created by test framework to test "no config" path
+				rm -f "$HERMIT_USER_CONFIG"
+				hermit init .
+				echo "Generated bin/hermit.hcl content:"
+				cat bin/hermit.hcl
+			`,
+			expectations: exp{
+				filesExist("bin/hermit.hcl"),
+				fileDoesNotContain("bin/hermit.hcl", "manage-git"), // Should be omitted when true
+			},
+		},
+		{
+			name: "InitWithEmptyUserConfigDefaultsToTrue",
+			script: `
+				# Test user config file exists but has no defaults block
+				cat > "$HERMIT_USER_CONFIG" <<EOF
+prompt = "none"
+EOF
+				hermit init .
+				echo "Generated bin/hermit.hcl content:"
+				cat bin/hermit.hcl
+			`,
+			expectations: exp{
+				filesExist("bin/hermit.hcl"),
+				fileDoesNotContain("bin/hermit.hcl", "manage-git"), // Should be omitted when true
+			},
+		},
+		{
 			name: "InitWithUserConfigDefaults",
 			script: `
 				cat > "$HERMIT_USER_CONFIG" <<EOF
@@ -442,22 +472,30 @@ EOF
 			hermit install envprovider-1.0.0
 			hermit install parentbin
 
-      # Install before activating because automatic env var updates
-      # only work when at least one second has passed since the HERMIT_ENV
-      # dir was modified.
-      ./child_environment/bin/hermit install envprovider-1.0.1
+			# Install before activating because automatic env var updates
+			# only work when at least one second has passed since the HERMIT_ENV
+			# dir was modified.
+			./child_environment/bin/hermit install envprovider-1.0.1
 			. child_environment/bin/activate-hermit
 
-      assert test "$VARIABLE" = "1.0.1"
-      assert test "$(parentbin.sh)" = "parentenv: envprovider-1.0.0"
+			assert test "$VARIABLE" = "1.0.1"
+			assert test "$(parentbin.sh)" = "parentenv: envprovider-1.0.0"
 			`,
 		},
 		{
 			name:         "MissingActivateFishShellFileIsValidEnv",
 			preparations: prep{fixture("testenv1"), activate(".")},
+			script:       `hermit validate env .`,
+		},
+		{
+			name:         "owie",
+			preparations: prep{fixture("testenv1")},
 			script: `
-            hermit validate env .
-`,
+			./bin/hermit install testbin1
+			. bin/activate-hermit
+			assert test "$ESCAPED" = '${DONT_EXPAND_ME}'
+			assert test "$MY_TEMPLATE" = '$FOO'
+			`,
 		},
 	}
 
@@ -758,7 +796,8 @@ func fileDoesNotContain(path, regex string) expectation {
 		t.Helper()
 		data, err := os.ReadFile(filepath.Join(dir, path))
 		assert.NoError(t, err)
-		assert.False(t, regexp.MustCompile(regex).Match(data))
+		assert.False(t, regexp.MustCompile(regex).Match(data),
+			"file '%s' contents should not contain '%s' and didn't.  Contents was \n%s)", path, regex, data)
 	}
 }
 

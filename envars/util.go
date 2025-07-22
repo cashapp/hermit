@@ -10,7 +10,7 @@ import (
 	"github.com/cashapp/hermit/platform"
 )
 
-// Parse a KEY=VALUE list of environment variables into an Envars map.
+// Parse a KEY=VALUE list of environment variables into an [Envars] map.
 func Parse(envars []string) Envars {
 	env := make(Envars, len(envars))
 	for _, envar := range envars {
@@ -20,9 +20,8 @@ func Parse(envars []string) Envars {
 	return env
 }
 
-// Expand repeatedly expands s until the mapping function stops making
-// substitutions. This is useful for variables that reference other variables.
-func Expand(s string, mapping func(string) string) string {
+// ExpandNoEscape behaves the same as [Expand] but without replacing "$$" with "$".
+func ExpandNoEscape(s string, mapping func(string) string) string {
 	last := ""
 	for last != s {
 		last = s
@@ -31,8 +30,15 @@ func Expand(s string, mapping func(string) string) string {
 	return s
 }
 
+// Expand repeatedly expands s until the mapping function stops making
+// substitutions. This is useful for variables that reference other variables.
+// Instances of "$$" are escaped to "$".
+func Expand(s string, mapping func(string) string) string {
+	return strings.ReplaceAll(ExpandNoEscape(s, mapping), "$$", "$")
+}
+
 // Mapping returns a function that expands hermit variables. The function can
-// be passed to Expand.
+// be passed to [Expand]. Instances of "$$" are left unexpanded.
 func Mapping(env, home string, p platform.Platform) func(s string) string {
 	return func(key string) string {
 		switch key {
@@ -65,6 +71,15 @@ func Mapping(env, home string, p platform.Platform) func(s string) string {
 
 		case "DD":
 			return fmt.Sprintf("%02d", time.Now().Day())
+
+		case "$":
+			// Pass through "$$" unmodified. [os.Expand] does not provide the ability
+			// to escape "$", so we need to handle it ourselves. Since [Expand] loops until
+			// no more changes are made, we cannot transform "$$" to "$" or else the result
+			// itself will be expanded. For example, "$$foo" -> "$foo" -> "value_of_foo".
+			// See https://github.com/golang/go/issues/43482
+			return "$$"
+
 		default:
 			return ""
 		}

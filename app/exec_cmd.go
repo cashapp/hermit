@@ -13,6 +13,7 @@ import (
 	"github.com/cashapp/hermit/cache"
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/manifest"
+	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/state"
 	"github.com/cashapp/hermit/ui"
 	"github.com/cashapp/hermit/util/debug"
@@ -23,7 +24,7 @@ type execCmd struct {
 	Args   []string `arg:"" help:"Arguments to pass to executable (use -- to separate)." optional:""`
 }
 
-func (e *execCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, globalState GlobalState, config Config, defaultHTTPClient *http.Client) error {
+func (e *execCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, globalState GlobalState, config Config, defaultHTTPClient *http.Client, sourceRewriters []sources.URLRewriter) error {
 	envDir, err := hermit.FindEnvDir(e.Binary)
 	if err != nil {
 		return errors.WithStack(err)
@@ -34,7 +35,7 @@ func (e *execCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, globalStat
 	}
 
 	// Pass config.SHA256Sums because OpenEnv uses the defaults cashapp/hermit; internal builds inject additional SHA256Sums.
-	env, err := hermit.OpenEnv(envInfo, sta, cache.GetSource, globalState.Env, defaultHTTPClient, config.SHA256Sums)
+	env, err := hermit.OpenEnv(envInfo, sta, cache.GetSource, globalState.Env, defaultHTTPClient, config.SHA256Sums, sourceRewriters...)
 	if err != nil {
 		return errors.WithStack(err)
 	}
