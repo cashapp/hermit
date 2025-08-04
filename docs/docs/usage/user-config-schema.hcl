@@ -8,7 +8,8 @@ short-prompt = boolean # (optional)
 no-git = boolean # (optional)
 # If true Hermit will try to add the IntelliJ IDEA plugin automatically.
 idea = boolean # (optional)
-
+# If true, use GitHub CLI (gh) for token authentication instead of environment variables.
+gh-cli-auth = boolean # (optional)
 # Default configuration values for new Hermit environments.
 defaults {
   # Extra environment variables.

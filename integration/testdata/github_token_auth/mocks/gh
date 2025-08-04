@@ -1,0 +1,19 @@
+#!/bin/sh
+
+if [ "$1" = "auth" ] && [ "$2" = "token" ]; then
+    echo "gh $*" >> gh-calls
+
+    # Check if we should simulate a failure
+    if [ -n "$GH_AUTH_FAIL" ]; then
+        echo "no oauth token found for github.com" >&2
+        echo "gh auth token failed (simulated)" >> gh-failures
+        exit 1
+    fi
+
+    echo "mock-gh-token"
+    exit 0
+fi
+
+# Log all other invocations as errors
+echo "ERROR: gh $* (unexpected command)" >> gh-calls
+exit 1
