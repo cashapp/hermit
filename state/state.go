@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/cashapp/hermit/archive"
@@ -284,7 +285,24 @@ func (s *State) renameRecursive(b *ui.Task, src, dest string) error {
 	})
 
 	task.Debugf("mv %s %s", src, dest)
-	return errors.WithStack(os.Rename(src, dest))
+
+	if err := os.Rename(src, dest); err != nil {
+		// If the rename fails with EXDEV, it means the source and destination are on different filesystems.
+		// In this case, we read the source file and write it to the destination path.
+		if errors.Is(err, syscall.EXDEV) {
+			input, rerr := os.ReadFile(src)
+			if rerr != nil {
+				return errors.WithStack(rerr)
+			}
+			if werr := os.WriteFile(dest, input, 0o755); werr != nil {
+				return errors.WithStack(werr)
+			}
+			return errors.WithStack(os.Remove(src))
+		}
+		return errors.WithStack(err)
+	}
+
+	return nil
 }
 
 func (s *State) removeRecursive(b *ui.Task, dest string) error {
