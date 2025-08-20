@@ -294,7 +294,7 @@ func (s *State) renameRecursive(b *ui.Task, src, dest string) error {
 			if rerr != nil {
 				return errors.WithStack(rerr)
 			}
-			if werr := os.WriteFile(dest, input, 0o755); werr != nil {
+			if werr := os.WriteFile(dest, input, 0o600); werr != nil {
 				return errors.WithStack(werr)
 			}
 			return errors.WithStack(os.Remove(src))
