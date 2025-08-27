@@ -42,6 +42,17 @@ func New(stateDir string, sources []Source) *Sources {
 	}
 }
 
+func (s *Sources) LocalDirs() []string {
+	var out []string
+	for _, source := range s.sources {
+		if local, ok := source.(*LocalSource); ok {
+			dir := strings.TrimPrefix(local.fs.uri, "env:///")
+			out = append(out, dir)
+		}
+	}
+	return out
+}
+
 // Prepend a new source
 func (s *Sources) Prepend(source Source) {
 	s.sources = append([]Source{source}, s.sources...)

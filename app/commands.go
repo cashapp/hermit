@@ -84,6 +84,7 @@ type activated struct {
 	Env        envCmd               `cmd:"" help:"Manage environment variables." group:"env"`
 	Validate   activatedValidateCmd `cmd:"" help:"Hermit validation." group:"global"`
 	AddDigests addDigestsCmd        `cmd:"" help:"Add digests for all versions/platforms to the input manifest files." group:"global"`
+	Bundle     bundleCmd            `cmd:"" help:"Expand packages from the current environment into a target directory." group:"env"`
 
 	Clean cleanCmd `cmd:"" help:"Clean hermit cache." group:"global"`
 	GC    gcCmd    `cmd:"" hidden:"" group:"global"`

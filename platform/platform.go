@@ -1,5 +1,10 @@
 package platform
 
+import (
+	"maps"
+	"slices"
+)
+
 // Amd64 architecture
 const Amd64 = "amd64"
 
@@ -24,10 +29,28 @@ func (p Platform) String() string {
 	return p.OS + "-" + p.Arch
 }
 
+type Platforms []Platform
+
+func (p Platforms) Arches() []string {
+	arches := map[string]bool{}
+	for _, platform := range p {
+		arches[platform.Arch] = true
+	}
+	return slices.Collect(maps.Keys(arches))
+}
+
+func (p Platforms) OSes() []string {
+	oses := map[string]bool{}
+	for _, platform := range p {
+		oses[platform.OS] = true
+	}
+	return slices.Collect(maps.Keys(oses))
+}
+
 // Core platforms officially supported by Hermit.
 //
 // For a package to be considered fully compliant, these platforms need to be supported
-var Core = []Platform{
+var Core = Platforms{
 	{Linux, Amd64},
 	{Darwin, Amd64},
 	{Darwin, Arm64},
@@ -36,9 +59,12 @@ var Core = []Platform{
 // Optional platforms supported on a best-effort basis.
 //
 // Fully compliant packages are not required to support these platforms
-var Optional = []Platform{
+var Optional = Platforms{
 	{Linux, Arm64},
 }
+
+// All platforms supported by Hermit.
+var All = append(Core, Optional...)
 
 var xarch = map[string]string{
 	Amd64: "x86_64",

@@ -360,6 +360,37 @@ func OpenEnv(
 	}, nil
 }
 
+// WithState returns a new Env with the given state.
+func (e Env) WithState(state *state.State) *Env {
+	e.state = state
+	e.lazyResolver = nil
+	return &e
+}
+
+// WithBinDir returns a new Env with the given binary directory.
+func (e Env) WithBinDir(dir string) *Env {
+	e.binDir = dir
+	return &e
+}
+
+// WithEnvDir returns a new Env with the given environment directory.
+//
+// Any env-relative sources will result in symlinked paths back to the original environment from the new environment.
+func (e Env) WithEnvDir(l *ui.UI, dir string) (*Env, error) {
+	sources, err := e.sources(l)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	// Symlink local source directories back to the original directory...this is not foolproof sadly.
+	for _, localDir := range sources.LocalDirs() {
+		if err := os.Symlink(filepath.Join(e.envDir, localDir), filepath.Join(dir, localDir)); err != nil {
+			return nil, errors.WithStack(err)
+		}
+	}
+	e.envDir = dir
+	return &e, nil
+}
+
 // Root directory of the environment.
 func (e *Env) Root() string {
 	return e.envDir
@@ -1502,8 +1533,9 @@ func (e *Env) resolver(l *ui.UI) (*manifest.Resolver, error) {
 		return nil, errors.WithStack(err)
 	}
 	resolver, err := manifest.New(sources, manifest.Config{
-		Env:   e.envDir,
-		State: e.state.Root(),
+		Env:    e.envDir,
+		State:  e.state.Root(),
+		PkgDir: e.state.PkgDir(),
 		Platform: platform.Platform{
 			OS:   runtime.GOOS,
 			Arch: runtime.GOARCH,
