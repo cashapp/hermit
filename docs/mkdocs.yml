@@ -20,54 +20,55 @@ strict: false
 ####################################################################################################
 nav:
   - Home:
-    - index.md
+      - index.md
   - About:
-    - about/index.md
+      - about/index.md
   - Supported SDKs:
       - sdks/index.md
   - Usage:
-    - usage/index.md
-    - Get Started: usage/get-started.md
-    - usage/ci.md
-    - usage/config.md
-    - usage/envars.md
-    - usage/ide.md
-    - usage/management.md
-    - usage/recipes.md
-    - usage/renovate.md
-    - usage/shell.md
-    - usage/updates.md
-    - usage/user-config.md
+      - usage/index.md
+      - Get Started: usage/get-started.md
+      - usage/bundle.md
+      - usage/ci.md
+      - usage/config.md
+      - usage/envars.md
+      - usage/ide.md
+      - usage/management.md
+      - usage/recipes.md
+      - usage/renovate.md
+      - usage/shell.md
+      - usage/updates.md
+      - usage/user-config.md
   - FAQ:
-    - faq/index.md
+      - faq/index.md
   - Packaging:
-    - packaging/index.md
-    - packaging/private.md
-    - packaging/reference.md
-    - packaging/tutorial.md
-    - Schema:
-      - packaging/schema/index.md
-      - packaging/schema/auto-version.md
-      - packaging/schema/channel.md
-      - packaging/schema/darwin.md
-      - packaging/schema/html.md
-      - packaging/schema/linux.md
-      - packaging/schema/manifest.md
-      - packaging/schema/platform.md
-      - packaging/schema/version.md
-      - packaging/schema/on.md
-      - packaging/schema/chmod.md
-      - packaging/schema/copy.md
-      - packaging/schema/delete.md
-      - packaging/schema/message.md
-      - packaging/schema/mkdir.md
-      - packaging/schema/rename.md
-      - packaging/schema/run.md
-      - packaging/schema/symlink.md
+      - packaging/index.md
+      - packaging/private.md
+      - packaging/reference.md
+      - packaging/tutorial.md
+      - Schema:
+          - packaging/schema/index.md
+          - packaging/schema/auto-version.md
+          - packaging/schema/channel.md
+          - packaging/schema/darwin.md
+          - packaging/schema/html.md
+          - packaging/schema/linux.md
+          - packaging/schema/manifest.md
+          - packaging/schema/platform.md
+          - packaging/schema/version.md
+          - packaging/schema/on.md
+          - packaging/schema/chmod.md
+          - packaging/schema/copy.md
+          - packaging/schema/delete.md
+          - packaging/schema/message.md
+          - packaging/schema/mkdir.md
+          - packaging/schema/rename.md
+          - packaging/schema/run.md
+          - packaging/schema/symlink.md
 
 theme:
   name: material
-  favicon:  img/logo.svg
+  favicon: img/logo.svg
   logo: img/logo.svg
   features:
     - search.highlight

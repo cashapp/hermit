@@ -497,6 +497,16 @@ EOF
 			assert test "$MY_TEMPLATE" = '$FOO'
 			`,
 		},
+		{
+			name:         "Bundle",
+			preparations: prep{fixture("testenv1"), activate(".")},
+			script: `
+			pwd
+			hermit install testbin1
+			hermit bundle ../hermit-bundle-test
+			assert test -x ../hermit-bundle-test/bin/testbin1
+			`,
+		},
 	}
 
 	checkForShells(t)

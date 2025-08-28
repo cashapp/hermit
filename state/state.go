@@ -107,6 +107,18 @@ func Open(stateDir string, config Config, cache *cache.Cache) (*State, error) {
 	return s, nil
 }
 
+// WithPackageDir returns a new State with the package directory set to the given directory.
+func (s State) WithPackageDir(dir string) *State {
+	s.pkgDir = dir
+	return &s
+}
+
+// WithBinDir returns a new State with the binary symlink directory set to the given directory.
+func (s State) WithBinDir(dir string) *State {
+	s.binaryDir = dir
+	return &s
+}
+
 func validateAndCompileAutoMirrors(config Config) ([]precompiledAutoMirror, error) {
 	autoMirrors := []precompiledAutoMirror{}
 	for _, mirror := range config.AutoMirrors {

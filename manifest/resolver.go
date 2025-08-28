@@ -38,6 +38,8 @@ type Config struct {
 	Env string
 	// State path where packages are installed.
 	State string
+	// (Optional) path to where packages will be unpacked. If empty will use .State + "/pkg"
+	PkgDir string
 	platform.Platform
 }
 
@@ -181,6 +183,9 @@ func New(sources *sources.Sources, config Config) (*Resolver, error) {
 	}
 	if config.Arch == "" {
 		config.Arch = runtime.GOARCH
+	}
+	if config.PkgDir == "" {
+		config.PkgDir = filepath.Join(config.State, "pkg")
 	}
 	return &Resolver{
 		config:  config,
@@ -396,7 +401,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 			manifest.Path, selector, strings.Join(knownVersions, ", "), strings.Join(knownChannels, ", "))
 	}
 
-	root := filepath.Join(config.State, "pkg", found.String())
+	root := filepath.Join(config.PkgDir, found.String())
 	p := &Package{
 		Description:          manifest.Description,
 		Homepage:             manifest.Homepage,
