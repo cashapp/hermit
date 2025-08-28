@@ -557,7 +557,11 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	mapping := func(key string) string {
 		val := pkgMapping(key)
 		if val == "" {
-			err = errors.Errorf("unknown variable $%s", key)
+			if key == "version" {
+				err = errors.Errorf("failed to expand ${%s} (hint: make sure all channels set a version range)", key)
+			} else {
+				err = errors.Errorf("unknown variable $%s", key)
+			}
 			return ""
 		}
 		return val
