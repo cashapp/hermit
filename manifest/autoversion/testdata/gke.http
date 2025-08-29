@@ -1,0 +1,34 @@
+{
+  "components": [
+    {
+      "id": "gke-gcloud-auth-plugin-linux-x86_64",
+      "version": {
+        "version_string": "0.5.12",
+        "build_number": "20250117151628"
+      },
+      "data": {
+        "checksum": "a1b2c3d4e5f6789012345678901234567890123456789012345678901234567890"
+      }
+    },
+    {
+      "id": "gke-gcloud-auth-plugin-darwin-x86_64", 
+      "version": {
+        "version_string": "0.5.12",
+        "build_number": "20250117151629"
+      },
+      "data": {
+        "checksum": "b2c3d4e5f6789012345678901234567890123456789012345678901234567890a1"
+      }
+    },
+    {
+      "id": "gke-gcloud-auth-plugin-darwin-arm",
+      "version": {
+        "version_string": "0.5.12", 
+        "build_number": "20250117151630"
+      },
+      "data": {
+        "checksum": "c3d4e5f6789012345678901234567890123456789012345678901234567890a1b2"
+      }
+    }
+  ]
+}
