@@ -4,6 +4,7 @@ import (
 	"sort"
 
 	"github.com/cashapp/hermit/errors"
+	"github.com/qdm12/reprint"
 )
 
 // Event in the lifecycle of a package.
@@ -57,28 +58,28 @@ type Trigger struct {
 func (a *Trigger) Ordered() []Action {
 	var out []Action
 	for _, action := range a.Run {
-		out = append(out, action)
+		out = append(out, reprint.This(action).(Action))
 	}
 	for _, action := range a.Copy {
-		out = append(out, action)
+		out = append(out, reprint.This(action).(Action))
 	}
 	for _, action := range a.Chmod {
-		out = append(out, action)
+		out = append(out, reprint.This(action).(Action))
 	}
 	for _, action := range a.Rename {
-		out = append(out, action)
+		out = append(out, reprint.This(action).(Action))
 	}
 	for _, action := range a.Delete {
-		out = append(out, action)
+		out = append(out, reprint.This(action).(Action))
 	}
 	for _, action := range a.Message {
-		out = append(out, action)
+		out = append(out, reprint.This(action).(Action))
 	}
 	for _, action := range a.Mkdir {
-		out = append(out, action)
+		out = append(out, reprint.This(action).(Action))
 	}
 	for _, action := range a.Symlink {
-		out = append(out, action)
+		out = append(out, reprint.This(action).(Action))
 	}
 	sort.Slice(out, func(i, j int) bool {
 		return out[i].position().Line < out[j].position().Line
