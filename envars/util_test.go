@@ -11,11 +11,11 @@ import (
 func TestExpandMapping(t *testing.T) {
 	cases := []struct {
 		name       string
-		mapping    func(string) string
+		mapping    func(string) (string, bool)
 		wantExpand map[string]string
 	}{
 		{
-			name: "basic expansion",
+			name: "BasicExpansion",
 			mapping: Mapping("hermit/env", "home/user", platform.Platform{
 				OS:   platform.Linux,
 				Arch: platform.Amd64,
@@ -28,11 +28,10 @@ func TestExpandMapping(t *testing.T) {
 				"${os}":         platform.Linux,
 				"${arch}":       platform.Amd64,
 				"${xarch}":      platform.ArchToXArch(platform.Amd64),
-				"${NOT_A_VAR}":  "",
 			},
 		},
 		{
-			name: "nested expansion",
+			name: "NestedExpansion",
 			mapping: Mapping("${HOME}/env", "home/${os}-user", platform.Platform{
 				OS:   platform.Darwin,
 				Arch: platform.Arm64,
@@ -47,7 +46,7 @@ func TestExpandMapping(t *testing.T) {
 			},
 		},
 		{
-			name: "unknown OS and Arch",
+			name: "UnknownOSAndArch",
 			mapping: Mapping("", "", platform.Platform{
 				OS:   "foo",
 				Arch: "bar",
@@ -57,15 +56,15 @@ func TestExpandMapping(t *testing.T) {
 			},
 		},
 		{
-			name: "escaped vars",
-			mapping: func(s string) string {
+			name: "EscapedVars",
+			mapping: func(s string) (string, bool) {
 				switch s {
 				case "$":
-					return "$$"
+					return "$$", true
 				case "foo":
-					return "bar"
+					return "bar", true
 				default:
-					return ""
+					return "", false
 				}
 			},
 			wantExpand: map[string]string{
@@ -86,14 +85,14 @@ func TestExpandMapping(t *testing.T) {
 }
 
 func TestExpandNoEscape(t *testing.T) {
-	assert.Equal(t, "$$foo", ExpandNoEscape("$$foo", func(s string) string {
+	assert.Equal(t, "$$foo", ExpandNoEscape("$$foo", func(s string) (string, bool) {
 		switch s {
 		case "$":
-			return "$$"
+			return "$$", true
 		case "foo":
-			return "bar"
+			return "bar", true
 		default:
-			return ""
+			return "", false
 		}
 	}))
 }

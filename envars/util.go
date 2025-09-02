@@ -21,11 +21,17 @@ func Parse(envars []string) Envars {
 }
 
 // ExpandNoEscape behaves the same as [Expand] but without replacing "$$" with "$".
-func ExpandNoEscape(s string, mapping func(string) string) string {
+func ExpandNoEscape(s string, mapping func(string) (string, bool)) string {
 	last := ""
 	for last != s {
 		last = s
-		s = os.Expand(s, mapping)
+		s = os.Expand(s, func(s string) string {
+			value, ok := mapping(s)
+			if !ok {
+				return s
+			}
+			return value
+		})
 	}
 	return s
 }
@@ -33,44 +39,44 @@ func ExpandNoEscape(s string, mapping func(string) string) string {
 // Expand repeatedly expands s until the mapping function stops making
 // substitutions. This is useful for variables that reference other variables.
 // Instances of "$$" are escaped to "$".
-func Expand(s string, mapping func(string) string) string {
+func Expand(s string, mapping func(string) (string, bool)) string {
 	return strings.ReplaceAll(ExpandNoEscape(s, mapping), "$$", "$")
 }
 
 // Mapping returns a function that expands hermit variables. The function can
 // be passed to [Expand]. Instances of "$$" are left unexpanded.
-func Mapping(env, home string, p platform.Platform) func(s string) string {
-	return func(key string) string {
+func Mapping(env, home string, p platform.Platform) func(s string) (string, bool) {
+	return func(key string) (string, bool) {
 		switch key {
 		case "HERMIT_ENV", "env":
-			return env
+			return env, true
 
 		case "HERMIT_BIN":
-			return filepath.Join(env, "bin")
+			return filepath.Join(env, "bin"), true
 
 		case "os":
-			return p.OS
+			return p.OS, true
 
 		case "arch":
-			return p.Arch
+			return p.Arch, true
 
 		case "xarch":
 			if xarch := platform.ArchToXArch(p.Arch); xarch != "" {
-				return xarch
+				return xarch, true
 			}
-			return p.Arch
+			return p.Arch, true
 
 		case "HOME":
-			return home
+			return home, true
 
 		case "YYYY":
-			return fmt.Sprintf("%04d", time.Now().Year())
+			return fmt.Sprintf("%04d", time.Now().Year()), true
 
 		case "MM":
-			return fmt.Sprintf("%02d", time.Now().Month())
+			return fmt.Sprintf("%02d", time.Now().Month()), true
 
 		case "DD":
-			return fmt.Sprintf("%02d", time.Now().Day())
+			return fmt.Sprintf("%02d", time.Now().Day()), true
 
 		case "$":
 			// Pass through "$$" unmodified. [os.Expand] does not provide the ability
@@ -78,10 +84,10 @@ func Mapping(env, home string, p platform.Platform) func(s string) string {
 			// no more changes are made, we cannot transform "$$" to "$" or else the result
 			// itself will be expanded. For example, "$$foo" -> "$foo" -> "value_of_foo".
 			// See https://github.com/golang/go/issues/43482
-			return "$$"
+			return "$$", true
 
 		default:
-			return ""
+			return "", false
 		}
 	}
 }

@@ -197,7 +197,7 @@ func TestResolver_Resolve(t *testing.T) {
 				version "1.1.0" { source = "www.example.com/11" }
 				channel "testc" {
 				  update = "5h"
-				  version = "1.0.*"	
+				  version = "1.0.*"
 				}
             `,
 		},
@@ -222,7 +222,7 @@ func TestResolver_Resolve(t *testing.T) {
 				version "1.1.0" { source = "www.example.com/${version}" }
 				channel "testc" {
 				  update = "5h"
-				  version = "*"	
+				  version = "*"
 				}
             `,
 		},
@@ -246,7 +246,7 @@ func TestResolver_Resolve(t *testing.T) {
 				version "1.1.0" { source = "www.example.com/${version}" }
 				channel "testc" {
 				  update = "5h"
-				  version = "2.0"	
+				  version = "2.0"
 				}
             `,
 		},
@@ -349,9 +349,7 @@ func TestResolver_Resolve(t *testing.T) {
 			assert.NoError(t, err)
 			if tt.reference != "" {
 				gotPkg, err := l.Resolve(logger, PrefixSelector(ParseReference(tt.reference)))
-				if err != nil || tt.wantErr != "" {
-					assert.Equal(t, tt.wantErr, err.Error())
-				}
+				assert.EqualError(t, err, tt.wantErr)
 				if gotPkg != nil {
 					gotPkg.FS = nil
 				}

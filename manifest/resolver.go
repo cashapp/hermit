@@ -517,54 +517,56 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 
 	// Expand variables.
 	baseMapping := envars.Mapping(config.Env, home, config.Platform)
-	pkgMapping := func(key string) string {
-		val := baseMapping(key)
-		if val != "" {
-			return val
+	pkgMapping := func(key string) (string, bool) {
+		val, ok := baseMapping(key)
+		if ok {
+			return val, true
 		}
 
 		switch key {
 		case "name":
-			return found.Name
+			return found.Name, true
 
 		case "version":
-			return found.Version.String()
+			version := found.Version.String()
+			return version, version != ""
 
 		case "dest":
-			return layers.field("Dest", p.Dest).(string)
+			return layers.field("Dest", p.Dest).(string), true
 
 		case "root":
-			return layers.field("Root", p.Root).(string)
+			return layers.field("Root", p.Root).(string), true
 
 		default:
 			// TODO: Should these extra vars go in envars.Mapping?
-			return vars[key]
+			value, ok := vars[key]
+			return value, ok
 		}
 	}
 
 	// Wrap mapping to handle cases where the varable is undefined.
 	// envarMapping passes unknown variable references through
 	// unaltered.
-	envarMapping := func(key string) string {
-		val := pkgMapping(key)
-		if val == "" {
-			return "${" + key + "}"
+	envarMapping := func(key string) (string, bool) {
+		val, ok := pkgMapping(key)
+		if !ok {
+			return "${" + key + "}", true
 		}
-		return val
+		return val, true
 	}
 	// mapping sets err when unknown variables are found. This error
 	// is eventually returned by the current function.
-	mapping := func(key string) string {
-		val := pkgMapping(key)
-		if val == "" {
+	mapping := func(key string) (string, bool) {
+		val, ok := pkgMapping(key)
+		if !ok {
 			if key == "version" {
 				err = errors.Errorf("failed to expand ${%s} (hint: make sure all channels set a version range)", key)
 			} else {
 				err = errors.Errorf("unknown variable $%s", key)
 			}
-			return ""
+			return "", false
 		}
-		return val
+		return val, true
 	}
 
 	for _, env := range layerEnvars {
