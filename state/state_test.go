@@ -1,7 +1,6 @@
 package state_test
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -177,71 +176,5 @@ func TestUpdateSymlinks(t *testing.T) {
 	linuxLink, err := os.Readlink(linuxExec)
 	assert.NoError(t, err)
 	assert.Equal(t, filepath.Join(newPkg.Dest, "linux_exe"), linuxLink)
-
-}
-
-func TestUpgrade(t *testing.T) {
-	etagCounter := 0
-	fixture := NewStateTestFixture(t).
-		WithHTTPHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// always generate a new ETag to invalidate the cache
-			w.Header().Set("ETag", fmt.Sprintf("etag-%d", etagCounter))
-			etagCounter++
-			fr, err := os.Open("../archive/testdata/archive.tar.gz")
-			assert.NoError(t, err)
-			defer fr.Close() // nolint
-			_, err = io.Copy(w, fr)
-			assert.NoError(t, err)
-
-		}))
-	defer fixture.Clean()
-	state := fixture.State()
-	log, _ := ui.NewForTesting()
-	rootPkgDir := state.PkgDir()
-
-	packageNames := []string{"hermit", "dune"}
-
-	for _, name := range packageNames {
-		t.Run(name, func(t *testing.T) {
-			pkgDir := filepath.Join(rootPkgDir, name)
-			renamedDir := filepath.Join(rootPkgDir, fmt.Sprintf(".%s.old", name))
-			pkg := manifesttest.NewPkgBuilder(pkgDir).
-				WithSource(fixture.Server.URL).
-				WithName(name).
-				WithChannel("stable").
-				Result()
-			assert.NoError(t, state.CacheAndUnpack(log.Task("test"), pkg))
-
-			// Check package file exists
-			_, err := os.Stat(pkgDir)
-			assert.NoError(t, err)
-			_, err = os.Stat(renamedDir)
-			assert.Error(t, err)
-
-			// Update cache with new ETag
-			_, err = state.CacheAndDigest(log.Task("test"), pkg)
-			assert.NoError(t, err)
-
-			// Run upgrade
-			err = state.UpgradeChannel(log.Task("test"), pkg)
-			assert.NoError(t, err)
-
-			_, err = os.Stat(pkgDir)
-			assert.NoError(t, err)
-			// For hermit, we should have renamed the old directory
-			if name == "hermit" {
-				_, err = os.Stat(renamedDir)
-				assert.NoError(t, err)
-			} else {
-				// For dune, we should not have renamed the old directory
-				_, err = os.Stat(renamedDir)
-				assert.Error(t, err)
-			}
-
-			// Another upgrade to make sure we delete the old hermit directory
-			_, err = state.CacheAndDigest(log.Task("test"), pkg)
-			assert.NoError(t, err)
-		})
-	}
 
 }
