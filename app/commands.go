@@ -20,6 +20,7 @@ type cliInterface interface {
 	getDebug() bool
 	getTrace() bool
 	getQuiet() bool
+	getSelfUpdate() bool
 	getLevel() ui.Level
 	getGlobalState() GlobalState
 	getLockTimeout() time.Duration
@@ -33,6 +34,7 @@ type cliBase struct {
 	Debug          bool             `help:"Enable debug logging." short:"d"`
 	Trace          bool             `help:"Enable trace logging." short:"t"`
 	Quiet          bool             `help:"Disable logging and progress UI, except fatal errors." env:"HERMIT_QUIET" short:"q"`
+	SelfUpdate     bool             `help:"If true (the default) Hermit will update itself automatically." negatable:"" default:"true" env:"HERMIT_SELF_UPDATE"`
 	Level          ui.Level         `help:"Set minimum log level (${enum})." env:"HERMIT_LOG" default:"auto" enum:"auto,trace,debug,info,warn,error,fatal"`
 	LockTimeout    time.Duration    `help:"Timeout for waiting on the lock" default:"30s" env:"HERMIT_LOCK_TIMEOUT"`
 	UserConfigFile string           `help:"Path to Hermit user configuration file." name:"user-config" default:"~/.hermit.hcl" env:"HERMIT_USER_CONFIG"`
@@ -62,6 +64,7 @@ func (u *cliBase) getMemProfile() string         { return u.MemProfile }
 func (u *cliBase) getTrace() bool                { return u.Trace }
 func (u *cliBase) getDebug() bool                { return u.Debug }
 func (u *cliBase) getQuiet() bool                { return u.Quiet }
+func (u *cliBase) getSelfUpdate() bool           { return u.SelfUpdate }
 func (u *cliBase) getLevel() ui.Level            { return ui.AutoLevel(u.Level) }
 func (u *cliBase) getGlobalState() GlobalState   { return u.GlobalState }
 func (u *cliBase) getLockTimeout() time.Duration { return u.LockTimeout }

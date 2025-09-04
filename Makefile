@@ -7,6 +7,7 @@ VERSION ?= $(shell git describe --tags --dirty  --always)
 GOOS ?= $(shell ./bin/go version | awk '{print $$NF}' | cut -d/ -f1)
 GOARCH ?= $(shell ./bin/go version | awk '{print $$NF}' | cut -d/ -f2)
 BIN = $(BUILD_DIR)/hermit-$(GOOS)-$(GOARCH)
+export HERMIT_EXE =
 
 .PHONY: all build lint test
 

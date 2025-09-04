@@ -24,7 +24,16 @@ type execCmd struct {
 	Args   []string `arg:"" help:"Arguments to pass to executable (use -- to separate)." optional:""`
 }
 
-func (e *execCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, globalState GlobalState, config Config, defaultHTTPClient *http.Client, sourceRewriters []sources.URLRewriter) error {
+func (e *execCmd) Run(
+	l *ui.UI,
+	cli cliInterface,
+	cache *cache.Cache,
+	sta *state.State,
+	globalState GlobalState,
+	config Config,
+	defaultHTTPClient *http.Client,
+	sourceRewriters []sources.URLRewriter,
+) error {
 	envDir, err := hermit.FindEnvDir(e.Binary)
 	if err != nil {
 		return errors.WithStack(err)
@@ -47,14 +56,9 @@ func (e *execCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, globalStat
 	if err != nil {
 		return errors.WithStack(err)
 	}
-
-	// Upgrade hermit if necessary
-	pkgRef := filepath.Base(filepath.Dir(self))
-	if strings.HasPrefix(pkgRef, "hermit@") {
-		err := updateHermit(l, env, pkgRef, false)
-		if err != nil {
-			return errors.WithStack(err)
-		}
+	err = maybeUpdateHermit(l, env, cli.getSelfUpdate(), false)
+	if err != nil {
+		return errors.WithStack(err)
 	}
 
 	// Special-case executing Hermit itself.
@@ -97,7 +101,22 @@ func (e *execCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, globalStat
 	return env.Exec(l, pkg, binary, args, deps)
 }
 
-func updateHermit(l *ui.UI, env *hermit.Env, pkgRef string, force bool) error {
+// Upgrade hermit if necessary. We do this to ensure we can read the latest versions of manifests, otherwise they
+// might have configuration that is unavailable in older versions.
+func maybeUpdateHermit(l *ui.UI, env *hermit.Env, selfUpdate bool, force bool) error {
+	if !selfUpdate {
+		return nil
+	}
+	self, err := os.Executable()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	pkgRef := filepath.Base(filepath.Dir(self))
+	if !strings.HasPrefix(pkgRef, "hermit@") {
+		return nil
+	}
+
 	l.Tracef("Checking if %s needs to be updated", pkgRef)
 	pkg, err := env.Resolve(l, manifest.ExactSelector(manifest.ParseReference(pkgRef)), false)
 	if err != nil {
