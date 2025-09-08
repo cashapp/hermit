@@ -38,7 +38,12 @@ func UpdateDigests(l *ui.UI, client *http.Client, state *state.State, path strin
 	pkgsBySource := map[string]pkgAndref{}
 	for _, ref := range mani.References(name) {
 		for _, p := range slices.Concat(platform.Core, platform.Optional) {
-			config := manifest.Config{Env: ".", State: "/tmp", Platform: p}
+			config := manifest.Config{
+				Env:      ".", // Should be unused, so we don't need a real value here...hopefully.
+				State:    state.Root(),
+				PkgDir:   state.PkgDir(),
+				Platform: p,
+			}
 			pkg, err := manifest.Resolve(mani, config, ref)
 			if errors.Is(err, manifest.ErrNoSource) {
 				maybeWarnf(task, p, "No source provided for %s/%s", ref, p)
