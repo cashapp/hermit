@@ -1,9 +1,9 @@
 on:
   push:
     paths-ignore:
-      - 'docs/**'
+      - "docs/**"
     tags:
-      - 'v*'
+      - "v*"
 name: Release
 jobs:
   deployable:
@@ -14,7 +14,7 @@ jobs:
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
       - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
         with:
-          go-version: '^1.16.3'
+          go-version: "^1.16.3"
       - name: Build Hermit
         run: |
           make GOOS=linux GOARCH=amd64 CHANNEL=stable build

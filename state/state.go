@@ -505,6 +505,21 @@ func (s *State) CleanCache(b ui.Logger) error {
 	return os.RemoveAll(s.cacheDir)
 }
 
+// EnsureChannelIsUpToDate updates the package if it has an update interval,
+// the required time since the last update check has passed,
+// and the etag in the source has changed from the last check.
+//
+// This should only be called for packages that have already been installed
+func (s *State) EnsureChannelIsUpToDate(l *ui.UI, pkg *manifest.Package) error {
+	task := l.Task(pkg.Reference.String())
+	if pkg.UpdateInterval == 0 || pkg.UpdatedAt.After(time.Now().Add(-1*pkg.UpdateInterval)) {
+		task.Tracef("No updated required")
+		// No updates needed for this package
+		return nil
+	}
+	return errors.WithStack(s.UpgradeChannel(task, pkg))
+}
+
 // UpgradeChannel checks if the given binary has changed in its channel, and if so, downloads it.
 //
 // If the channel is upgraded this will return a clone of the updated manifest.

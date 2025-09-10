@@ -23,7 +23,7 @@ test-integration: ## run integration tests
 	./bin/go test -count=1 -tags integration -v ./integration
 
 build: build-binary ## builds binary and gzips it
-	gzip -9 $(BIN)
+	gzip -f9 $(BIN)
 
 build-binary: ## builds binary
 	mkdir -p $(BUILD_DIR)

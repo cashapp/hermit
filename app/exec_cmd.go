@@ -56,7 +56,7 @@ func (e *execCmd) Run(
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	err = maybeUpdateHermit(l, env, cli.getSelfUpdate(), false)
+	err = maybeUpdateHermit(l, sta, cli.getSelfUpdate(), false)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -103,7 +103,9 @@ func (e *execCmd) Run(
 
 // Upgrade hermit if necessary. We do this to ensure we can read the latest versions of manifests, otherwise they
 // might have configuration that is unavailable in older versions.
-func maybeUpdateHermit(l *ui.UI, env *hermit.Env, selfUpdate bool, force bool) error {
+//
+// If "selfUpdate" is false this will be a no-op under all circumstances.
+func maybeUpdateHermit(l *ui.UI, state *state.State, selfUpdate bool, force bool) error {
 	if !selfUpdate {
 		return nil
 	}
@@ -118,7 +120,7 @@ func maybeUpdateHermit(l *ui.UI, env *hermit.Env, selfUpdate bool, force bool) e
 	}
 
 	l.Tracef("Checking if %s needs to be updated", pkgRef)
-	pkg, err := env.Resolve(l, manifest.ExactSelector(manifest.ParseReference(pkgRef)), false)
+	pkg, err := state.Resolve(l, manifest.ExactSelector(manifest.ParseReference(pkgRef)))
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -128,7 +130,7 @@ func maybeUpdateHermit(l *ui.UI, env *hermit.Env, selfUpdate bool, force bool) e
 	} else if pkg.UpdatedAt.IsZero() {
 		pkg.UpdatedAt = time.Now()
 	}
-	err = env.UpdateUsage(pkg)
+	err = state.WritePackageState(pkg)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -137,5 +139,5 @@ func maybeUpdateHermit(l *ui.UI, env *hermit.Env, selfUpdate bool, force bool) e
 		// set the update time to 0 to force an update check
 		pkg.UpdatedAt = time.Time{}
 	}
-	return errors.WithStack(env.EnsureChannelIsUpToDate(l, pkg))
+	return errors.WithStack(state.EnsureChannelIsUpToDate(l, pkg))
 }
