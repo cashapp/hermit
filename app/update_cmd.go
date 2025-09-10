@@ -24,7 +24,7 @@ func (s *updateCmd) Run(l *ui.UI, env *hermit.Env, state *state.State, cli cliIn
 		return errors.WithStack(err)
 	}
 	// Upgrade hermit if necessary
-	err = maybeUpdateHermit(l, env, cli.getSelfUpdate(), true)
+	err = maybeUpdateHermit(l, state, cli.getSelfUpdate(), true)
 	if err != nil {
 		return errors.WithStack(err)
 	}
