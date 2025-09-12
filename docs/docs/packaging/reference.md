@@ -117,8 +117,8 @@ The available variables are:
 | `version`    | The version selected by the user. Does not apply when installing a channel. |
 | `dest`       | The directory where the archive will be extracted.<br/> Defaults to `<hermit-state>/pkg/<pkg-selector>`. |
 | `root`       | Directory considered the package root. Defaults to `${dest}`.
-| `os`         | The system's [OS](https://github.com/golang/go/blob/master/src/go/build/syslist.go) as reported by Go. |
-| `arch`       | The system's [CPU](https://github.com/golang/go/blob/master/src/go/build/syslist.go) architecture as reported by Go. |
+| `os`         | The system's [OS](https://github.com/golang/go/blob/master/src/internal/syslist/syslist.go) as reported by Go. |
+| `arch`       | The system's [CPU](https://github.com/golang/go/blob/master/src/internal/syslist/syslist.go) architecture as reported by Go. |
 | `xarch`      | An alternate mapping of `${arch}` where `amd64`=>`x86_64`,  `i386`=>`386`, and `arm64`=>`aarch64`. |
 | `HERMIT_ENV` | Path to the active Hermit environment. |
 | `HERMIT_BIN` | Path to the active Hermit environment's `bin` directory. |
