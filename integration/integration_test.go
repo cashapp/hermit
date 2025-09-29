@@ -565,6 +565,51 @@ EOF
 			expectations: exp{
 				filesExist("bin/cashapp-private-pkg.sh"),
 			}},
+		{name: "GitHubTokenAuthWithGHCliFails",
+			preparations: prep{
+				fixture("github_token_auth"),
+				activateWithMocks("."),
+				mockGitHub(
+					github.WithRequiredToken("mock-gh-token"),
+					github.WithMockRelease(github.MockRelease{
+						Repo:    "cashapp/hermit-packages-private",
+						TagName: "v1.0.0",
+						Name:    "cashapp-private-pkg-1.0.0.tar.gz",
+						Files:   []string{"testdata/github_token_auth/packages/cashapp-private-pkg.sh"},
+					}),
+				),
+			},
+			script: `
+				# Make sure the gh mock is executable
+				chmod +x mocks/gh
+
+				# Configure to use gh CLI auth
+				printf "gh-cli-auth = true\n" > "$HERMIT_USER_CONFIG"
+
+				# Set the environment variable to make gh auth fail
+				export GH_AUTH_FAIL=1
+
+				# Install should fail because gh cli auth fails and no env var is set
+				hermit install cashapp-private-pkg || true
+
+				# Verify gh CLI was called and failed
+				assert test -f gh-failures
+				assert grep -q "gh auth token failed" gh-failures
+
+				# Now unset the failure flag and set environment token as fallback
+				unset GH_AUTH_FAIL
+				export HERMIT_GITHUB_TOKEN="mock-gh-token"
+
+				# Install should succeed with env var
+				hermit install cashapp-private-pkg
+
+				# Verify package was installed and works
+				assert test "$(cashapp-private-pkg.sh)" = "cashapp-private-pkg 1.0.0"
+			`,
+			expectations: exp{
+				filesExist("bin/cashapp-private-pkg.sh"),
+				outputContains("gh auth failed: no oauth token found for github.com"),
+			}},
 	}
 
 	checkForShells(t)
