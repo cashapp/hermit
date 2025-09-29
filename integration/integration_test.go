@@ -27,6 +27,7 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/cashapp/hermit/envars"
 	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/github"
 	"github.com/creack/pty"
 )
 
@@ -507,6 +508,63 @@ EOF
 			assert test -x ../hermit-bundle-test/bin/testbin1
 			`,
 		},
+		{name: "GitHubTokenAuthWithGHCli",
+			preparations: prep{
+				fixture("github_token_auth"),
+				activateWithMocks("."),
+				mockGitHub(
+					github.WithRequiredToken("mock-gh-token"),
+					github.WithMockRelease(github.MockRelease{
+						Repo:    "cashapp/hermit-packages-private",
+						TagName: "v1.0.0",
+						Name:    "cashapp-private-pkg-1.0.0.tar.gz",
+						Files:   []string{"testdata/github_token_auth/packages/cashapp-private-pkg.sh"},
+					}),
+				),
+			},
+			script: `
+				printf "gh-cli-auth = true\n" > "$HERMIT_USER_CONFIG"
+
+				# Install a package that requires GitHub token auth
+				hermit install cashapp-private-pkg
+
+				# Verify gh CLI was called to get token for private package
+				assert test -f gh-calls
+				assert grep -q "gh auth token" gh-calls
+
+				# Verify package was installed and works
+				assert test "$(cashapp-private-pkg.sh)" = "cashapp-private-pkg 1.0.0"
+			`,
+			expectations: exp{
+				filesExist("bin/cashapp-private-pkg.sh"),
+			}},
+		{name: "GitHubTokenAuthWithEnv",
+			preparations: prep{
+				fixture("github_token_auth"),
+				activate("."),
+				mockGitHub(
+					github.WithRequiredToken("env-token"),
+					github.WithMockRelease(github.MockRelease{
+						Repo:    "cashapp/hermit-packages-private",
+						TagName: "v1.0.0",
+						Name:    "cashapp-private-pkg-1.0.0.tar.gz",
+						Files:   []string{"testdata/github_token_auth/packages/cashapp-private-pkg.sh"},
+					}),
+				),
+			},
+			script: `
+				# Set environment token
+				export HERMIT_GITHUB_TOKEN="env-token"
+
+				# Install a package that requires GitHub token auth
+				hermit install cashapp-private-pkg
+
+				# Verify package was installed and works
+				assert test "$(cashapp-private-pkg.sh)" = "cashapp-private-pkg 1.0.0"
+			`,
+			expectations: exp{
+				filesExist("bin/cashapp-private-pkg.sh"),
+			}},
 	}
 
 	checkForShells(t)
@@ -639,11 +697,15 @@ func buildAndInjectHermit(t *testing.T, environ []string) (outenviron []string) 
 	err := os.Mkdir(hermitExeDir, 0700)
 	assert.NoError(t, err)
 	t.Logf("Compiling Hermit to %s", hermitExe)
-	output, err := exec.Command("go", "build", "-o", hermitExe, "github.com/cashapp/hermit/cmd/hermit").CombinedOutput()
+	output, err := exec.Command("go", "build", "-tags", "localgithub", "-o", hermitExe, "github.com/cashapp/hermit/cmd/hermit").CombinedOutput()
 	assert.NoError(t, err, "%s", output)
-	outenviron = make([]string, len(environ), len(environ)+1)
+	outenviron = make([]string, len(environ), len(environ)+2)
 	copy(outenviron, environ)
 	outenviron = append(outenviron, "HERMIT_EXE="+hermitExe)
+	// Ensure HERMIT_GITHUB_BASE_URL is set for localgithub tests
+	if os.Getenv("HERMIT_GITHUB_BASE_URL") != "" {
+		outenviron = append(outenviron, "HERMIT_GITHUB_BASE_URL="+os.Getenv("HERMIT_GITHUB_BASE_URL"))
+	}
 	for i, env := range outenviron {
 		if strings.HasPrefix(env, "PATH=") {
 			outenviron[i] = "PATH=" + hermitExeDir + ":" + env[len("PATH="):]
@@ -722,6 +784,21 @@ func activate(relDest string) preparation {
 	}
 }
 
+// Activate the Hermit environment and add mocks to PATH
+func activateWithMocks(relDest string) preparation {
+	return func(t *testing.T, dir string) string {
+		// Add mocks directory to PATH if it exists
+		mocksPath := filepath.Join(dir, relDest, "mocks")
+		if _, err := os.Stat(mocksPath); err == nil {
+			return fmt.Sprintf(`
+export PATH="%s:$PATH"
+. %s/bin/activate-hermit
+`, mocksPath, relDest)
+		}
+		return fmt.Sprintf(". %s/bin/activate-hermit", relDest)
+	}
+}
+
 // Copy the specified environment fixture into the test root and activate it.
 func activatedFixtureEnv(env string) preparation {
 	return func(t *testing.T, dir string) string {
@@ -770,6 +847,15 @@ func fixtureToDir(relSource string, relDest string) preparation {
 		})
 		assert.NoError(t, err)
 		return ""
+	}
+}
+
+// mockGitHub creates a preparation that sets up a mock GitHub server with the given options
+func mockGitHub(opts ...github.MockServerOption) preparation {
+	return func(t *testing.T, dir string) string {
+		mock := github.NewMockGitHubServer(t, opts...)
+		t.Cleanup(func() { mock.Server.Close() })
+		return fmt.Sprintf("export HERMIT_GITHUB_BASE_URL=%s", mock.Server.URL)
 	}
 }
 

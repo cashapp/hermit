@@ -1,0 +1,11 @@
+#!/bin/sh
+
+if [ "$1" = "auth" ] && [ "$2" = "token" ]; then
+    echo "gh $*" >> gh-calls
+    echo "mock-gh-token"
+    exit 0
+fi
+
+# Log all other invocations as errors
+echo "ERROR: gh $* (unexpected command)" >> gh-calls
+exit 1

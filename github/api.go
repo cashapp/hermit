@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/ui"
 )
 
 const (
@@ -49,14 +50,14 @@ type Client struct {
 }
 
 // New creates a new GitHub API client.
-func New(client *http.Client, token string) *Client {
+func New(ui *ui.UI, client *http.Client, token string) *Client {
 	if client == nil {
 		client = http.DefaultClient
 	}
 	if token == "" {
 		client = http.DefaultClient
 	} else {
-		client = &http.Client{Transport: TokenAuthenticatedTransport(client.Transport, token)}
+		client = &http.Client{Transport: TokenAuthenticatedTransport(ui, client.Transport, token)}
 	}
 	return &Client{client: client}
 }
