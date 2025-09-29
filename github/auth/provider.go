@@ -10,6 +10,11 @@ import (
 	"github.com/cashapp/hermit/ui"
 )
 
+const (
+	ProviderTypeEnv   = "env"
+	ProviderTypeGHCli = "gh-cli"
+)
+
 // Provider is an interface for GitHub token providers
 type Provider interface {
 	// GetToken returns a GitHub token or an error if one cannot be obtained
@@ -77,9 +82,9 @@ func (p *GHCliProvider) GetToken() (string, error) {
 // NewProvider creates a new token provider based on the specified type
 func NewProvider(providerType string, ui *ui.UI) (Provider, error) {
 	switch providerType {
-	case "env", "":
+	case ProviderTypeEnv, "":
 		return &EnvProvider{ui: ui}, nil
-	case "gh-cli":
+	case ProviderTypeGHCli:
 		return &GHCliProvider{ui: ui}, nil
 	default:
 		return nil, errors.Errorf("unknown GitHub token provider: %s", providerType)

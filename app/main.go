@@ -234,9 +234,12 @@ func Main(config Config) {
 	var githubToken string
 	if envInfo != nil && len(envInfo.Config.GitHubTokenAuth.Match) > 0 {
 		// Determine provider based on user config
-		providerType := "env"
+		providerType := auth.ProviderTypeEnv
 		if userConfig.GHCliAuth {
-			providerType = "gh-cli"
+			providerType = auth.ProviderTypeGHCli
+			p.Tracef("Using GitHub CLI for token authentication (from user config)")
+		} else {
+			p.Tracef("Using environment variables for token authentication (default)")
 		}
 
 		provider, err := auth.NewProvider(providerType, p)
