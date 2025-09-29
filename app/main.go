@@ -241,11 +241,11 @@ func Main(config Config) {
 
 		provider, err := auth.NewProvider(providerType, p)
 		if err != nil {
-			p.Tracef("Failed to create GitHub token provider: %v", err)
+			p.Fatalf("Failed to create GitHub token provider: %v", err)
 		} else {
 			token, err := provider.GetToken()
 			if err != nil {
-				p.Tracef("Failed to get GitHub token from provider %s: %v", providerType, err)
+				p.Fatalf("Failed to get GitHub token from provider %s: %v", providerType, err)
 			} else {
 				githubToken = token
 				p.Tracef("GitHub token set from provider: %s", providerType)
