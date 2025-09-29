@@ -61,7 +61,7 @@ func (p *GHCliProvider) GetToken() (string, error) {
 		return "", errors.New("gh CLI not found in PATH")
 	}
 
-	p.ui.Tracef("gh CLI found in PATH: %s", ghPath)
+	p.ui.Tracef("gh found: %s", ghPath)
 
 	// Run gh auth token
 	cmd := exec.Command("gh", "auth", "token")
@@ -70,7 +70,6 @@ func (p *GHCliProvider) GetToken() (string, error) {
 		return "", errors.Wrap(err, "failed to get token from gh CLI")
 	}
 
-	p.ui.Tracef("gh auth token output: %s", string(output))
 	p.token = strings.TrimSpace(string(output))
 	return p.token, nil
 }
