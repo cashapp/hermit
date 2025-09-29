@@ -109,6 +109,14 @@ func (l *Loader) Load(u *ui.UI, name string) (*AnnotatedManifest, error) {
 // Non-critical errors will be made available in each AnnotatedManifest and
 // also via Errors().
 func (l *Loader) All() ([]*AnnotatedManifest, error) {
+	return l.Glob("*")
+}
+
+// Glob loads all package manifests based on the given glob and returns them.
+//
+// Non-critical errors will be made available in each AnnotatedManifest and
+// also via Errors().
+func (l *Loader) Glob(glob string) ([]*AnnotatedManifest, error) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 	var (
@@ -140,8 +148,10 @@ func (l *Loader) All() ([]*AnnotatedManifest, error) {
 	// Throttle concurrency to avoid being too resource-greedy.
 	wg.SetLimit(max(3, runtime.NumCPU()/4))
 
+	pattern := glob + ".hcl"
+
 	for _, bundle := range l.sources.Bundles() {
-		files, err := fs.Glob(bundle, "*.hcl")
+		files, err := fs.Glob(bundle, pattern)
 		if err != nil {
 			return nil, errors.Wrapf(err, "%s", bundle)
 		}

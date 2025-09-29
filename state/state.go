@@ -158,6 +158,18 @@ func (s *State) Resolve(l *ui.UI, matcher manifest.Selector) (*manifest.Package,
 	return resolver.Resolve(l, matcher)
 }
 
+func (s *State) SearchLite(l *ui.UI, glob string) ([]string, error) {
+	resolver, err := s.resolver(l)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	matches, err := resolver.SearchLite(l, glob)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return matches, nil
+}
+
 // Search for packages without an active environment.
 func (s *State) Search(l *ui.UI, glob string) (manifest.Packages, error) {
 	resolver, err := s.resolver(l)

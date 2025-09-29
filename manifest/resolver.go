@@ -218,6 +218,23 @@ func (r *Resolver) Sync(l *ui.UI, force bool) error {
 	return nil
 }
 
+// SearchLite returns package references matching the given pattern.
+func (r *Resolver) SearchLite(l ui.Logger, pattern string) ([]string, error) {
+	manifests, err := r.loader.Glob(pattern + "*")
+	var matches []string
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	for _, manifest := range manifests {
+		if strings.HasPrefix(manifest.Name, pattern) {
+			matches = append(matches, manifest.Name)
+		}
+	}
+
+	return matches, nil
+}
+
 // Search for packages using the given regular expression.
 func (r *Resolver) Search(l ui.Logger, pattern string) (Packages, error) {
 	re, err := regexp.Compile("(?i)" + pattern + "")

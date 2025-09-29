@@ -3,7 +3,6 @@ package hermit
 import (
 	"github.com/posener/complete"
 
-	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/state"
 	"github.com/cashapp/hermit/ui"
 )
@@ -23,20 +22,14 @@ func NewPackagePredictor(s *state.State, e *Env, l *ui.UI) *PackagePredictor {
 func (p *PackagePredictor) Predict(args complete.Args) []string { // nolint: golint
 	p.l.SetLevel(ui.LevelFatal)
 
-	var pkgs []*manifest.Package
+	var res []string
 	// if there is an error, just quietly return an empty list
 	if p.env == nil {
-		ps, _ := p.state.Search(p.l, ".*")
-		pkgs = ps
+		res, _ = p.state.SearchLite(p.l, args.Last)
 	} else {
-		ps, _ := p.env.Search(p.l, ".*")
-		pkgs = ps
+		res, _ = p.env.SearchLite(p.l, args.Last)
 	}
 
-	res := make([]string, len(pkgs))
-	for i, pkg := range pkgs {
-		res[i] = pkg.Reference.Name
-	}
 	return res
 }
 
