@@ -9,29 +9,31 @@ import (
 	"os"
 	"strings"
 
+	"github.com/cashapp/hermit/github/auth"
 	"github.com/cashapp/hermit/ui"
 )
 
-// TokenAuthenticatedTransport returns a HTTP transport that will inject a
-// GitHub authentication token into any requests and handle test-specific URL overrides.
-func TokenAuthenticatedTransport(ui *ui.UI, transport http.RoundTripper, token string) http.RoundTripper {
+// AuthenticatedTransport returns a HTTP transport that will inject a
+// GitHub authentication token into any requests and handle test-specific URL overrides,
+// fetching the token from the provided auth.Provider only when needed.
+func AuthenticatedTransport(ui *ui.UI, transport http.RoundTripper, provider auth.Provider) http.RoundTripper {
 	if transport == nil {
 		transport = http.DefaultTransport
 	}
-	return &testGitHubClient{
-		rt:    transport,
-		token: token,
-		ui:    ui,
+	return &testGitHubProviderClient{
+		rt:       transport,
+		provider: provider,
+		ui:       ui,
 	}
 }
 
-type testGitHubClient struct {
-	ui    *ui.UI
-	rt    http.RoundTripper
-	token string
+type testGitHubProviderClient struct {
+	ui       *ui.UI
+	rt       http.RoundTripper
+	provider auth.Provider
 }
 
-func (g *testGitHubClient) RoundTrip(req *http.Request) (*http.Response, error) {
+func (g *testGitHubProviderClient) RoundTrip(req *http.Request) (*http.Response, error) {
 	// Check if this is a GitHub request or if it's already been rewritten to our mock server
 	isGitHubRequest := req.URL.Host == "github.com" || req.URL.Host == "api.github.com"
 	isMockServerRequest := strings.Contains(req.URL.String(), os.Getenv("HERMIT_GITHUB_BASE_URL"))
@@ -59,8 +61,12 @@ func (g *testGitHubClient) RoundTrip(req *http.Request) (*http.Response, error) 
 		req.URL.Host = mockURL.Host
 	}
 
-	if g.token != "" {
-		req.Header.Set("Authorization", "token "+g.token)
+	// Only fetch the token when needed
+	if g.provider != nil {
+		token, err := g.provider.GetToken()
+		if err == nil && token != "" {
+			req.Header.Set("Authorization", "token "+token)
+		}
 	}
 
 	resp, err := g.rt.RoundTrip(req)
