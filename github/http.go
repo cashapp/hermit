@@ -1,30 +1,37 @@
+//go:build !localgithub
+
 package github
 
 import (
 	"net/http"
+
+	"github.com/cashapp/hermit/github/auth"
+	"github.com/cashapp/hermit/ui"
 )
 
-// TokenAuthenticatedTransport returns a HTTP transport that will inject a
-// GitHub authentication token into any requests to github.com.
-//
-// Conceptually similar to
-// https://github.com/google/go-github/blob/d23570d44313ca73dbcaadec71fc43eca4d29f8b/github/github.go#L841-L875
-func TokenAuthenticatedTransport(transport http.RoundTripper, token string) http.RoundTripper {
+// AuthenticatedTransport returns a HTTP transport that will inject a
+// GitHub authentication token into any requests to github.com, fetching the token
+// from the provided auth.Provider only when needed.
+func AuthenticatedTransport(_ *ui.UI, transport http.RoundTripper, provider auth.Provider) http.RoundTripper {
 	if transport == nil {
 		transport = http.DefaultTransport
 	}
-	return &githubAuthenticatedHTTPClient{rt: transport, token: token}
+	return &githubProviderAuthenticatedHTTPClient{rt: transport, provider: provider}
 }
 
-type githubAuthenticatedHTTPClient struct {
-	token string
-	rt    http.RoundTripper
+type githubProviderAuthenticatedHTTPClient struct {
+	provider auth.Provider
+	rt       http.RoundTripper
 }
 
-func (g *githubAuthenticatedHTTPClient) RoundTrip(req *http.Request) (*http.Response, error) {
+func (g *githubProviderAuthenticatedHTTPClient) RoundTrip(req *http.Request) (*http.Response, error) {
 	req = req.Clone(req.Context()) // The stdlib docs recommend not mutating the request in place.
-	if (req.URL.Host == "github.com" || req.URL.Host == "api.github.com") && g.token != "" {
-		req.Header.Set("Authorization", "token "+g.token)
+	if req.URL.Host == "github.com" || req.URL.Host == "api.github.com" {
+		// Only fetch the token when needed for GitHub API requests
+		token, err := g.provider.GetToken()
+		if err == nil && token != "" {
+			req.Header.Set("Authorization", "token "+token)
+		}
 	}
 	return g.rt.RoundTrip(req)
 }

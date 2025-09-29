@@ -29,6 +29,7 @@ type UserConfig struct {
 	NoGit       bool          `hcl:"no-git,optional" help:"If true Hermit will never add/remove files from Git automatically."`
 	Idea        bool          `hcl:"idea,optional" help:"If true Hermit will try to add the IntelliJ IDEA plugin automatically."`
 	Defaults    hermit.Config `hcl:"defaults,block,optional" help:"Default configuration values for new Hermit environments."`
+	GHCliAuth   bool          `hcl:"gh-cli-auth,optional" help:"If true, use GitHub CLI (gh) for token authentication instead of environment variables."`
 }
 
 func NewUserConfigWithDefaults() UserConfig {
