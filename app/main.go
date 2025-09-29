@@ -207,9 +207,9 @@ func Main(config Config) {
 
 	ctx, err := parser.Parse(os.Args[1:])
 	parser.FatalIfErrorf(err)
-	configureLogging(cli, ctx.Command(), p)
+	configureLogging(cli, ctx, p)
 
-	var userConfig UserConfig
+	userConfig := NewUserConfigWithDefaults()
 	userConfigPath := cli.getUserConfigFile()
 
 	if IsUserConfigExists(userConfigPath) {
@@ -231,7 +231,10 @@ func Main(config Config) {
 	}
 
 	// Initialize GitHub auth provider if needed
-	var githubAuthProvider auth.Provider
+	var (
+		githubAuthProvider auth.Provider
+		githubToken        string
+	)
 	if envInfo != nil && len(envInfo.Config.GitHubTokenAuth.Match) > 0 {
 		providerType := auth.ProviderTypeEnv
 		if userConfig.GHCliAuth {
@@ -242,6 +245,11 @@ func Main(config Config) {
 			p.Fatalf("Failed to create GitHub auth provider: %v", err)
 		}
 		githubAuthProvider = provider
+		if token, tokenErr := provider.GetToken(); tokenErr != nil {
+			p.Tracef("GitHub auth provider %s did not return token: %v", providerType, tokenErr)
+		} else {
+			githubToken = token
+		}
 	}
 
 	getSource := config.PackageSourceSelector
@@ -273,23 +281,6 @@ func Main(config Config) {
 	cache, err := cache.Open(hermit.UserStateDir, getSource, defaultHTTPClient, config.fastHTTPClient(p))
 	if err != nil {
 		log.Fatalf("failed to open cache: %s", err)
-	}
-
-	ctx, err := parser.Parse(os.Args[1:])
-	parser.FatalIfErrorf(err)
-	configureLogging(cli, ctx, p)
-
-	userConfig := NewUserConfigWithDefaults()
-	userConfigPath := cli.getUserConfigFile()
-
-	if IsUserConfigExists(userConfigPath) {
-		p.Tracef("Loading user config from: %s", userConfigPath)
-		userConfig, err = LoadUserConfig(userConfigPath)
-		if err != nil {
-			log.Printf("%s: %s", userConfigPath, err)
-		}
-	} else {
-		p.Tracef("No user config found at: %s", userConfigPath)
 	}
 
 	config.State.LockTimeout = cli.getLockTimeout()
