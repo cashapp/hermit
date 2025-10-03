@@ -4,6 +4,10 @@
 
 set -eo pipefail
 
+# Set Github Token only in CI (Buildkite)
+if [ -n "${BUILDKITE}" ]; then
+  export GIT_CREDENTIALS_TOKEN_NAME=sq_hermit
+fi
 export HERMIT_USER_HOME=~
 
 if [ -z "${HERMIT_STATE_DIR}" ]; then
