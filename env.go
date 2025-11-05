@@ -1038,6 +1038,7 @@ func (e *Env) ListInstalled(l *ui.UI) ([]*manifest.Package, error) {
 	for _, ref := range refs {
 		pkg, err := e.Resolve(l, manifest.ExactSelector(ref), false)
 		if err != nil { // We don't want to error if there are corrupt packages.
+			l.Warnf("Could not resolve package %s (does \"hermit update\" need to be run?): %v", ref, err)
 			continue
 		}
 		out = append(out, pkg)

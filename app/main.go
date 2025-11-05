@@ -251,7 +251,7 @@ func Main(config Config) {
 
 	ctx, err := parser.Parse(os.Args[1:])
 	parser.FatalIfErrorf(err)
-	configureLogging(cli, ctx, p)
+	configureLogging(cli, p)
 
 	userConfig := NewUserConfigWithDefaults()
 	userConfigPath := cli.getUserConfigFile()
@@ -317,13 +317,7 @@ func Main(config Config) {
 	fatalIfError(p, ctx, err)
 }
 
-func configureLogging(cli cliInterface, ctx *kong.Context, p *ui.UI) {
-	cmd := ctx.Command()
-	// This is set to avoid logging in environments where quiet flag is not used
-	// in the "hermit" script. This is fragile, and should be removed when we know that all the
-	// environments are using a script with executions done with --quiet
-	isExecution := cmd == "exec <binary>"
-
+func configureLogging(cli cliInterface, p *ui.UI) {
 	switch {
 	case cli.getTrace():
 		p.SetLevel(ui.LevelTrace)
@@ -332,11 +326,7 @@ func configureLogging(cli cliInterface, ctx *kong.Context, p *ui.UI) {
 	case cli.getQuiet():
 		p.SetLevel(ui.LevelFatal)
 	default:
-		if isExecution {
-			p.SetLevel(ui.LevelFatal)
-		} else {
-			p.SetLevel(cli.getLevel())
-		}
+		p.SetLevel(cli.getLevel())
 	}
 
 	if cli.getQuiet() {
