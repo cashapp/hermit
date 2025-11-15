@@ -218,16 +218,16 @@ func (r *Resolver) Sync(l *ui.UI, force bool) error {
 	return nil
 }
 
-// SearchLite returns package references matching the given pattern.
-func (r *Resolver) SearchLite(l ui.Logger, pattern string) ([]string, error) {
-	manifests, err := r.loader.Glob(pattern + "*")
+// SearchPrefix returns package names whose name begins with the given prefix.
+func (r *Resolver) SearchPrefix(l ui.Logger, prefix string) ([]string, error) {
+	manifests, err := r.loader.Glob(prefix + "*")
 	var matches []string
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	for _, manifest := range manifests {
-		if strings.HasPrefix(manifest.Name, pattern) {
+		if strings.HasPrefix(manifest.Name, prefix) {
 			matches = append(matches, manifest.Name)
 		}
 	}

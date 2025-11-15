@@ -158,12 +158,13 @@ func (s *State) Resolve(l *ui.UI, matcher manifest.Selector) (*manifest.Package,
 	return resolver.Resolve(l, matcher)
 }
 
-func (s *State) SearchLite(l *ui.UI, glob string) ([]string, error) {
+// SearchPrefix returns package names whose name begins with the given prefix.
+func (s *State) SearchPrefix(l *ui.UI, glob string) ([]string, error) {
 	resolver, err := s.resolver(l)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	matches, err := resolver.SearchLite(l, glob)
+	matches, err := resolver.SearchPrefix(l, glob)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -262,7 +263,7 @@ func (s *State) ReadPackageState(pkg *manifest.Package) {
 
 // WritePackageState updates the fields and usage time stamp of the given package
 func (s *State) WritePackageState(p *manifest.Package) error {
-	var updatedAt = time.Time{}
+	updatedAt := time.Time{}
 	if p.UpdateInterval > 0 {
 		updatedAt = p.UpdatedAt
 	}
@@ -294,7 +295,7 @@ func (s *State) removeRecursive(b *ui.Task, dest string) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		err = os.Chmod(path, info.Mode()|0200)
+		err = os.Chmod(path, info.Mode()|0o200)
 
 		if errors.Is(err, os.ErrNotExist) {
 			task.Debugf("file did not exist during removal %q", path)
@@ -374,7 +375,7 @@ func (s *State) linkBinaries(p *manifest.Package) error {
 		return errors.WithStack(err)
 	}
 
-	if err := os.MkdirAll(dir, 0700); err != nil {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return errors.WithStack(err)
 	}
 

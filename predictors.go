@@ -25,9 +25,9 @@ func (p *PackagePredictor) Predict(args complete.Args) []string { // nolint: gol
 	var res []string
 	// if there is an error, just quietly return an empty list
 	if p.env == nil {
-		res, _ = p.state.SearchLite(p.l, args.Last)
+		res, _ = p.state.SearchPrefix(p.l, args.Last)
 	} else {
-		res, _ = p.env.SearchLite(p.l, args.Last)
+		res, _ = p.env.SearchPrefix(p.l, args.Last)
 	}
 
 	return res

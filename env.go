@@ -1149,13 +1149,13 @@ func (e *Env) Clean(l *ui.UI, level CleanMask) error {
 	return nil
 }
 
-// SearchLite for packages using the given regular expression.
-func (e *Env) SearchLite(l *ui.UI, pattern string) ([]string, error) {
+// SearchPrefix for packages using the given name prefix.
+func (e *Env) SearchPrefix(l *ui.UI, pattern string) ([]string, error) {
 	resolver, err := e.resolver(l)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	matches, err := resolver.SearchLite(l, pattern)
+	matches, err := resolver.SearchPrefix(l, pattern)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
