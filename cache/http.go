@@ -107,7 +107,7 @@ func downloadHTTP(b *ui.Task, response *http.Response, checksum string, uri stri
 		return "", "", "", errors.WithStack(err)
 	}
 	resumed := info.Size()
-	task.Size(int(max(response.ContentLength + resumed, 0)))
+	task.Size(int(max(response.ContentLength+resumed, 1)))
 	task.Add(int(resumed))
 	defer task.Done()
 
