@@ -218,6 +218,23 @@ func (r *Resolver) Sync(l *ui.UI, force bool) error {
 	return nil
 }
 
+// SearchPrefix returns package names whose name begins with the given prefix.
+func (r *Resolver) SearchPrefix(l ui.Logger, prefix string) ([]string, error) {
+	manifests, err := r.loader.Glob(prefix + "*")
+	var matches []string
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	for _, manifest := range manifests {
+		if strings.HasPrefix(manifest.Name, prefix) {
+			matches = append(matches, manifest.Name)
+		}
+	}
+
+	return matches, nil
+}
+
 // Search for packages using the given regular expression.
 func (r *Resolver) Search(l ui.Logger, pattern string) (Packages, error) {
 	re, err := regexp.Compile("(?i)" + pattern + "")

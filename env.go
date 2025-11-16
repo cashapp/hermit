@@ -1149,6 +1149,19 @@ func (e *Env) Clean(l *ui.UI, level CleanMask) error {
 	return nil
 }
 
+// SearchPrefix for packages using the given name prefix.
+func (e *Env) SearchPrefix(l *ui.UI, pattern string) ([]string, error) {
+	resolver, err := e.resolver(l)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	matches, err := resolver.SearchPrefix(l, pattern)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return matches, nil
+}
+
 // Search for packages using the given regular expression.
 func (e *Env) Search(l *ui.UI, pattern string) (manifest.Packages, error) {
 	resolver, err := e.resolver(l)
