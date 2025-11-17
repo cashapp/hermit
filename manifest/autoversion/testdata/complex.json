@@ -1,0 +1,16 @@
+{
+  "releases": {
+    "stable": {
+      "tag_name": "v1.4.0",
+      "prerelease": false
+    },
+    "latest": {
+      "tag_name": "v1.5.2",
+      "prerelease": false
+    },
+    "beta": {
+      "tag_name": "v1.6.0-beta1",
+      "prerelease": true
+    }
+  }
+}
