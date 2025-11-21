@@ -72,7 +72,7 @@ used by other scripts. Add a `my-script-lib-prefix` to your library to report
 its install directory. This is somewhat akin to `pkg-config`.
 
 ```bash
-#!/bin/bash
+#!/usr/bin/env bash
 echo "$(dirname $0)"
 ```
 
@@ -89,7 +89,7 @@ version "0.1.0", "0.1.1", "0.2.0" {}
 Then to source any of the "library" scripts just install the package and:
 
 ```bash
-#!/bin/bash
+#!/usr/bin/env bash
 
 . $(my-script-lib-prefix)/lib1.sh
 
