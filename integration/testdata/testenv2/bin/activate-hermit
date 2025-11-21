@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # This file must be used with "source bin/activate-hermit" from bash or zsh.
 # You cannot run it directly
 

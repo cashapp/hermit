@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # shellcheck disable=SC2018,SC2019
 # SC2019: Use '[:upper:]' to support accents and foreign alphabets.
@@ -100,7 +100,7 @@ function system_install() {
     rm -f "$HERMIT_BIN_INSTALL_DIR/$HERMIT_INSTALL_NAME"
   fi
   cat > "$HERMIT_BIN_INSTALL_DIR/$HERMIT_INSTALL_NAME" << EOF
-#!/bin/bash
+#!/usr/bin/env bash
 : "\${HERMIT_EXE:=${HERMIT_EXE_RAW}}"
 test -x \${HERMIT_EXE} && exec "\${HERMIT_EXE}" "\$@"
 (curl -fsSL "${HERMIT_DIST_URL}/install.sh" | bash) && exec "\${HERMIT_EXE}" "\$@"
