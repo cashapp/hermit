@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # ratchet:actions/checkout@master
+        uses: actions/checkout@c2d88d3ecc89a9ef08eebf45d9637801dcee7eb5 # ratchet:actions/checkout@master
         with:
           submodules: true
       - name: Init Hermit
