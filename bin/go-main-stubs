@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #
 # This script generates stub scripts for every Go "main" package in this
@@ -42,7 +42,7 @@ echo -n .
 for main in $(cd "${root}" && go list -f '{{if eq "main" .Name}}{{.ImportPath}}{{end}}' ./...); do
   stub_script="${bindir}/$(basename $main)"
   cat << EOF > ${stub_script}
-#!/bin/bash
+#!/usr/bin/env bash
 # go-main-stubs stub script
 exec "\$(dirname \$0)/go" run $main "\$@"
 EOF
