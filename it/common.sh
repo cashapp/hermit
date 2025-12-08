@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This is a helper file for integration tests, and should not be used directly.
 # Instead, this should be sourced from the IT specific sub-folders
