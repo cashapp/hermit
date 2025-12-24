@@ -137,3 +137,9 @@ func (b PkgBuilder) WithUnsupportedPlatforms(platforms []platform.Platform) PkgB
 	b.result.UnsupportedPlatforms = platforms
 	return b
 }
+
+// WithVars sets the variables for the package
+func (b PkgBuilder) WithVars(vars map[string]string) PkgBuilder {
+	b.result.Vars = vars
+	return b
+}

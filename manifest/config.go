@@ -91,6 +91,7 @@ func (c *Layer) match(arch string) bool {
 type AutoVersionBlock struct {
 	GitHubRelease string                `hcl:"github-release,optional" help:"GitHub <user>/<repo> to retrieve and update versions from the releases API."`
 	HTML          *HTMLAutoVersionBlock `hcl:"html,block" help:"Extract version information from a HTML URL using XPath."`
+	JSON          *JSONAutoVersionBlock `hcl:"json,block" help:"Extract version information from a JSON URL using gjson path syntax."`
 	GitTags       string                `hcl:"git-tags,optional" help:"Git remote URL to fetch git tags for version extraction."`
 
 	VersionPattern        string `hcl:"version-pattern,optional" help:"Regex with one capture group to extract the version number from the origin." default:"v?(.*)"`
@@ -102,6 +103,31 @@ type HTMLAutoVersionBlock struct {
 	URL   string `hcl:"url" help:"URL to retrieve HTML from."`
 	XPath string `hcl:"xpath,optional" help:"XPath for selecting versions from HTML (see https://github.com/antchfx/htmlquery) - use version-pattern to extract substrings"`
 	CSS   string `hcl:"css,optional" help:"CSS selector for selecting versions from HTML (see https://github.com/andybalholm/cascadia). Only one of xpath or css can be specified."`
+}
+
+// JSONAutoVersionBlock defines how version numbers can be extracted from JSON.
+type JSONAutoVersionBlock struct {
+	URL        string            `hcl:"url" help:"URL to retrieve JSON from."`
+	Path       string            `hcl:"path,optional" help:"gjson path expression for selecting versions from JSON (legacy - use extract.version instead)."`
+	Headers    map[string]string `hcl:"headers,optional" help:"HTTP headers to send with the request."`
+	Vars       map[string]string `hcl:"vars,optional" help:"Additional variables to extract from JSON using gjson path expressions (legacy - use extract block instead)."`
+	SHA256Path string            `hcl:"sha256-path,optional" help:"gjson path expression for extracting SHA256 checksum (legacy - use extract block instead)."`
+	Extract    *JSONExtractBlock `hcl:"extract,block" help:"Extract block defining version and platform-specific variable extraction."`
+}
+
+// JSONExtractBlock defines centralized JSON extraction configuration.
+type JSONExtractBlock struct {
+	Version  string                      `hcl:"version" help:"gjson path expression for extracting the version."`
+	Darwin   *JSONPlatformExtractBlock   `hcl:"darwin,block" help:"Darwin-specific variable extraction."`
+	Linux    *JSONPlatformExtractBlock   `hcl:"linux,block" help:"Linux-specific variable extraction."`
+	Platform []*JSONPlatformExtractBlock `hcl:"platform,block" help:"Platform-specific variable extraction."`
+}
+
+// JSONPlatformExtractBlock defines variable extraction for a specific platform.
+type JSONPlatformExtractBlock struct {
+	BuildNumber string `hcl:"build_number,optional" help:"gjson path for extracting build number."`
+	SHA256      string `hcl:"sha256,optional" help:"gjson path for extracting SHA256 checksum."`
+	CommitSHA   string `hcl:"commit_sha,optional" help:"gjson path for extracting commit SHA."`
 }
 
 // PlatformBlock matches a set of attributes describing a platform (eg. CPU, OS, etc.)
