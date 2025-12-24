@@ -58,7 +58,7 @@ export HERMIT_ENV_OPS="$(${HERMIT_ENV}/bin/hermit env --ops)"
 export HERMIT_BIN_CHANGE=$(date -r ${HERMIT_ENV}/bin +"%s")
 
 {{- if ne .Prompt "none" }}
-if test -n "${PS1+_}"; then export _HERMIT_OLD_PS1="${PS1}"; export PS1="{{if eq .Prompt "env"}}{{ .EnvName }}{{end}}🐚 ${PS1}"; fi
+if test -n "${PS1+_}"; then export _HERMIT_OLD_PS1="${PS1}"; PS1="{{if eq .Prompt "env"}}{{ .EnvName }}{{end}}🐚 ${PS1}"; fi
 {{- end}}
 
 update_hermit_env() {
