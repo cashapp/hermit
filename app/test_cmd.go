@@ -17,7 +17,7 @@ func (t *testCmd) Run(l *ui.UI, env *hermit.Env) error {
 		options := &hermit.ValidationOptions{
 			CheckSources: t.CheckSources,
 		}
-		warnings, err := env.ValidateManifest(l, selector.Name(), options)
+		warnings, err := env.ValidateSelector(l, &selector, options)
 		if err != nil {
 			return errors.WithStack(err)
 		}
