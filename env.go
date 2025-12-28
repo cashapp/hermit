@@ -917,6 +917,51 @@ type ValidationOptions struct {
 	CheckSources bool
 }
 
+// ValidateSelector validates a package selector.
+//
+// If the selector is fully qualified (specifies a version or channel), only that
+// specific reference is validated. Otherwise, all versions in the manifest are validated.
+//
+// Returns the resolution errors for core systems as warnings.
+// If a version fails to resolve for all systems, returns an error.
+func (e *Env) ValidateSelector(l *ui.UI, selector manifest.Selector, options *ValidationOptions) ([]string, error) {
+	sources, err := e.sources(l)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	mnf, err := manifest.NewLoader(sources).Load(l, selector.Name())
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	refs := mnf.References(selector.Name())
+
+	// Filter to only matching references if selector is fully qualified
+	if selector.IsFullyQualified() {
+		var filtered []manifest.Reference
+		for _, ref := range refs {
+			if selector.Matches(ref) {
+				filtered = append(filtered, ref)
+			}
+		}
+		refs = filtered
+	}
+
+	var warnings []string
+	task := l.Task("validate")
+	for _, ref := range refs {
+		task.Infof("Validating %s", ref)
+		w, err := e.validateReference(l, sources, ref, options)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		warnings = append(warnings, w...)
+	}
+
+	return warnings, nil
+}
+
 // ValidateManifest with given name.
 //
 // Returns the resolution errors for core systems as warnings.
