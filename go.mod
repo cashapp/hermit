@@ -30,9 +30,9 @@ require (
 	github.com/saracen/go7z v0.0.0-20191010121135-9c09b6bd7fda
 	github.com/sassoftware/go-rpmutils v0.4.0
 	github.com/square/exit v1.3.0
+	github.com/ulikunitz/xz v0.5.12
 	github.com/willabides/kongplete v0.4.0
 	github.com/willdonnelly/passwd v0.0.0-20141013001024-7935dab3074c
-	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
 	golang.org/x/net v0.42.0
 	golang.org/x/sync v0.16.0
 	golang.org/x/sys v0.34.0
@@ -54,7 +54,7 @@ require (
 	github.com/riywo/loginshell v0.0.0-20200815045211-7d26008be1ab // indirect
 	github.com/saracen/go7z-fixtures v0.0.0-20190623165746-aa6b8fba1d2f // indirect
 	github.com/saracen/solidblock v0.0.0-20190426153529-45df20abab6f // indirect
-	github.com/ulikunitz/xz v0.5.12 // indirect
+	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	golang.org/x/crypto v0.40.0 // indirect
 	golang.org/x/text v0.27.0 // indirect
 )

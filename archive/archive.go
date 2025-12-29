@@ -22,7 +22,7 @@ import (
 	"github.com/klauspost/compress/zstd"
 	"github.com/saracen/go7z"
 	"github.com/sassoftware/go-rpmutils"
-	"github.com/xi2/xz"
+	"github.com/ulikunitz/xz"
 	"howett.net/plist"
 
 	"github.com/otiai10/copy"
@@ -306,7 +306,7 @@ func openArchive(source string) (f *os.File, r io.Reader, mime *mimetype.MIME, e
 		r = bzip2.NewReader(r)
 
 	case "application/x-xz":
-		xr, err := xz.NewReader(r, 0)
+		xr, err := xz.NewReader(r)
 		if err != nil {
 			return nil, nil, mime, errors.WithStack(err)
 		}
