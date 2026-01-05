@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # THIS FILE IS GENERATED; DO NOT MODIFY
 
@@ -37,7 +37,7 @@ if [ ! -x "${HERMIT_EXE}" ]; then
       awk -v EXPECTED="$INSTALL_SCRIPT_SHA256" \
       '$2!=EXPECTED {print "Install script sha256 " $2 " does not match " EXPECTED; exit 1}'
   fi
-  /bin/bash "${INSTALL_SCRIPT}" 1>&2
+  bash "${INSTALL_SCRIPT}" 1>&2
 fi
 
 exec "${HERMIT_EXE}" --level=fatal exec "$0" -- "$@"
