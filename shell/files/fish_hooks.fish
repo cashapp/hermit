@@ -7,7 +7,7 @@ function activate_hermit --on-variable PWD
           if set -q DEACTIVATED_HERMIT; and test "$CUR" -ef "$DEACTIVATED_HERMIT"
               return
           end
-          if functions -q deactivate-hermit
+          if set -q _HERMIT_SHELL_ACTIVE; and test "$_HERMIT_SHELL_ACTIVE" -ef "$HERMIT_ENV"
               return
           end
       end

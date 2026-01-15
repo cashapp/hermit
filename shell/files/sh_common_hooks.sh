@@ -5,7 +5,7 @@ change_hermit_env() {
       if [ -n "${DEACTIVATED_HERMIT+_}" ] && [ "${CUR}" -ef "${DEACTIVATED_HERMIT}" ]; then
         return
       fi
-      if typeset -f deactivate-hermit >/dev/null 2>&1; then
+      if [ -n "${_HERMIT_SHELL_ACTIVE+_}" ] && [ "${_HERMIT_SHELL_ACTIVE}" -ef "${HERMIT_ENV}" ]; then
         return
       fi
     fi

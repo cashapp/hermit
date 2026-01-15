@@ -4,7 +4,7 @@ export HERMIT_ENV={{.Root}}
 
 if [ -n "${ACTIVE_HERMIT+_}" ]; then
   if [ "$ACTIVE_HERMIT" = "$HERMIT_ENV" ]; then
-    if typeset -f deactivate-hermit >/dev/null 2>&1; then
+    if [ -n "${_HERMIT_SHELL_ACTIVE+_}" ] && [ "${_HERMIT_SHELL_ACTIVE}" -ef "${HERMIT_ENV}" ]; then
       echo "This Hermit environment has already been activated. Skipping" >&2
       return 0
     fi
@@ -34,6 +34,7 @@ _hermit_deactivate() {
   unset -f update_hermit_env >/dev/null 2>&1
   unset ACTIVE_HERMIT
   unset HERMIT_ENV_OPS
+  unset _HERMIT_SHELL_ACTIVE
 
   hash -r 2>/dev/null
 
@@ -62,6 +63,7 @@ unset DEACTIVATED_HERMIT
 export ACTIVE_HERMIT=$HERMIT_ENV
 export HERMIT_ENV_OPS="$(${HERMIT_ENV}/bin/hermit env --ops)"
 export HERMIT_BIN_CHANGE=$(date -r ${HERMIT_ENV}/bin +"%s")
+_HERMIT_SHELL_ACTIVE=$HERMIT_ENV
 
 {{- if ne .Prompt "none" }}
 if test -n "${PS1+_}"; then export _HERMIT_OLD_PS1="${PS1}"; PS1="{{if eq .Prompt "env"}}{{ .EnvName }}{{end}}🐚 ${PS1}"; fi
