@@ -227,6 +227,97 @@ EOF
 			expectations: exp{outputContains("This Hermit environment has already been activated. Skipping")},
 		},
 		{
+			name: "ReactivatesWhenFunctionsMissing",
+			preparations: prep{fixture("testenv1")},
+			script: `
+				export BAR="orig"
+				. bin/activate-hermit
+
+				# Simulate inherited env vars without shell functions.
+				unset -f deactivate-hermit update_hermit_env _hermit_deactivate >/dev/null 2>&1
+				mkdir -p "$PWD/extra-bin"
+				export PATH="$PWD/extra-bin:$PATH"
+
+				HERMIT_ROOT_BIN="$(command -v hermit)"
+				if [ -n "${BASH_VERSION-}" ]; then
+					eval "$($HERMIT_ROOT_BIN shell-hooks --print --bash)"
+				elif [ -n "${ZSH_VERSION-}" ]; then
+					eval "$($HERMIT_ROOT_BIN shell-hooks --print --zsh)"
+				fi
+
+				change_hermit_env
+				case "$(env)" in
+				  *"HERMIT_ENV="*) ;;
+				  *) hermit-send "error: HERMIT_ENV not exported after repair"; exit 1 ;;
+				esac
+				assert typeset -f deactivate-hermit >/dev/null 2>&1
+				deactivate-hermit
+				assert test -z "${HERMIT_ENV-}"
+				assert test "$BAR" = "orig"
+				case ":$PATH:" in
+				  *":$PWD/bin:"*) hermit-send "error: PATH still contains env bin"; exit 1 ;;
+				esac
+				case ":$PATH:" in
+				  *":$PWD/extra-bin:"*) ;;
+				  *) hermit-send "error: PATH missing extra-bin"; exit 1 ;;
+				esac
+			`,
+		},
+		{
+			name:         "ResourcingActivationRepairsMissingFunctions",
+			preparations: prep{fixture("testenv1")},
+			script: `
+				. bin/activate-hermit
+				unset -f deactivate-hermit update_hermit_env _hermit_deactivate >/dev/null 2>&1
+				. bin/activate-hermit
+				assert typeset -f deactivate-hermit >/dev/null 2>&1
+			`,
+		},
+		{
+			name:         "DoesNotReactivateAfterManualDeactivation",
+			preparations: prep{fixture("testenv1")},
+			script: `
+				. bin/activate-hermit
+				deactivate-hermit
+
+				HERMIT_ROOT_BIN="$(command -v hermit)"
+				if [ -n "${BASH_VERSION-}" ]; then
+					eval "$($HERMIT_ROOT_BIN shell-hooks --print --bash)"
+				elif [ -n "${ZSH_VERSION-}" ]; then
+					eval "$($HERMIT_ROOT_BIN shell-hooks --print --zsh)"
+				fi
+
+				change_hermit_env
+				assert test -z "${HERMIT_ENV-}"
+			`,
+		},
+		{
+			name:         "SwitchEnvWithMissingFunctions",
+			preparations: prep{fixture("overlapping_envs")},
+			script: `
+				. env1/bin/activate-hermit
+
+				# Simulate inherited env vars without shell functions.
+				unset -f deactivate-hermit update_hermit_env _hermit_deactivate >/dev/null 2>&1
+
+				HERMIT_ROOT_BIN="$(command -v hermit)"
+				if [ -n "${BASH_VERSION-}" ]; then
+					eval "$($HERMIT_ROOT_BIN shell-hooks --print --bash)"
+				elif [ -n "${ZSH_VERSION-}" ]; then
+					eval "$($HERMIT_ROOT_BIN shell-hooks --print --zsh)"
+				fi
+
+				cd env2
+				change_hermit_env
+				assert test "$HERMIT_ENV" = "$PWD"
+				case "$(env)" in
+				  *"HERMIT_ENV="*) ;;
+				  *) hermit-send "error: HERMIT_ENV not exported after env switch"; exit 1 ;;
+				esac
+				assert typeset -f deactivate-hermit >/dev/null 2>&1
+			`,
+		},
+		{
 			name:         "PackageEnvarsAreSetAutomatically",
 			preparations: prep{fixture("testenv1"), activate(".")},
 			script: `

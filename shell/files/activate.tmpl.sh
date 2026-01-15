@@ -4,16 +4,22 @@ export HERMIT_ENV={{.Root}}
 
 if [ -n "${ACTIVE_HERMIT+_}" ]; then
   if [ "$ACTIVE_HERMIT" = "$HERMIT_ENV" ]; then
-    echo "This Hermit environment has already been activated. Skipping" >&2
-    return 0
-  elif type deactivate-hermit &>/dev/null; then
-    export HERMIT_CURRENT_ENV=$HERMIT_ENV
-    export HERMIT_ENV=$ACTIVE_HERMIT
+    if typeset -f deactivate-hermit >/dev/null 2>&1; then
+      echo "This Hermit environment has already been activated. Skipping" >&2
+      return 0
+    fi
+  elif typeset -f deactivate-hermit >/dev/null 2>&1; then
+    HERMIT_CURRENT_ENV=$HERMIT_ENV
+    HERMIT_ENV=$ACTIVE_HERMIT
     deactivate-hermit
     export HERMIT_ENV=$HERMIT_CURRENT_ENV
     unset HERMIT_CURRENT_ENV
   else
+    HERMIT_CURRENT_ENV=$HERMIT_ENV
+    HERMIT_ENV=$ACTIVE_HERMIT
     eval "$(${ACTIVE_HERMIT}/bin/hermit env --deactivate-from-ops="${HERMIT_ENV_OPS}")"
+    export HERMIT_ENV=$HERMIT_CURRENT_ENV
+    unset HERMIT_CURRENT_ENV
   fi
 fi
 
