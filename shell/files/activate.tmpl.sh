@@ -8,7 +8,7 @@ if [ -n "${ACTIVE_HERMIT+_}" ]; then
       echo "This Hermit environment has already been activated. Skipping" >&2
       return 0
     fi
-  elif typeset -f deactivate-hermit >/dev/null 2>&1; then
+  elif type deactivate-hermit &>/dev/null; then
     HERMIT_CURRENT_ENV=$HERMIT_ENV
     HERMIT_ENV=$ACTIVE_HERMIT
     deactivate-hermit
