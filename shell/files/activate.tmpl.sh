@@ -10,10 +10,10 @@ if [ -n "${ACTIVE_HERMIT+_}" ]; then
       return 0
     fi
   elif type deactivate-hermit &>/dev/null; then
-    HERMIT_ENV=$ACTIVE_HERMIT
+    export HERMIT_ENV=$ACTIVE_HERMIT
     deactivate-hermit
   else
-    HERMIT_ENV=$ACTIVE_HERMIT
+    export HERMIT_ENV=$ACTIVE_HERMIT
     eval "$(${ACTIVE_HERMIT}/bin/hermit env --deactivate-from-ops="${HERMIT_ENV_OPS}")"
   fi
 fi
