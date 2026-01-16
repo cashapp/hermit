@@ -247,30 +247,16 @@ EOF
 				fi
 
 				change_hermit_env
-				case "$(env)" in
-				  *"HERMIT_ENV="*) ;;
-				  *) hermit-send "error: HERMIT_ENV not exported after repair"; exit 1 ;;
-				esac
+				assert test -n "$HERMIT_ENV"
 				assert test "$_HERMIT_SHELL_ACTIVE" = "$HERMIT_ENV"
-				case ":$PATH:" in
-				  *":$PWD/bin:"*) ;;
-				  *) hermit-send "error: PATH missing env bin after repair"; exit 1 ;;
-				esac
-				case ":$PATH:" in
-				  *":$PWD/extra-bin:"*) ;;
-				  *) hermit-send "error: PATH missing extra-bin"; exit 1 ;;
-				esac
+				assert test -n "$(printf "%s" "$PATH" | tr ":" "\n" | awk -v bin="$PWD/bin" '$0 == bin {print}')"
+				assert test -n "$(printf "%s" "$PATH" | tr ":" "\n" | awk -v bin="$PWD/extra-bin" '$0 == bin {print}')"
 				deactivate-hermit
 				assert test -z "${_HERMIT_SHELL_ACTIVE-}"
 				assert test -z "${HERMIT_ENV-}"
 				assert test "$BAR" = "orig"
-				case ":$PATH:" in
-				  *":$PWD/bin:"*) hermit-send "error: PATH still contains env bin"; exit 1 ;;
-				esac
-				case ":$PATH:" in
-				  *":$PWD/extra-bin:"*) ;;
-				  *) hermit-send "error: PATH missing extra-bin"; exit 1 ;;
-				esac
+				assert test -z "$(printf "%s" "$PATH" | tr ":" "\n" | awk -v bin="$PWD/bin" '$0 == bin {print}')"
+				assert test -n "$(printf "%s" "$PATH" | tr ":" "\n" | awk -v bin="$PWD/extra-bin" '$0 == bin {print}')"
 				change_hermit_env
 				assert test -z "${HERMIT_ENV-}"
 			`,
