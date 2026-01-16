@@ -234,14 +234,7 @@ EOF
 				child_script=$(cat <<-'EOF'
 				set -euo pipefail
 
-				assert() {
-				  if ! "$@"; then
-				    exit 1
-				  fi
-				}
-
-				# Simulate inherited env vars without shell-local activation marker.
-				unset _HERMIT_SHELL_ACTIVE >/dev/null 2>&1
+				# Simulate a child shell that inherits env vars but not shell-local state.
 				PATH=$(printf "%s" "$PATH" | tr ":" "\n" | awk -v bin="$PWD/bin" '$0 != bin' | paste -sd ":" -)
 				export PATH
 
@@ -253,13 +246,13 @@ EOF
 				fi
 
 				change_hermit_env
-				assert test -n "${_HERMIT_SHELL_ACTIVE-}"
-				assert test -n "$(printf "%s" "$PATH" | tr ":" "\n" | awk -v bin="$PWD/bin" '$0 == bin {print}')"
+				test -n "${_HERMIT_SHELL_ACTIVE-}"
+				test -n "$(printf "%s" "$PATH" | tr ":" "\n" | awk -v bin="$PWD/bin" '$0 == bin {print}')"
 				deactivate-hermit
-				assert test -z "${_HERMIT_SHELL_ACTIVE-}"
-				assert test -z "${HERMIT_ENV-}"
+				test -z "${_HERMIT_SHELL_ACTIVE-}"
+				test -z "${HERMIT_ENV-}"
 				change_hermit_env
-				assert test -z "${HERMIT_ENV-}"
+				test -z "${HERMIT_ENV-}"
 				EOF
 				)
 				if [ -n "${BASH_VERSION-}" ]; then
