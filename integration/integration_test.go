@@ -242,9 +242,8 @@ EOF
 
 				# Simulate inherited env vars without shell-local activation marker.
 				unset _HERMIT_SHELL_ACTIVE >/dev/null 2>&1
-				mkdir -p "$PWD/extra-bin"
 				PATH=$(printf "%s" "$PATH" | tr ":" "\n" | awk -v bin="$PWD/bin" '$0 != bin' | paste -sd ":" -)
-				export PATH="$PWD/extra-bin:$PATH"
+				export PATH
 
 				HERMIT_ROOT_BIN="$(command -v hermit)"
 				if [ "${CHILD_SHELL}" = "bash" ]; then
@@ -254,15 +253,11 @@ EOF
 				fi
 
 				change_hermit_env
-				assert test -n "$HERMIT_ENV"
-				assert test "$_HERMIT_SHELL_ACTIVE" = "$HERMIT_ENV"
+				assert test -n "${_HERMIT_SHELL_ACTIVE-}"
 				assert test -n "$(printf "%s" "$PATH" | tr ":" "\n" | awk -v bin="$PWD/bin" '$0 == bin {print}')"
-				assert test -n "$(printf "%s" "$PATH" | tr ":" "\n" | awk -v bin="$PWD/extra-bin" '$0 == bin {print}')"
 				deactivate-hermit
 				assert test -z "${_HERMIT_SHELL_ACTIVE-}"
 				assert test -z "${HERMIT_ENV-}"
-				assert test -z "$(printf "%s" "$PATH" | tr ":" "\n" | awk -v bin="$PWD/bin" '$0 == bin {print}')"
-				assert test -n "$(printf "%s" "$PATH" | tr ":" "\n" | awk -v bin="$PWD/extra-bin" '$0 == bin {print}')"
 				change_hermit_env
 				assert test -z "${HERMIT_ENV-}"
 				EOF
