@@ -235,7 +235,6 @@ EOF
 
 				# Simulate inherited env vars without shell-local activation marker.
 				unset _HERMIT_SHELL_ACTIVE >/dev/null 2>&1
-				unset -f deactivate-hermit update_hermit_env _hermit_deactivate >/dev/null 2>&1
 				mkdir -p "$PWD/extra-bin"
 				PATH=$(printf "%s" "$PATH" | tr ":" "\n" | awk -v bin="$PWD/bin" '$0 != bin' | paste -sd ":" -)
 				export PATH="$PWD/extra-bin:$PATH"
