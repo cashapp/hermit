@@ -3,15 +3,20 @@ function activate_hermit --on-variable PWD
   set -q HERMIT_ROOT_BIN; or set HERMIT_ROOT_BIN "$HOME/bin/hermit"
 
   while test "$CUR" != "/"
-      if test "$CUR" -ef "$HERMIT_ENV"
-          return
+      if set -q HERMIT_ENV; and test "$CUR" -ef "$HERMIT_ENV"
+          if set -q DEACTIVATED_HERMIT; and test "$CUR" -ef "$DEACTIVATED_HERMIT"
+              return
+          end
+          if set -q _HERMIT_SHELL_ACTIVE; and test "$_HERMIT_SHELL_ACTIVE" -ef "$HERMIT_ENV"
+              return
+          end
       end
       if test -f "$CUR/bin/activate-hermit.fish"
           if test -n "$HERMIT_ENV"
               type -q _hermit_deactivate; and _hermit_deactivate
           end
           # Validate and activate the Hermit environment
-          if not test "$CUR" -ef "$DEACTIVATED_HERMIT"
+          if not set -q DEACTIVATED_HERMIT; or not test "$CUR" -ef "$DEACTIVATED_HERMIT"
               if "$HERMIT_ROOT_BIN" --quiet validate env "$CUR" >/dev/null 2>&1
                   source "$CUR/bin/activate-hermit.fish"
               end

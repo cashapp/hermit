@@ -227,6 +227,42 @@ EOF
 			expectations: exp{outputContains("This Hermit environment has already been activated. Skipping")},
 		},
 		{
+			name: "ReactivatesWhenShellMarkerMissing",
+			preparations: prep{fixture("testenv1")},
+			script: `
+				. bin/activate-hermit
+				child_script=$(cat <<-'EOF'
+				set -euo pipefail
+
+				# Simulate a child shell that inherits env vars but not shell-local state.
+				PATH=$(printf "%s" "$PATH" | tr ":" "\n" | awk -v bin="$PWD/bin" '$0 != bin' | paste -sd ":" -)
+				export PATH
+
+				HERMIT_ROOT_BIN="$(command -v hermit)"
+				if [ "${CHILD_SHELL}" = "bash" ]; then
+					eval "$($HERMIT_ROOT_BIN shell-hooks --print --bash)"
+				else
+					eval "$($HERMIT_ROOT_BIN shell-hooks --print --zsh)"
+				fi
+
+				change_hermit_env
+				test -n "${_HERMIT_SHELL_ACTIVE-}"
+				test -n "$(printf "%s" "$PATH" | tr ":" "\n" | awk -v bin="$PWD/bin" '$0 == bin {print}')"
+				deactivate-hermit
+				test -z "${_HERMIT_SHELL_ACTIVE-}"
+				test -z "${HERMIT_ENV-}"
+				change_hermit_env
+				test -z "${HERMIT_ENV-}"
+				EOF
+				)
+				if [ -n "${BASH_VERSION-}" ]; then
+					CHILD_SHELL=bash bash --noprofile --norc -c "$child_script"
+				elif [ -n "${ZSH_VERSION-}" ]; then
+					CHILD_SHELL=zsh zsh --no-rcs --no-globalrcs -c "$child_script"
+				fi
+			`,
+		},
+		{
 			name:         "PackageEnvarsAreSetAutomatically",
 			preparations: prep{fixture("testenv1"), activate(".")},
 			script: `

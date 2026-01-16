@@ -1,21 +1,24 @@
 # Hermit {{.Shell}} activation script
 
-set -gx HERMIT_ENV {{.Root}}
+set -l HERMIT_TARGET {{.Root}}
 
 if set -q ACTIVE_HERMIT
-    if test "$ACTIVE_HERMIT" = "$HERMIT_ENV"
-        echo "This Hermit environment has already been activated. Skipping" >&2
-        return 0
+    if test "$ACTIVE_HERMIT" = "$HERMIT_TARGET"
+        if set -q _HERMIT_SHELL_ACTIVE; and test "$_HERMIT_SHELL_ACTIVE" -ef "$HERMIT_TARGET"
+            echo "This Hermit environment has already been activated. Skipping" >&2
+            return 0
+        end
     else if functions -q deactivate-hermit
-        set -lx HERMIT_CURRENT_ENV $HERMIT_ENV
         set -gx HERMIT_ENV $ACTIVE_HERMIT
         deactivate-hermit
-        set -gx HERMIT_ENV $HERMIT_CURRENT_ENV
-        set -e HERMIT_CURRENT_ENV
     else
+        set -gx HERMIT_ENV $ACTIVE_HERMIT
         "$ACTIVE_HERMIT/bin/hermit" env --deactivate-from-ops="$HERMIT_ENV_OPS" | source
     end
 end
+
+set -gx HERMIT_ENV $HERMIT_TARGET
+set -e HERMIT_TARGET
 
 {{ range $ENV_NAME, $ENV_VALUE := .Env }}
 set -gx {{ $ENV_NAME }} {{ $ENV_VALUE | Quote }}
@@ -28,6 +31,7 @@ function _hermit_deactivate
     functions -e update_hermit_env > /dev/null 2>&1
     set -e ACTIVE_HERMIT
     set -e HERMIT_ENV_OPS
+    set -e _HERMIT_SHELL_ACTIVE
 
     # Clear the command cache
     functions -c > /dev/null
@@ -44,6 +48,7 @@ set -e DEACTIVATED_HERMIT
 set -gx ACTIVE_HERMIT $HERMIT_ENV
 set -gx HERMIT_ENV_OPS $("$HERMIT_ENV/bin/hermit" env --ops)
 set -gx HERMIT_BIN_CHANGE $(date -r "$HERMIT_ENV/bin" +"%s")
+set -g _HERMIT_SHELL_ACTIVE $HERMIT_ENV
 
 # Function to update Hermit environment
 function update_hermit_env
