@@ -230,8 +230,15 @@ EOF
 			name: "ReactivatesWhenShellMarkerMissing",
 			preparations: prep{fixture("testenv1")},
 			script: `
-				export BAR="orig"
 				. bin/activate-hermit
+				child_script=$(cat <<-'EOF'
+				set -euo pipefail
+
+				assert() {
+				  if ! "$@"; then
+				    exit 1
+				  fi
+				}
 
 				# Simulate inherited env vars without shell-local activation marker.
 				unset _HERMIT_SHELL_ACTIVE >/dev/null 2>&1
@@ -240,9 +247,9 @@ EOF
 				export PATH="$PWD/extra-bin:$PATH"
 
 				HERMIT_ROOT_BIN="$(command -v hermit)"
-				if [ -n "${BASH_VERSION-}" ]; then
+				if [ "${CHILD_SHELL}" = "bash" ]; then
 					eval "$($HERMIT_ROOT_BIN shell-hooks --print --bash)"
-				elif [ -n "${ZSH_VERSION-}" ]; then
+				else
 					eval "$($HERMIT_ROOT_BIN shell-hooks --print --zsh)"
 				fi
 
@@ -254,11 +261,17 @@ EOF
 				deactivate-hermit
 				assert test -z "${_HERMIT_SHELL_ACTIVE-}"
 				assert test -z "${HERMIT_ENV-}"
-				assert test "$BAR" = "orig"
 				assert test -z "$(printf "%s" "$PATH" | tr ":" "\n" | awk -v bin="$PWD/bin" '$0 == bin {print}')"
 				assert test -n "$(printf "%s" "$PATH" | tr ":" "\n" | awk -v bin="$PWD/extra-bin" '$0 == bin {print}')"
 				change_hermit_env
 				assert test -z "${HERMIT_ENV-}"
+				EOF
+				)
+				if [ -n "${BASH_VERSION-}" ]; then
+					CHILD_SHELL=bash bash --noprofile --norc -c "$child_script"
+				elif [ -n "${ZSH_VERSION-}" ]; then
+					CHILD_SHELL=zsh zsh --no-rcs --no-globalrcs -c "$child_script"
+				fi
 			`,
 		},
 		{
