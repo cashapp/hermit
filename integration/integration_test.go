@@ -228,37 +228,23 @@ EOF
 		},
 		{
 			name: "ReactivatesWhenShellMarkerMissing",
-			preparations: prep{fixture("testenv1")},
+			preparations: prep{fixture("testenv1"), activate(".")},
 			script: `
-				. bin/activate-hermit
-				child_script=$(cat <<-'EOF'
-				set -euo pipefail
-
-				# Simulate a child shell that inherits env vars but not shell-local state.
-				PATH=$(printf "%s" "$PATH" | tr ":" "\n" | awk -v bin="$PWD/bin" '$0 != bin' | paste -sd ":" -)
-				export PATH
-
-				HERMIT_ROOT_BIN="$(command -v hermit)"
-				if [ "${CHILD_SHELL}" = "bash" ]; then
-					eval "$($HERMIT_ROOT_BIN shell-hooks --print --bash)"
-				else
-					eval "$($HERMIT_ROOT_BIN shell-hooks --print --zsh)"
-				fi
-
-				change_hermit_env
-				test -n "${_HERMIT_SHELL_ACTIVE-}"
-				test -n "$(printf "%s" "$PATH" | tr ":" "\n" | awk -v bin="$PWD/bin" '$0 == bin {print}')"
-				deactivate-hermit
-				test -z "${_HERMIT_SHELL_ACTIVE-}"
-				test -z "${HERMIT_ENV-}"
-				change_hermit_env
-				test -z "${HERMIT_ENV-}"
-				EOF
-				)
+				child='set -euo pipefail
+				  : "${HERMIT_ENV:?}" "${ACTIVE_HERMIT:?}"
+				  test -z "${_HERMIT_SHELL_ACTIVE-}"
+				  PATH=/usr/bin:/bin
+				  eval "$("$HERMIT_EXE" shell-hooks --print --${BASH_VERSION:+bash}${ZSH_VERSION:+zsh})"
+				  change_hermit_env
+				  test "$_HERMIT_SHELL_ACTIVE" -ef "$PWD"
+				  case ":$PATH:" in *":$PWD/bin:"*) ;; *) exit 1;; esac
+				  deactivate-hermit
+				  test -z "${HERMIT_ENV-}${_HERMIT_SHELL_ACTIVE-}"
+				  change_hermit_env; test -z "${HERMIT_ENV-}"'
 				if [ -n "${BASH_VERSION-}" ]; then
-					CHILD_SHELL=bash bash --noprofile --norc -c "$child_script"
-				elif [ -n "${ZSH_VERSION-}" ]; then
-					CHILD_SHELL=zsh zsh --no-rcs --no-globalrcs -c "$child_script"
+					bash --noprofile --norc -c "$child"
+				else
+					zsh --no-rcs --no-globalrcs -c "$child"
 				fi
 			`,
 		},
