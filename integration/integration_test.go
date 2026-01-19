@@ -234,7 +234,7 @@ EOF
 				  : "${HERMIT_ENV:?}" "${ACTIVE_HERMIT:?}"
 				  test -z "${_HERMIT_SHELL_ACTIVE-}"
 				  PATH=/usr/bin:/bin
-				  eval "$("$HERMIT_EXE" shell-hooks --print --${BASH_VERSION:+bash}${ZSH_VERSION:+zsh})"
+				  eval "$("$HERMIT_EXE" shell-hooks --print --$HOOK_SHELL)"
 				  change_hermit_env
 				  test "$_HERMIT_SHELL_ACTIVE" -ef "$PWD"
 				  case ":$PATH:" in *":$PWD/bin:"*) ;; *) exit 1;; esac
@@ -242,9 +242,9 @@ EOF
 				  test -z "${HERMIT_ENV-}${_HERMIT_SHELL_ACTIVE-}"
 				  change_hermit_env; test -z "${HERMIT_ENV-}"'
 				if [ -n "${BASH_VERSION-}" ]; then
-					bash --noprofile --norc -c "$child"
+					HOOK_SHELL=bash bash --noprofile --norc -c "$child"
 				else
-					zsh --no-rcs --no-globalrcs -c "$child"
+					HOOK_SHELL=zsh zsh --no-rcs --no-globalrcs -c "$child"
 				fi
 			`,
 		},
