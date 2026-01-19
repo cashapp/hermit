@@ -235,9 +235,13 @@ EOF
 				  test -z "${_HERMIT_SHELL_ACTIVE-}"
 				  PATH=/usr/bin:/bin
 				  eval "$("$HERMIT_EXE" shell-hooks --print --$HOOK_SHELL)"
+
+				  # Hook should reactivate (marker set, env bin on PATH).
 				  change_hermit_env
 				  test "$_HERMIT_SHELL_ACTIVE" -ef "$PWD"
 				  case ":$PATH:" in *":$PWD/bin:"*) ;; *) exit 1;; esac
+
+				  # Deactivate should clear state and prevent immediate reactivation.
 				  deactivate-hermit
 				  test -z "${HERMIT_ENV-}${_HERMIT_SHELL_ACTIVE-}"
 				  change_hermit_env; test -z "${HERMIT_ENV-}"'
