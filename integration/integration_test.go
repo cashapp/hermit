@@ -240,16 +240,27 @@ EOF
 				  change_hermit_env
 				  test "$_HERMIT_SHELL_ACTIVE" -ef "$PWD"
 				  case ":$PATH:" in *":$PWD/bin:"*) ;; *) exit 1;; esac
-
-				  # Deactivate should clear state and prevent immediate reactivation.
-				  deactivate-hermit
-				  test -z "${HERMIT_ENV-}${_HERMIT_SHELL_ACTIVE-}"
-				  change_hermit_env; test -z "${HERMIT_ENV-}"'
+				'
 				if [ -n "${BASH_VERSION-}" ]; then
 					HOOK_SHELL=bash bash --noprofile --norc -c "$child"
 				else
 					HOOK_SHELL=zsh zsh --no-rcs --no-globalrcs -c "$child"
 				fi
+			`,
+		},
+		{
+			name:         "ManualDeactivationBlocksReactivation",
+			preparations: prep{fixture("testenv1"), activate(".")},
+			script: `
+				if [ -n "${BASH_VERSION-}" ]; then
+					eval "$("$HERMIT_EXE" shell-hooks --print --bash)"
+				else
+					eval "$("$HERMIT_EXE" shell-hooks --print --zsh)"
+				fi
+
+				deactivate-hermit
+				change_hermit_env
+				test -z "${HERMIT_ENV-}"
 			`,
 		},
 		{
