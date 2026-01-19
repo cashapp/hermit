@@ -4,7 +4,7 @@ set -l HERMIT_TARGET {{.Root}}
 
 if set -q ACTIVE_HERMIT
     if test "$ACTIVE_HERMIT" = "$HERMIT_TARGET"
-        if set -q _HERMIT_SHELL_ACTIVE; and test "$_HERMIT_SHELL_ACTIVE" -ef "$HERMIT_TARGET"
+        if test "$_HERMIT_SHELL_ACTIVE" -ef "$HERMIT_TARGET"
             echo "This Hermit environment has already been activated. Skipping" >&2
             return 0
         end
