@@ -1,13 +1,8 @@
 change_hermit_env() {
   local CUR=${PWD}
   while [ "$CUR" != "/" ]; do
-    if [ -n "${HERMIT_ENV+_}" ] && [ "${CUR}" -ef "${HERMIT_ENV}" ]; then
-      if [ -n "${DEACTIVATED_HERMIT+_}" ] && [ "${CUR}" -ef "${DEACTIVATED_HERMIT}" ]; then
-        return
-      fi
-      if [ -n "${_HERMIT_SHELL_ACTIVE+_}" ] && [ "${_HERMIT_SHELL_ACTIVE}" -ef "${HERMIT_ENV}" ]; then
-        return
-      fi
+    if [ -n "${HERMIT_ENV+_}" ] && [ "${CUR}" -ef "${HERMIT_ENV}" ] && [ -n "${_HERMIT_SHELL_ACTIVE+_}" ] && [ "${_HERMIT_SHELL_ACTIVE}" -ef "${HERMIT_ENV}" ]; then
+      return
     fi
     if [ -f "${CUR}/bin/activate-hermit" ]; then
       if [ -n "${HERMIT_ENV+_}"  ]; then type _hermit_deactivate &>/dev/null && _hermit_deactivate; fi

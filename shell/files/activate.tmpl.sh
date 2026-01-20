@@ -1,25 +1,23 @@
 # Hermit {{.Shell}} activation script
 
-HERMIT_TARGET={{.Root}}
+export HERMIT_ENV={{.Root}}
 
 if [ -n "${ACTIVE_HERMIT+_}" ]; then
-  if [ "$ACTIVE_HERMIT" = "$HERMIT_TARGET" ]; then
-    if [ -n "${_HERMIT_SHELL_ACTIVE+_}" ] && [ "${_HERMIT_SHELL_ACTIVE}" -ef "${HERMIT_TARGET}" ]; then
+  if [ "$ACTIVE_HERMIT" = "$HERMIT_ENV" ]; then
+    if [ -n "${_HERMIT_SHELL_ACTIVE+_}" ] && [ "${_HERMIT_SHELL_ACTIVE}" -ef "${HERMIT_ENV}" ]; then
       echo "This Hermit environment has already been activated. Skipping" >&2
-      unset HERMIT_TARGET
       return 0
     fi
   elif type deactivate-hermit &>/dev/null; then
+    export HERMIT_CURRENT_ENV=$HERMIT_ENV
     export HERMIT_ENV=$ACTIVE_HERMIT
     deactivate-hermit
+    export HERMIT_ENV=$HERMIT_CURRENT_ENV
+    unset HERMIT_CURRENT_ENV
   else
-    export HERMIT_ENV=$ACTIVE_HERMIT
     eval "$(${ACTIVE_HERMIT}/bin/hermit env --deactivate-from-ops="${HERMIT_ENV_OPS}")"
   fi
 fi
-
-export HERMIT_ENV=$HERMIT_TARGET
-unset HERMIT_TARGET
 
 {{ range $ENV_NAME, $ENV_VALUE := .Env }}
 export {{ $ENV_NAME }}={{ $ENV_VALUE | Quote }}
