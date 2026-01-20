@@ -3,11 +3,9 @@
 export HERMIT_ENV={{.Root}}
 
 if [ -n "${ACTIVE_HERMIT+_}" ]; then
-  if [ "$ACTIVE_HERMIT" = "$HERMIT_ENV" ]; then
-    if [ -n "${_HERMIT_SHELL_ACTIVE+_}" ] && [ "${_HERMIT_SHELL_ACTIVE}" -ef "${HERMIT_ENV}" ]; then
-      echo "This Hermit environment has already been activated. Skipping" >&2
-      return 0
-    fi
+  if [ "$ACTIVE_HERMIT" = "$HERMIT_ENV" ] && [ -n "${_HERMIT_SHELL_ACTIVE+_}" ] && [ "${_HERMIT_SHELL_ACTIVE}" -ef "${HERMIT_ENV}" ]; then
+    echo "This Hermit environment has already been activated. Skipping" >&2
+    return 0
   elif type deactivate-hermit &>/dev/null; then
     export HERMIT_CURRENT_ENV=$HERMIT_ENV
     export HERMIT_ENV=$ACTIVE_HERMIT
