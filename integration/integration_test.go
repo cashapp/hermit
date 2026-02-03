@@ -507,6 +507,91 @@ EOF
 			assert test -x ../hermit-bundle-test/bin/testbin1
 			`,
 		},
+		{
+			name:         "ActivateHookIsCalled",
+			preparations: prep{fixture("testenv1")},
+			script: `
+				# Define the activate hook before sourcing
+				hermit_on_activate() { HOOK_ACTIVATED="yes"; }
+				. bin/activate-hermit
+				assert test "${HOOK_ACTIVATED:-}" = "yes"
+			`,
+		},
+		{
+			name:         "DeactivateHookIsCalled",
+			preparations: prep{fixture("testenv1")},
+			script: `
+				# Define both hooks
+				hermit_on_activate() { HOOK_ACTIVATED="yes"; }
+				hermit_on_deactivate() { HOOK_DEACTIVATED="yes"; }
+				. bin/activate-hermit
+				assert test "${HOOK_ACTIVATED:-}" = "yes"
+				deactivate-hermit
+				assert test "${HOOK_DEACTIVATED:-}" = "yes"
+			`,
+		},
+		{
+			name:         "HooksCanAccessHermitEnv",
+			preparations: prep{fixture("testenv1")},
+			script: `
+				hermit_on_activate() { CAPTURED_HERMIT_ENV="$HERMIT_ENV"; }
+				. bin/activate-hermit
+				assert test -n "${CAPTURED_HERMIT_ENV:-}"
+				assert test "$CAPTURED_HERMIT_ENV" = "$HERMIT_ENV"
+			`,
+		},
+		{
+			name:         "MissingHooksDoNotCauseErrors",
+			preparations: prep{fixture("testenv1")},
+			script: `
+				# Don't define any hooks - should work normally
+				. bin/activate-hermit
+				assert test -n "$HERMIT_ENV"
+				deactivate-hermit
+				assert test -z "${HERMIT_ENV:-}"
+			`,
+		},
+		{
+			name:         "HooksWorkWhenSwitchingEnvironments",
+			preparations: prep{allFixtures("testenv1", "testenv2")},
+			script: `
+				# Define hooks that track which environment was activated
+				hermit_on_activate() { LAST_ACTIVATED="$HERMIT_ENV"; }
+				hermit_on_deactivate() { HOOK_DEACTIVATED="yes"; }
+
+				. testenv1/bin/activate-hermit
+				assert test "${LAST_ACTIVATED:-}" = "$PWD/testenv1"
+
+				. testenv2/bin/activate-hermit
+				# Deactivate hook should have been called when switching
+				assert test "${HOOK_DEACTIVATED:-}" = "yes"
+				# Activate hook should have been called for testenv2
+				assert test "${LAST_ACTIVATED:-}" = "$PWD/testenv2"
+			`,
+		},
+		{
+			name:         "HooksCanModifyEnvironment",
+			preparations: prep{fixture("testenv1")},
+			script: `
+				hermit_on_activate() {
+					CUSTOM_VAR="custom_value"
+					PATH="/custom/path:$PATH"
+				}
+				. bin/activate-hermit
+				assert test "${CUSTOM_VAR:-}" = "custom_value"
+				assert echo "$PATH" | grep -q "/custom/path"
+			`,
+		},
+		{
+			name:         "DeactivateHookCanSetVariables",
+			preparations: prep{fixture("testenv1")},
+			script: `
+				hermit_on_deactivate() { CLEANUP_DONE="yes"; }
+				. bin/activate-hermit
+				deactivate-hermit
+				assert test "${CLEANUP_DONE:-}" = "yes"
+			`,
+		},
 	}
 
 	checkForShells(t)
