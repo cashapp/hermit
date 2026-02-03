@@ -432,6 +432,77 @@ EOF
 			`,
 		},
 		{
+			name:         "VirtualRuntimeDependencyResolvesFromInstalled",
+			preparations: prep{fixture("testenv-virtual"), activate(".")},
+			script: `
+			# Install the provider first (openjdk provides "jdk")
+			hermit install openjdk
+			# Install the consumer which has runtime-dependencies = ["jdk"]
+			hermit install consumer
+			# Verify the consumer can access JAVA_HOME injected from the jdk provider at runtime
+			assert test "$(consumer.sh)" = "JAVA_HOME=/path/to/java"
+			`,
+		},
+		{
+			name:         "VirtualRuntimeDependencyResolvesToCorrectProvider",
+			preparations: prep{fixture("testenv-virtual"), activate(".")},
+			script: `
+			# Install azuljdk (alternative jdk provider) then consumer
+			hermit install azuljdk
+			hermit install consumer
+			# Verify the consumer gets JAVA_HOME from azuljdk, not some default
+			assert test "$(consumer.sh)" = "JAVA_HOME=/path/to/azul"
+			`,
+		},
+		{
+			name:         "VirtualRuntimeDependencyFailsWithoutProvider",
+			preparations: prep{fixture("testenv-virtual"), activate(".")},
+			script: `
+			# Try to install consumer without any jdk provider installed
+			# This should fail because runtime-dependencies = ["jdk"] has no provider
+			hermit install consumer 2>&1 | grep -q "jdk"
+			`,
+			fails: true,
+		},
+		{
+			name:         "VirtualRequirementResolvesFromInstallSelection",
+			preparations: prep{fixture("testenv-virtual"), activate(".")},
+			script: `
+			# Install openjdk and gradle together - gradle requires = ["jdk"]
+			# Without the selection feature, this would fail with "multiple packages satisfy"
+			# because both openjdk and azuljdk provide "jdk"
+			hermit install openjdk gradle
+			# Verify gradle was installed (proves the requirement was resolved)
+			assert test -L bin/gradle.sh
+			# Verify openjdk was installed as the provider
+			assert test -L bin/openjdk.sh
+			`,
+		},
+		{
+			name:         "VirtualRequirementSelectsSpecificProvider",
+			preparations: prep{fixture("testenv-virtual"), activate(".")},
+			script: `
+			# Both openjdk and azuljdk provide "jdk"
+			# Installing azuljdk with gradle should use azuljdk as the provider
+			hermit install azuljdk gradle
+			# Verify azuljdk was chosen as the jdk provider
+			assert test -L bin/azuljdk.sh
+			assert test -L bin/gradle.sh
+			# Verify openjdk was NOT installed (proves selection picked azuljdk)
+			assert test ! -L bin/openjdk.sh
+			`,
+		},
+		{
+			name:         "VirtualRequirementFailsWithAmbiguousProviders",
+			preparations: prep{fixture("testenv-virtual"), activate(".")},
+			script: `
+			# Try to install only gradle without selecting a jdk provider
+			# This should fail because both openjdk and azuljdk provide "jdk"
+			hermit install gradle 2>&1 | grep -q "multiple packages satisfy"
+			`,
+			fails: true,
+		},
+		{
 			name:         "EnvironmentsWithOverlappingEnvVariablesCanBeSwitched",
 			preparations: prep{fixture("overlapping_envs")},
 			script: `

@@ -355,6 +355,102 @@ func TestDependencyResolution(t *testing.T) {
 	// Test that resolving package where requirement is fulfilled by multiple uninstalled packages fails
 	err = f.Env.ResolveWithDeps(f.P, installed, manifest.NameSelector("pkg4"), map[string]*manifest.Package{})
 	assert.EqualError(t, err, "multiple packages satisfy the required dependency \"virtual2\", please install one of the following manually: pkg1, pkg2")
+
+	// Test that an explicitly selected provider resolves virtual dependencies.
+	selected := map[string]*manifest.Package{}
+	err = f.Env.ResolveWithDeps(f.P, installed, manifest.NameSelector("pkg1"), selected)
+	assert.NoError(t, err)
+	err = f.Env.ResolveWithDeps(f.P, installed, manifest.NameSelector("pkg4"), selected)
+	assert.NoError(t, err)
+
+	// Test that multiple selected providers do not fail resolution.
+	selected = map[string]*manifest.Package{}
+	err = f.Env.ResolveWithDeps(f.P, installed, manifest.NameSelector("pkg1"), selected)
+	assert.NoError(t, err)
+	err = f.Env.ResolveWithDeps(f.P, installed, manifest.NameSelector("pkg2"), selected)
+	assert.NoError(t, err)
+	err = f.Env.ResolveWithDeps(f.P, installed, manifest.NameSelector("pkg4"), selected)
+	assert.NoError(t, err)
+}
+
+func TestVirtualRuntimeDependencies(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		tar := TestTarGz{map[string]string{"java": "java-binary", "consumer-bin": "consumer-binary"}}
+		tar.Write(t, w)
+	})
+
+	f := hermittest.NewEnvTestFixture(t, handler)
+	f.WithManifests(map[string]string{
+		// Provider package that provides the "jdk" virtual capability
+		"openjdk.hcl": `
+			description = ""
+			binaries = ["java"]
+			version "21" {
+			  source = "` + f.Server.URL + `"
+			}
+			provides = ["jdk"]
+		`,
+		// Consumer package that has runtime-dependencies on the virtual "jdk"
+		"consumer.hcl": `
+			description = ""
+			binaries = ["consumer-bin"]
+			version "1.0.0" {
+			  source = "` + f.Server.URL + `"
+			}
+			runtime-dependencies = ["jdk"]
+		`,
+	})
+	defer f.Clean()
+
+	// Install the provider first
+	provider, err := f.Env.Resolve(f.P, manifest.NameSelector("openjdk"), false)
+	assert.NoError(t, err)
+	_, err = f.Env.Install(f.P, provider)
+	assert.NoError(t, err)
+
+	// Now install the consumer - should succeed because openjdk provides "jdk"
+	consumer, err := f.Env.Resolve(f.P, manifest.NameSelector("consumer"), false)
+	assert.NoError(t, err)
+	_, err = f.Env.Install(f.P, consumer)
+	assert.NoError(t, err)
+}
+
+func TestVirtualRuntimeDependenciesNotInstalled(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		tar := TestTarGz{map[string]string{"java": "java-binary", "consumer-bin": "consumer-binary"}}
+		tar.Write(t, w)
+	})
+
+	f := hermittest.NewEnvTestFixture(t, handler)
+	f.WithManifests(map[string]string{
+		// Provider package that provides the "jdk" virtual capability
+		"openjdk.hcl": `
+			description = ""
+			binaries = ["java"]
+			version "21" {
+			  source = "` + f.Server.URL + `"
+			}
+			provides = ["jdk"]
+		`,
+		// Consumer package that has runtime-dependencies on the virtual "jdk"
+		"consumer.hcl": `
+			description = ""
+			binaries = ["consumer-bin"]
+			version "1.0.0" {
+			  source = "` + f.Server.URL + `"
+			}
+			runtime-dependencies = ["jdk"]
+		`,
+	})
+	defer f.Clean()
+
+	// Try to install the consumer without installing the provider first
+	// Should fail because no installed package provides "jdk"
+	consumer, err := f.Env.Resolve(f.P, manifest.NameSelector("consumer"), false)
+	assert.NoError(t, err)
+	_, err = f.Env.Install(f.P, consumer)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "jdk")
 }
 
 func TestManifestValidation(t *testing.T) {

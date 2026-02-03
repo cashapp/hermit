@@ -661,6 +661,14 @@ func (e *Env) resolveRuntimeDependencies(l *ui.UI, p *manifest.Package, aggregat
 		}
 
 		depPkg, err := e.Resolve(l, manifest.ExactSelector(ref), true)
+		// If the package doesn't exist, try resolving as a virtual package
+		if err != nil && errors.Is(err, manifest.ErrUnknownPackage) {
+			virtualRef, verr := e.resolveVirtual(l, ref.Name)
+			if verr != nil {
+				return errors.WithStack(err) // Return original error
+			}
+			depPkg, err = e.Resolve(l, manifest.ExactSelector(virtualRef), true)
+		}
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -1490,8 +1498,21 @@ func (e *Env) ResolveWithDeps(l *ui.UI, installed []manifest.Reference, selector
 	}
 	out[pkg.Reference.String()] = pkg
 	for _, req := range pkg.Requires {
+		// Prefer a package that has already been selected for this install.
+		ref, ok := resolveVirtualFromSelection(req, out)
+		if ok {
+			if _, exists := out[ref.String()]; exists {
+				continue
+			}
+			err = e.ResolveWithDeps(l, installed, manifest.ExactSelector(ref), out)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			continue
+		}
+
 		// First search from virtual providers
-		ref, err := e.resolveVirtual(l, req)
+		ref, err = e.resolveVirtual(l, req)
 		if err != nil && errors.Is(err, manifest.ErrUnknownPackage) {
 			// Secondly search by the package name
 			sel, err := manifest.ParseGlobSelector(req)
@@ -1511,6 +1532,22 @@ func (e *Env) ResolveWithDeps(l *ui.UI, installed []manifest.Reference, selector
 		}
 	}
 	return nil
+}
+
+func resolveVirtualFromSelection(name string, selected map[string]*manifest.Package) (manifest.Reference, bool) {
+	var matches []manifest.Reference
+	for _, pkg := range selected {
+		if pkg.Reference.Name == name || slices.Contains(pkg.Provides, name) {
+			matches = append(matches, pkg.Reference)
+		}
+	}
+	if len(matches) == 0 {
+		return manifest.Reference{}, false
+	}
+	// Return the first match alphabetically; we have to install them all anyways
+	return slices.MinFunc(matches, func(a, b manifest.Reference) int {
+		return strings.Compare(a.String(), b.String())
+	}), true
 }
 
 func (e *Env) resolveVirtual(l *ui.UI, name string) (manifest.Reference, error) {
