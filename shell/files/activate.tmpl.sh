@@ -41,7 +41,7 @@ _hermit_deactivate() {
 {{- end}}
 
 {{- if ne .Prompt "none"}}
-  if test -n "${_HERMIT_OLD_PS1+_}"; then export PS1="${_HERMIT_OLD_PS1}"; unset _HERMIT_OLD_PS1; fi
+  if test -n "${_HERMIT_OLD_PS1+_}"; then PS1="${_HERMIT_OLD_PS1}"; unset _HERMIT_OLD_PS1; fi
 {{- end}}
 
 }
