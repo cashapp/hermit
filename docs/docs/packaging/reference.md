@@ -100,8 +100,11 @@ When a package with `requires` definition is installed, all its dependencies are
 Runtime dependencies are package dependencies that are not installed into the target environment.
 These are defined using a `runtime-dependencies` definition in the manifest.
 
+Like `requires`, runtime dependencies can refer to an explicit package or to a virtual package defined in the `provides` definition of another package.
+For example, `runtime-dependencies = ["jdk"]` would work with any installed package defining `provides = ["jdk"]`.
+
 Hermit makes sure the runtime dependencies are on the system when a binary from the package is executed, and injects the environment variables from the runtime dependencies to the binary when executed.
-This is a good way on depending on binaries and env variables from other packages in your package without exposing them to the target environment.
+This is a good way of depending on binaries and env variables from other packages in your package without exposing them to the target environment.
 
 ## Variable Interpolation
 
