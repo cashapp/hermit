@@ -31,6 +31,11 @@ function _hermit_deactivate
 
     # Clear the command cache
     functions -c > /dev/null
+
+    # Call user-defined deactivate hook if it exists
+    if functions -q hermit_on_deactivate
+        hermit_on_deactivate
+    end
 end
 
 # Wrapper function for deactivating Hermit
@@ -54,4 +59,9 @@ function update_hermit_env
     "$CUR_HERMIT" env --activate | source
     set -gx HERMIT_ENV_OPS $("$HERMIT_ENV/bin/hermit" env --ops)
     set -gx HERMIT_BIN_CHANGE $CURRENT
+end
+
+# Call user-defined activate hook if it exists
+if functions -q hermit_on_activate
+    hermit_on_activate
 end
