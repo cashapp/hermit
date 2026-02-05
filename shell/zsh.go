@@ -8,7 +8,8 @@ import (
 )
 
 var zshShellHooks = `
-precmd_functions+=(change_hermit_env)
+change_hermit_env
+chpwd_functions+=(change_hermit_env)
 
 # shellcheck disable=SC2154
 if [[ -n ${_comps+x} ]]; then
