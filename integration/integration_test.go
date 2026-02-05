@@ -432,6 +432,77 @@ EOF
 			`,
 		},
 		{
+			name:         "VirtualRuntimeDependencyResolvesFromInstalled",
+			preparations: prep{fixture("testenv-virtual"), activate(".")},
+			script: `
+			# Install the provider first (openjdk provides "jdk")
+			hermit install openjdk
+			# Install the consumer which has runtime-dependencies = ["jdk"]
+			hermit install consumer
+			# Verify the consumer can access JAVA_HOME injected from the jdk provider at runtime
+			assert test "$(consumer.sh)" = "JAVA_HOME=/path/to/java"
+			`,
+		},
+		{
+			name:         "VirtualRuntimeDependencyResolvesToCorrectProvider",
+			preparations: prep{fixture("testenv-virtual"), activate(".")},
+			script: `
+			# Install azuljdk (alternative jdk provider) then consumer
+			hermit install azuljdk
+			hermit install consumer
+			# Verify the consumer gets JAVA_HOME from azuljdk, not some default
+			assert test "$(consumer.sh)" = "JAVA_HOME=/path/to/azul"
+			`,
+		},
+		{
+			name:         "VirtualRuntimeDependencyFailsWithoutProvider",
+			preparations: prep{fixture("testenv-virtual"), activate(".")},
+			script: `
+			# Try to install consumer without any jdk provider installed
+			# This should fail because runtime-dependencies = ["jdk"] has no provider
+			hermit install consumer 2>&1 | grep -q "jdk"
+			`,
+			fails: true,
+		},
+		{
+			name:         "VirtualRequirementResolvesFromInstallSelection",
+			preparations: prep{fixture("testenv-virtual"), activate(".")},
+			script: `
+			# Install openjdk and gradle together - gradle requires = ["jdk"]
+			# Without the selection feature, this would fail with "multiple packages satisfy"
+			# because both openjdk and azuljdk provide "jdk"
+			hermit install openjdk gradle
+			# Verify gradle was installed (proves the requirement was resolved)
+			assert test -L bin/gradle.sh
+			# Verify openjdk was installed as the provider
+			assert test -L bin/openjdk.sh
+			`,
+		},
+		{
+			name:         "VirtualRequirementSelectsSpecificProvider",
+			preparations: prep{fixture("testenv-virtual"), activate(".")},
+			script: `
+			# Both openjdk and azuljdk provide "jdk"
+			# Installing azuljdk with gradle should use azuljdk as the provider
+			hermit install azuljdk gradle
+			# Verify azuljdk was chosen as the jdk provider
+			assert test -L bin/azuljdk.sh
+			assert test -L bin/gradle.sh
+			# Verify openjdk was NOT installed (proves selection picked azuljdk)
+			assert test ! -L bin/openjdk.sh
+			`,
+		},
+		{
+			name:         "VirtualRequirementFailsWithAmbiguousProviders",
+			preparations: prep{fixture("testenv-virtual"), activate(".")},
+			script: `
+			# Try to install only gradle without selecting a jdk provider
+			# This should fail because both openjdk and azuljdk provide "jdk"
+			hermit install gradle 2>&1 | grep -q "multiple packages satisfy"
+			`,
+			fails: true,
+		},
+		{
 			name:         "EnvironmentsWithOverlappingEnvVariablesCanBeSwitched",
 			preparations: prep{fixture("overlapping_envs")},
 			script: `
@@ -505,6 +576,91 @@ EOF
 			hermit install testbin1
 			hermit bundle ../hermit-bundle-test
 			assert test -x ../hermit-bundle-test/bin/testbin1
+			`,
+		},
+		{
+			name:         "ActivateHookIsCalled",
+			preparations: prep{fixture("testenv1")},
+			script: `
+				# Define the activate hook before sourcing
+				hermit_on_activate() { HOOK_ACTIVATED="yes"; }
+				. bin/activate-hermit
+				assert test "${HOOK_ACTIVATED:-}" = "yes"
+			`,
+		},
+		{
+			name:         "DeactivateHookIsCalled",
+			preparations: prep{fixture("testenv1")},
+			script: `
+				# Define both hooks
+				hermit_on_activate() { HOOK_ACTIVATED="yes"; }
+				hermit_on_deactivate() { HOOK_DEACTIVATED="yes"; }
+				. bin/activate-hermit
+				assert test "${HOOK_ACTIVATED:-}" = "yes"
+				deactivate-hermit
+				assert test "${HOOK_DEACTIVATED:-}" = "yes"
+			`,
+		},
+		{
+			name:         "HooksCanAccessHermitEnv",
+			preparations: prep{fixture("testenv1")},
+			script: `
+				hermit_on_activate() { CAPTURED_HERMIT_ENV="$HERMIT_ENV"; }
+				. bin/activate-hermit
+				assert test -n "${CAPTURED_HERMIT_ENV:-}"
+				assert test "$CAPTURED_HERMIT_ENV" = "$HERMIT_ENV"
+			`,
+		},
+		{
+			name:         "MissingHooksDoNotCauseErrors",
+			preparations: prep{fixture("testenv1")},
+			script: `
+				# Don't define any hooks - should work normally
+				. bin/activate-hermit
+				assert test -n "$HERMIT_ENV"
+				deactivate-hermit
+				assert test -z "${HERMIT_ENV:-}"
+			`,
+		},
+		{
+			name:         "HooksWorkWhenSwitchingEnvironments",
+			preparations: prep{allFixtures("testenv1", "testenv2")},
+			script: `
+				# Define hooks that track which environment was activated
+				hermit_on_activate() { LAST_ACTIVATED="$HERMIT_ENV"; }
+				hermit_on_deactivate() { HOOK_DEACTIVATED="yes"; }
+
+				. testenv1/bin/activate-hermit
+				assert test "${LAST_ACTIVATED:-}" = "$PWD/testenv1"
+
+				. testenv2/bin/activate-hermit
+				# Deactivate hook should have been called when switching
+				assert test "${HOOK_DEACTIVATED:-}" = "yes"
+				# Activate hook should have been called for testenv2
+				assert test "${LAST_ACTIVATED:-}" = "$PWD/testenv2"
+			`,
+		},
+		{
+			name:         "HooksCanModifyEnvironment",
+			preparations: prep{fixture("testenv1")},
+			script: `
+				hermit_on_activate() {
+					CUSTOM_VAR="custom_value"
+					PATH="/custom/path:$PATH"
+				}
+				. bin/activate-hermit
+				assert test "${CUSTOM_VAR:-}" = "custom_value"
+				assert echo "$PATH" | grep -q "/custom/path"
+			`,
+		},
+		{
+			name:         "DeactivateHookCanSetVariables",
+			preparations: prep{fixture("testenv1")},
+			script: `
+				hermit_on_deactivate() { CLEANUP_DONE="yes"; }
+				. bin/activate-hermit
+				deactivate-hermit
+				assert test "${CLEANUP_DONE:-}" = "yes"
 			`,
 		},
 	}
