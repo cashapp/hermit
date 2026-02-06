@@ -394,7 +394,7 @@ func extractZip(b *ui.Task, f *os.File, info os.FileInfo, dest string, strip int
 		if destFile == "" {
 			continue
 		}
-		err = extractZipFile(zf, destFile)
+		err = extractZipFile(zf, destFile, dest)
 		if err != nil {
 			return errors.Wrap(err, destFile)
 		}
@@ -402,7 +402,7 @@ func extractZip(b *ui.Task, f *os.File, info os.FileInfo, dest string, strip int
 	return nil
 }
 
-func extractZipFile(zf *zip.File, destFile string) error {
+func extractZipFile(zf *zip.File, destFile string, dest string) error {
 	zfr, err := zf.Open()
 	if err != nil {
 		return errors.WithStack(err)
@@ -418,20 +418,8 @@ func extractZipFile(zf *zip.File, destFile string) error {
 			return errors.WithStack(err)
 		}
 		symlinkTarget := string(symlink)
-		// destFile's parent directory is used to compute the destination root for validation.
-		// We need the original destination directory, which we can infer by going up from destFile.
-		// However, extractZipFile doesn't receive the destination directly, so we validate
-		// by checking the resolved path stays under destFile's directory tree.
-		dir := filepath.Dir(destFile)
-		// For zip symlinks, we need to find the extraction root. Since we don't have it directly,
-		// we validate by ensuring the resolved target doesn't escape via ".." traversal.
-		resolvedTarget := filepath.Clean(filepath.Join(dir, symlinkTarget))
-		if !strings.HasPrefix(resolvedTarget, filepath.Clean(dir)) {
-			// Check if target escapes the current directory - this catches obvious traversals
-			// For proper validation, we check if target contains suspicious patterns
-			if strings.Contains(filepath.Clean(symlinkTarget), "..") {
-				return errors.Errorf("%s: illegal symlink target %q (path traversal detected)", destFile, symlinkTarget)
-			}
+		if err := sanitizeSymlinkTarget(destFile, symlinkTarget, dest); err != nil {
+			return err
 		}
 		return errors.WithStack(os.Symlink(symlinkTarget, destFile))
 	}

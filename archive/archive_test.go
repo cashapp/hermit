@@ -2,6 +2,7 @@ package archive
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"compress/gzip"
 	"os"
 	"path/filepath"
@@ -252,4 +253,105 @@ func TestLinkTraversalWithStrip(t *testing.T) {
 		return nil
 	})
 	assert.NoError(t, err)
+}
+
+// TestZipInternalSymlink tests that relative symlinks pointing to sibling directories
+// within the archive are allowed. This is the pattern used by packages like bats-core
+// which contain test fixtures with symlinks like ../recursive/subsuite.
+func TestZipInternalSymlink(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	zipPath := filepath.Join(tmpDir, "internal_symlink.zip")
+	f, err := os.Create(zipPath)
+	assert.NoError(t, err)
+
+	zw := zip.NewWriter(f)
+
+	// Add directory: suite/recursive/
+	_, err = zw.Create("suite/recursive/")
+	assert.NoError(t, err)
+
+	// Add file: suite/recursive/test.bats
+	w, err := zw.Create("suite/recursive/test.bats")
+	assert.NoError(t, err)
+	_, err = w.Write([]byte("test content"))
+	assert.NoError(t, err)
+
+	// Add directory: suite/recursive/subsuite/
+	_, err = zw.Create("suite/recursive/subsuite/")
+	assert.NoError(t, err)
+
+	// Add file: suite/recursive/subsuite/sub.bats
+	w, err = zw.Create("suite/recursive/subsuite/sub.bats")
+	assert.NoError(t, err)
+	_, err = w.Write([]byte("sub content"))
+	assert.NoError(t, err)
+
+	// Add directory: suite/recursive_with_symlinks/
+	_, err = zw.Create("suite/recursive_with_symlinks/")
+	assert.NoError(t, err)
+
+	// Add symlink: suite/recursive_with_symlinks/subsuite -> ../recursive/subsuite
+	header := &zip.FileHeader{
+		Name: "suite/recursive_with_symlinks/subsuite",
+	}
+	header.SetMode(os.ModeSymlink | 0777)
+	w, err = zw.CreateHeader(header)
+	assert.NoError(t, err)
+	_, err = w.Write([]byte("../recursive/subsuite"))
+	assert.NoError(t, err)
+
+	assert.NoError(t, zw.Close())
+	assert.NoError(t, f.Close())
+
+	p, _ := ui.NewForTesting()
+	dest := filepath.Join(tmpDir, "extracted")
+
+	_, err = Extract(
+		p.Task("extract"),
+		zipPath,
+		&manifest.Package{Dest: dest, Source: "internal_symlink.zip"},
+	)
+	assert.NoError(t, err, "internal symlinks within the archive should be allowed")
+
+	// Verify the symlink was created and points to the right target
+	target, err := os.Readlink(filepath.Join(dest, "suite", "recursive_with_symlinks", "subsuite"))
+	assert.NoError(t, err)
+	assert.Equal(t, "../recursive/subsuite", target)
+}
+
+// TestZipEscapingSymlink tests that symlinks in zip archives that escape
+// the extraction root are rejected.
+func TestZipEscapingSymlink(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	zipPath := filepath.Join(tmpDir, "escaping_symlink.zip")
+	f, err := os.Create(zipPath)
+	assert.NoError(t, err)
+
+	zw := zip.NewWriter(f)
+
+	header := &zip.FileHeader{
+		Name: "evil",
+	}
+	header.SetMode(os.ModeSymlink | 0777)
+	w, err := zw.CreateHeader(header)
+	assert.NoError(t, err)
+	_, err = w.Write([]byte("../../etc/passwd"))
+	assert.NoError(t, err)
+
+	assert.NoError(t, zw.Close())
+	assert.NoError(t, f.Close())
+
+	p, _ := ui.NewForTesting()
+	dest := filepath.Join(tmpDir, "extracted")
+
+	_, err = Extract(
+		p.Task("extract"),
+		zipPath,
+		&manifest.Package{Dest: dest, Source: "escaping_symlink.zip"},
+	)
+	assert.Error(t, err)
+	assert.True(t, strings.Contains(err.Error(), "illegal symlink target"),
+		"expected error about illegal symlink target, got: %v", err)
 }
