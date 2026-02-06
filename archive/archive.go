@@ -417,23 +417,13 @@ func extractZipFile(zf *zip.File, destFile string) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		symlinkTarget := string(symlink)
-		// destFile's parent directory is used to compute the destination root for validation.
-		// We need the original destination directory, which we can infer by going up from destFile.
-		// However, extractZipFile doesn't receive the destination directly, so we validate
-		// by checking the resolved path stays under destFile's directory tree.
 		dir := filepath.Dir(destFile)
-		// For zip symlinks, we need to find the extraction root. Since we don't have it directly,
-		// we validate by ensuring the resolved target doesn't escape via ".." traversal.
-		resolvedTarget := filepath.Clean(filepath.Join(dir, symlinkTarget))
-		if !strings.HasPrefix(resolvedTarget, filepath.Clean(dir)) {
-			// Check if target escapes the current directory - this catches obvious traversals
-			// For proper validation, we check if target contains suspicious patterns
-			if strings.Contains(filepath.Clean(symlinkTarget), "..") {
-				return errors.Errorf("%s: illegal symlink target %q (path traversal detected)", destFile, symlinkTarget)
-			}
+		symlinkPath := filepath.Join(dir, string(symlink))
+		symlinkPath, err = filepath.Rel(dir, symlinkPath)
+		if err != nil {
+			return errors.WithStack(err)
 		}
-		return errors.WithStack(os.Symlink(symlinkTarget, destFile))
+		return errors.WithStack(os.Symlink(symlinkPath, destFile))
 	}
 
 	err = os.MkdirAll(filepath.Dir(destFile), 0700)
@@ -487,9 +477,6 @@ func extractPackageTarball(b *ui.Task, r io.Reader, dest string, strip int) erro
 			}
 
 		case mode&os.ModeSymlink != 0:
-			if err := sanitizeSymlinkTarget(destFile, hdr.Linkname, dest); err != nil {
-				return err
-			}
 			err = syscall.Symlink(hdr.Linkname, destFile)
 			if err != nil {
 				return errors.Wrapf(err, "%s: failed to create symlink to %s", destFile, hdr.Linkname)
@@ -498,9 +485,6 @@ func extractPackageTarball(b *ui.Task, r io.Reader, dest string, strip int) erro
 		case hdr.Typeflag&(tar.TypeLink|tar.TypeGNULongLink) != 0 && hdr.Linkname != "":
 			// Convert hard links into symlinks so we don't have to track inodes later on during relocation.
 			src := filepath.Join(dest, hdr.Linkname) // nolint: gosec
-			if err := sanitizeSymlinkTarget(destFile, src, dest); err != nil {
-				return err
-			}
 			rp, err := filepath.Rel(filepath.Dir(destFile), src)
 			if err != nil {
 				return errors.WithStack(err)
@@ -671,28 +655,6 @@ func sanitizeExtractPath(filePath string, destination string) error {
 	destPath := filepath.Join(destination, filePath)
 	if !strings.HasPrefix(destPath, filepath.Clean(destination)) {
 		return errors.Errorf("%s: illegal file path (%s not under %s)", filePath, destPath, destination)
-	}
-	return nil
-}
-
-// sanitizeSymlinkTarget validates that a symlink target doesn't escape the destination directory.
-// destFile is the absolute path where the symlink will be created.
-// linkTarget is the symlink target (can be relative or absolute).
-// destination is the root extraction directory that must contain the resolved symlink target.
-func sanitizeSymlinkTarget(destFile, linkTarget, destination string) error {
-	// Resolve the symlink target relative to the directory containing the symlink
-	var resolvedTarget string
-	if filepath.IsAbs(linkTarget) {
-		resolvedTarget = linkTarget
-	} else {
-		resolvedTarget = filepath.Join(filepath.Dir(destFile), linkTarget)
-	}
-	resolvedTarget = filepath.Clean(resolvedTarget)
-
-	// Ensure the resolved target is within the destination directory
-	cleanDest := filepath.Clean(destination)
-	if !strings.HasPrefix(resolvedTarget, cleanDest+string(filepath.Separator)) && resolvedTarget != cleanDest {
-		return errors.Errorf("%s: illegal symlink target %q (resolves to %s which is outside %s)", destFile, linkTarget, resolvedTarget, destination)
 	}
 	return nil
 }
