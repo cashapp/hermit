@@ -40,6 +40,8 @@ type Config struct {
 	Version     string
 	LogLevel    ui.Level
 	BaseDistURL string
+	// URL for Cachew proxy server. If set, all HTTP/HTTPS downloads will be proxied through Cachew.
+	CachewURL string
 	// Possible system-wide installation paths
 	InstallPaths []string
 	// SHA256 checksums for all known versions of per-environment scripts.
@@ -242,6 +244,11 @@ func Main(config Config) {
 
 			getSource = cache.GitHubSourceSelector(getSource, ghClient, matcher)
 		}
+	}
+
+	// Add Cachew source selector if configured
+	if config.CachewURL != "" {
+		getSource = cache.CachewSourceSelector(getSource, config.CachewURL)
 	}
 
 	cache, err := cache.Open(hermit.UserStateDir, getSource, defaultHTTPClient, config.fastHTTPClient(p))
