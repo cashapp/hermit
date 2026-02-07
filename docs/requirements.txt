@@ -1,6 +1,6 @@
 mkdocs
-mkdocs-include-markdown-plugin==7.1.6
+mkdocs-include-markdown-plugin==7.2.1
 mkdocs-material>=9.0.6
 mkdocs-mermaid2-plugin
 mkdocs-redirects
-markupsafe==3.0.2
+markupsafe==3.0.3
