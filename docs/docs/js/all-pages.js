@@ -1,11 +1,4 @@
-const COPY_PAGE_LABEL = "Copy Page";
-const COPIED_LABEL = "Copied";
-const COPY_RESET_DELAY_MS = 1600;
-const COPY_PAGE_DENYLIST = new Set(["", "about", "sdks"]);
-const COPY_ICON_SVG = '<svg stroke="currentColor" fill="none" stroke-width="1.9" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3"></path></svg>';
-const CHECK_ICON_SVG = '<svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="12" width="12" xmlns="http://www.w3.org/2000/svg"><path d="m5 12.5 4 4 10-11"></path></svg>';
-
-function openExternalLinksInNewWindow(root = document) {
+function external_new_window(root = document) {
   root.querySelectorAll("a[href]").forEach((link) => {
     if (link.hostname && link.hostname !== location.hostname) {
       link.target = "_blank";
@@ -13,6 +6,13 @@ function openExternalLinksInNewWindow(root = document) {
     }
   });
 }
+
+const COPY_PAGE_LABEL = "Copy Page";
+const COPIED_LABEL = "Copied";
+const COPY_RESET_DELAY_MS = 1600;
+const COPY_PAGE_DENYLIST = new Set(["", "about", "sdks"]);
+const COPY_ICON_SVG = '<svg stroke="currentColor" fill="none" stroke-width="1.9" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3"></path></svg>';
+const CHECK_ICON_SVG = '<svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="12" width="12" xmlns="http://www.w3.org/2000/svg"><path d="m5 12.5 4 4 10-11"></path></svg>';
 
 async function copyToClipboard(text) {
   if (!text) {
@@ -76,7 +76,7 @@ function addCopyPageButton(root = document) {
 }
 
 function init(root = document) {
-  openExternalLinksInNewWindow(root);
+  external_new_window(root);
   addCopyPageButton(root);
 }
 
