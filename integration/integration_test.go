@@ -218,6 +218,15 @@ EOF
 			`,
 		},
 		{
+			name: "ActivationWorksWhenPathContainsSpaces",
+			script: `
+				mkdir -p "env with spaces"
+				hermit init "env with spaces"
+				. "env with spaces/bin/activate-hermit"
+				assert test "$HERMIT_ENV" = "$PWD/env with spaces"
+			`,
+		},
+		{
 			name: "ConsidersASecondActivationANoop",
 			script: `
 				hermit init .
