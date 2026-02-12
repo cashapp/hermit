@@ -42,13 +42,11 @@ function addCopyPageButton(root = document) {
   }
   const markdownNode = article.querySelector("#__hermit_page_markdown");
   const h1 = article.querySelector("h1");
-  if (!markdownNode || !h1) {
-    return;
-  }
-  const pageUrl = (markdownNode.dataset.pageUrl || "").replace(/^\/+|\/+$/g, "");
+  const pageUrl = markdownNode.dataset.pageUrl.replace(/^\/+|\/+$/g, "");
   if (COPY_PAGE_DENYLIST.has(pageUrl)) {
     return;
   }
+  const pageTitle = h1.childNodes[0]?.textContent?.trim() || h1.textContent.trim();
 
   const button = document.createElement("button");
   button.type = "button";
@@ -59,11 +57,10 @@ function addCopyPageButton(root = document) {
 
   let resetTimer;
   button.addEventListener("click", async () => {
-    let markdown = "";
-    try {
-      markdown = JSON.parse(markdownNode.textContent || '""');
-    } catch (_err) {}
-    if (!(await copyToClipboard(markdown))) {
+    const markdown = JSON.parse(markdownNode.textContent).trim();
+    const titleHeading = `# ${pageTitle}`;
+    const content = markdown ? `${titleHeading}\n\n${markdown}` : titleHeading;
+    if (!(await copyToClipboard(content))) {
       return;
     }
     button.classList.add("is-copied");
