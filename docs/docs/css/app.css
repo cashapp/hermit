@@ -80,3 +80,47 @@ button.dl {
   text-align: center;
   margin-top: 150px;
 }
+
+.md-typeset h1.hermit-copy-page-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.md-typeset h1.hermit-copy-page-title .hermit-copy-page-btn {
+  margin-left: auto;
+}
+
+.md-typeset .hermit-copy-page-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.32rem 0.62rem;
+  border-width: 1px;
+  border-radius: 0.18rem;
+  font-size: 0.73rem;
+  font-weight: 600;
+  line-height: 1.05;
+  text-transform: none;
+}
+
+.md-typeset .hermit-copy-page-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.92rem;
+  height: 0.92rem;
+}
+
+.md-typeset .hermit-copy-page-icon svg {
+  width: 0.88rem;
+  height: 0.88rem;
+}
+
+.md-typeset .hermit-copy-page-btn.is-copied,
+.md-typeset .hermit-copy-page-btn.is-copied:hover,
+.md-typeset .hermit-copy-page-btn.is-copied:focus {
+  background-color: #127c37;
+  border-color: #127c37;
+  color: #fff;
+}
