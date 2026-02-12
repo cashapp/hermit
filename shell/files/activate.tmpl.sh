@@ -1,19 +1,19 @@
 # Hermit {{.Shell}} activation script
 
-export HERMIT_ENV={{.Root}}
+export HERMIT_ENV={{ .Root | Quote }}
 
 if [ -n "${ACTIVE_HERMIT+_}" ]; then
   if [ "$ACTIVE_HERMIT" = "$HERMIT_ENV" ]; then
     echo "This Hermit environment has already been activated. Skipping" >&2
     return 0
   elif type deactivate-hermit &>/dev/null; then
-    export HERMIT_CURRENT_ENV=$HERMIT_ENV
-    export HERMIT_ENV=$ACTIVE_HERMIT
+    export HERMIT_CURRENT_ENV="${HERMIT_ENV}"
+    export HERMIT_ENV="${ACTIVE_HERMIT}"
     deactivate-hermit
-    export HERMIT_ENV=$HERMIT_CURRENT_ENV
+    export HERMIT_ENV="${HERMIT_CURRENT_ENV}"
     unset HERMIT_CURRENT_ENV
   else
-    eval "$(${ACTIVE_HERMIT}/bin/hermit env --deactivate-from-ops="${HERMIT_ENV_OPS}")"
+    eval "$("${ACTIVE_HERMIT}/bin/hermit" env --deactivate-from-ops="${HERMIT_ENV_OPS}")"
   fi
 fi
 
@@ -22,8 +22,8 @@ export {{ $ENV_NAME }}={{ $ENV_VALUE | Quote }}
 {{ end }}
 
 _hermit_deactivate() {
-  echo "Hermit environment $(${HERMIT_ENV}/bin/hermit env HERMIT_ENV) deactivated"
-  eval "$(${ACTIVE_HERMIT}/bin/hermit env --deactivate-from-ops="${HERMIT_ENV_OPS}")"
+  echo "Hermit environment $("${HERMIT_ENV}/bin/hermit" env HERMIT_ENV) deactivated"
+  eval "$("${ACTIVE_HERMIT}/bin/hermit" env --deactivate-from-ops="${HERMIT_ENV_OPS}")"
   unset -f deactivate-hermit >/dev/null 2>&1
   unset -f update_hermit_env >/dev/null 2>&1
   unset ACTIVE_HERMIT
@@ -54,22 +54,23 @@ deactivate-hermit() {
 
 
 unset DEACTIVATED_HERMIT
-export ACTIVE_HERMIT=$HERMIT_ENV
-export HERMIT_ENV_OPS="$(${HERMIT_ENV}/bin/hermit env --ops)"
-export HERMIT_BIN_CHANGE=$(date -r ${HERMIT_ENV}/bin +"%s")
+export ACTIVE_HERMIT="${HERMIT_ENV}"
+export HERMIT_ENV_OPS="$("${HERMIT_ENV}/bin/hermit" env --ops)"
+export HERMIT_BIN_CHANGE="$(date -r "${HERMIT_ENV}/bin" +"%s")"
 
 {{- if ne .Prompt "none" }}
 if test -n "${PS1+_}"; then export _HERMIT_OLD_PS1="${PS1}"; PS1="{{if eq .Prompt "env"}}{{ .EnvName }}{{end}}🐚 ${PS1}"; fi
 {{- end}}
 
 update_hermit_env() {
-  local CURRENT=$(date -r ${HERMIT_ENV}/bin +"%s")
+  local CURRENT
+  CURRENT="$(date -r "${HERMIT_ENV}/bin" +"%s")"
   test "$CURRENT" = "$HERMIT_BIN_CHANGE" && return 0
-  local CUR_HERMIT=${HERMIT_ENV}/bin/hermit
-  eval "$(${ACTIVE_HERMIT}/bin/hermit env --deactivate-from-ops="${HERMIT_ENV_OPS}")"
-  eval "$(${CUR_HERMIT} env --activate)"
-  export HERMIT_ENV_OPS=$(${HERMIT_ENV}/bin/hermit env --ops)
-  export HERMIT_BIN_CHANGE=$CURRENT
+  local CUR_HERMIT="${HERMIT_ENV}/bin/hermit"
+  eval "$("${ACTIVE_HERMIT}/bin/hermit" env --deactivate-from-ops="${HERMIT_ENV_OPS}")"
+  eval "$("${CUR_HERMIT}" env --activate)"
+  export HERMIT_ENV_OPS="$("${HERMIT_ENV}/bin/hermit" env --ops)"
+  export HERMIT_BIN_CHANGE="${CURRENT}"
 }
 
 {{- if .Bash }}
