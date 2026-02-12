@@ -203,7 +203,7 @@ type UnavailableError struct {
 
 // Error returns the error string for the unavailable error
 func (e *UnavailableError) Error() string {
-	msg := e.URI + "%s is unavailable"
+	msg := e.URI + "is unavailable"
 	if e.Err != nil {
 		return fmt.Sprintf("%s: %v", msg, e.Err)
 	}
