@@ -48,11 +48,11 @@ end
 set -e DEACTIVATED_HERMIT
 set -gx ACTIVE_HERMIT "$HERMIT_ENV"
 set -gx HERMIT_ENV_OPS "$("$HERMIT_ENV/bin/hermit" env --ops)"
-set -gx HERMIT_BIN_CHANGE $(date -r "$HERMIT_ENV/bin" +"%s")
+set -gx HERMIT_BIN_CHANGE "$(date -r "$HERMIT_ENV/bin" +"%s")"
 
 # Function to update Hermit environment
 function update_hermit_env
-    set CURRENT $(date -r "$HERMIT_ENV/bin" +"%s")
+    set CURRENT "$(date -r "$HERMIT_ENV/bin" +"%s")"
     test "$CURRENT" = "$HERMIT_BIN_CHANGE"; and return 0
     set CUR_HERMIT "$HERMIT_ENV/bin/hermit"
     "$ACTIVE_HERMIT/bin/hermit" env --deactivate-from-ops="$HERMIT_ENV_OPS" | source
