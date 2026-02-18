@@ -24,13 +24,13 @@ jobs:
           INSTALLER_VERSION=$(go run -ldflags "-X main.channel=stable" ./cmd/hermit gen-installer --dest=build/install.sh)
           cp build/install.sh build/install-"${INSTALLER_VERSION}".sh
       - name: Release versioned
-        uses: ncipollo/release-action@bcfe5470707e8832e12347755757cec0eb3c22af # v1
+        uses: ncipollo/release-action@b7eabc95ff50cbeeedec83973935c8f306dfcd0b # v1
         with:
           allowUpdates: true
           artifacts: "build/*"
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Release stable
-        uses: ncipollo/release-action@bcfe5470707e8832e12347755757cec0eb3c22af # v1
+        uses: ncipollo/release-action@b7eabc95ff50cbeeedec83973935c8f306dfcd0b # v1
         with:
           tag: stable
           name: Stable
