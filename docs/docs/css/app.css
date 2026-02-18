@@ -1,11 +1,25 @@
 :root, [data-md-color-scheme="default"] {
   --md-primary-fg-color: #00D64F;
+  --hermit-copy-btn-bg: #f7f8fa;
+  --hermit-copy-btn-bg-hover: #f2f4f7;
+  --hermit-copy-btn-border: #cfd4dc;
+  --hermit-copy-btn-border-hover: #c2c8d1;
+  --hermit-copy-btn-fg: #5a606b;
+  --hermit-copy-btn-fg-hover: #4f5560;
+  --hermit-copy-btn-focus: #c2c8d1;
 }
 
 [data-md-color-scheme="slate"] {
   --md-primary-fg-color: #15c13e;
   --md-default-bg-color: #121212;
   --md-code-bg-color: hsla(var(--md-hue),25%,25%,1);
+  --hermit-copy-btn-bg: hsla(var(--md-hue), 15%, 20%, 0.55);
+  --hermit-copy-btn-bg-hover: hsla(var(--md-hue), 15%, 26%, 0.68);
+  --hermit-copy-btn-border: hsla(var(--md-hue), 8%, 72%, 0.26);
+  --hermit-copy-btn-border-hover: hsla(var(--md-hue), 8%, 78%, 0.34);
+  --hermit-copy-btn-fg: hsla(var(--md-hue), 12%, 88%, 0.75);
+  --hermit-copy-btn-fg-hover: hsla(var(--md-hue), 12%, 92%, 0.9);
+  --hermit-copy-btn-focus: hsla(var(--md-hue), 8%, 82%, 0.34);
 }
 
 @font-face {
@@ -79,4 +93,64 @@ button.dl {
 .logo {
   text-align: center;
   margin-top: 150px;
+}
+
+.md-typeset h1.hermit-copy-page-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.md-typeset h1.hermit-copy-page-title .hermit-copy-page-btn {
+  margin-left: auto;
+}
+
+.md-typeset .hermit-copy-page-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.26rem 0.54rem;
+  border: 1px solid var(--hermit-copy-btn-border);
+  border-radius: 0.18rem;
+  background-color: var(--hermit-copy-btn-bg);
+  box-shadow: none;
+  color: var(--hermit-copy-btn-fg);
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.05;
+  text-transform: none;
+}
+
+.md-typeset .hermit-copy-page-btn:hover,
+.md-typeset .hermit-copy-page-btn:focus,
+.md-typeset .hermit-copy-page-btn:focus-visible {
+  background-color: var(--hermit-copy-btn-bg-hover);
+  border-color: var(--hermit-copy-btn-border-hover);
+  color: var(--hermit-copy-btn-fg-hover);
+}
+
+.md-typeset .hermit-copy-page-btn:focus-visible {
+  outline: 1px solid var(--hermit-copy-btn-focus);
+  outline-offset: 1px;
+}
+
+.md-typeset .hermit-copy-page-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.92rem;
+  height: 0.92rem;
+}
+
+.md-typeset .hermit-copy-page-icon svg {
+  width: 0.88rem;
+  height: 0.88rem;
+}
+
+.md-typeset .hermit-copy-page-btn.is-copied,
+.md-typeset .hermit-copy-page-btn.is-copied:hover,
+.md-typeset .hermit-copy-page-btn.is-copied:focus {
+  background-color: var(--hermit-copy-btn-bg-hover);
+  border-color: var(--hermit-copy-btn-border-hover);
+  color: var(--hermit-copy-btn-fg-hover);
 }
