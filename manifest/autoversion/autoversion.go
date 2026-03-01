@@ -51,10 +51,12 @@ blocks:
 			latestVersion, err = gitHub(ghClient, block.autoVersion)
 		case block.autoVersion.HTML != nil:
 			latestVersion, err = htmlAutoVersion(httpClient, block.autoVersion)
+		case block.autoVersion.JSON != nil:
+			latestVersion, err = jsonAutoVersion(httpClient, block.autoVersion)
 		case block.autoVersion.GitTags != "":
 			latestVersion, err = gitTagsAutoVersion(block.autoVersion)
 		default:
-			return "", errors.Errorf("%s: expected either github-release or html", block.version.Pos)
+			return "", errors.Errorf("%s: expected one of github-release, html, json, or git-tags", block.version.Pos)
 		}
 		if err != nil {
 			return "", errors.Wrap(err, block.version.Pos.String())

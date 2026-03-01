@@ -91,6 +91,7 @@ func (c *Layer) match(arch string) bool {
 type AutoVersionBlock struct {
 	GitHubRelease string                `hcl:"github-release,optional" help:"GitHub <user>/<repo> to retrieve and update versions from the releases API."`
 	HTML          *HTMLAutoVersionBlock `hcl:"html,block" help:"Extract version information from a HTML URL using XPath."`
+	JSON          *JSONAutoVersionBlock `hcl:"json,block" help:"Extract version information from a JSON URL using jq."`
 	GitTags       string                `hcl:"git-tags,optional" help:"Git remote URL to fetch git tags for version extraction."`
 
 	VersionPattern        string `hcl:"version-pattern,optional" help:"Regex with one capture group to extract the version number from the origin." default:"v?(.*)"`
@@ -102,6 +103,12 @@ type HTMLAutoVersionBlock struct {
 	URL   string `hcl:"url" help:"URL to retrieve HTML from."`
 	XPath string `hcl:"xpath,optional" help:"XPath for selecting versions from HTML (see https://github.com/antchfx/htmlquery) - use version-pattern to extract substrings"`
 	CSS   string `hcl:"css,optional" help:"CSS selector for selecting versions from HTML (see https://github.com/andybalholm/cascadia). Only one of xpath or css can be specified."`
+}
+
+// JSONAutoVersionBlock defines how version numbers can be extracted from a JSON API using jq.
+type JSONAutoVersionBlock struct {
+	URL string `hcl:"url" help:"URL to retrieve JSON from."`
+	JQ  string `hcl:"jq" help:"jq expression to extract version strings from JSON (see https://github.com/itchyny/gojq)."`
 }
 
 // PlatformBlock matches a set of attributes describing a platform (eg. CPU, OS, etc.)
