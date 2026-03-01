@@ -1,6 +1,6 @@
 module github.com/cashapp/hermit
 
-go 1.23.0
+go 1.24.0
 
 toolchain go1.24.5
 
@@ -20,6 +20,7 @@ require (
 	github.com/creack/pty v1.1.24
 	github.com/gabriel-vasile/mimetype v1.4.9
 	github.com/gobwas/glob v0.2.3
+	github.com/itchyny/gojq v0.12.18
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/klauspost/compress v1.18.0
 	github.com/mattn/go-isatty v0.0.20
@@ -35,7 +36,7 @@ require (
 	github.com/willdonnelly/passwd v0.0.0-20141013001024-7935dab3074c
 	golang.org/x/net v0.42.0
 	golang.org/x/sync v0.16.0
-	golang.org/x/sys v0.34.0
+	golang.org/x/sys v0.38.0
 	golang.org/x/term v0.33.0
 	howett.net/plist v1.0.1
 	mvdan.cc/sh v2.6.4+incompatible
@@ -49,6 +50,7 @@ require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hexops/gotextdiff v1.0.3 // indirect
+	github.com/itchyny/timefmt-go v0.1.7 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/otiai10/mint v1.6.3 // indirect
 	github.com/riywo/loginshell v0.0.0-20200815045211-7d26008be1ab // indirect

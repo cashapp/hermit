@@ -17,7 +17,7 @@ func TestFlock(t *testing.T) {
 	dir := t.TempDir()
 	lockfile := filepath.Join(dir, "lock")
 
-	ctx, cancel := context.WithTimeout(context.TODO(), time.Millisecond*200)
+	ctx, cancel := context.WithTimeout(t.Context(), time.Millisecond*200)
 	defer cancel()
 
 	currentPID := 123
@@ -40,7 +40,7 @@ func TestRecursiveFlock(t *testing.T) {
 	dir := t.TempDir()
 	lockfile := filepath.Join(dir, "lock")
 
-	ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
 	defer cancel()
 
 	releaseb, err := Acquire(ctx, lockfile, "test2")
@@ -63,7 +63,7 @@ func TestContinueFlock(t *testing.T) {
 	dir := t.TempDir()
 	lockfile := filepath.Join(dir, "lock")
 
-	ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
 	defer cancel()
 
 	release, err := Acquire(ctx, lockfile, "test")
