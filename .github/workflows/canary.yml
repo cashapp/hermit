@@ -12,15 +12,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6
-        with:
-          go-version: '^1.16.3'
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@e49f5cb4dd64ff0b0b659d1d8df499595451155a # ratchet:cashapp/activate-hermit@v1
       - name: Build Hermit
         run: |
-          make GOOS=linux GOARCH=amd64 CHANNEL=canary build
-          make GOOS=linux GOARCH=arm64 CHANNEL=canary build
-          make GOOS=darwin GOARCH=amd64 CHANNEL=canary build
-          make GOOS=darwin GOARCH=arm64 CHANNEL=canary build
+          just build canary linux amd64
+          just build canary linux arm64
+          just build canary darwin amd64
+          just build canary darwin arm64
           INSTALLER_VERSION=$(go run -ldflags "-X main.channel=canary" ./cmd/hermit gen-installer --dest=build/install.sh)
           cp build/install.sh build/install-"${INSTALLER_VERSION}".sh
       - name: Release canary
