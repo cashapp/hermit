@@ -7,7 +7,7 @@ cd "${SCRIPT_DIR}/.."
 for channel in "canary" "stable"; do
   rm -rf build
   # Build on native architecture
-  make CHANNEL="${channel}" build
+  ./bin/just build "${channel}"
   gunzip -c build/hermit*.gz > build/hermit
   chmod +x build/hermit
   build/hermit version
