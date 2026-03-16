@@ -14,6 +14,7 @@ change_hermit_env() {
       fi
       return
     fi
+    # Set CUR to the next directory up. Avoid using dirname for performance.
     CUR="${CUR%/*}"
     CUR="${CUR:-/}"
   done
