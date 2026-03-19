@@ -1088,13 +1088,29 @@ func (e *Env) ListInstalled(l *ui.UI) ([]*manifest.Package, error) {
 		return nil, errors.WithStack(err)
 	}
 	out := []*manifest.Package{}
+	var failedRefs []manifest.Reference
 	for _, ref := range refs {
 		pkg, err := e.Resolve(l, manifest.ExactSelector(ref), false)
-		if err != nil { // We don't want to error if there are corrupt packages.
-			l.Warnf("Could not resolve package %s (does \"hermit update\" need to be run?): %v", ref, err)
+		if err != nil {
+			failedRefs = append(failedRefs, ref)
 			continue
 		}
 		out = append(out, pkg)
+	}
+	// If any packages failed to resolve, sync sources once and retry them.
+	if len(failedRefs) > 0 {
+		resolver, err := e.resolver(l)
+		if err == nil {
+			_ = resolver.Sync(l, true)
+		}
+		for _, ref := range failedRefs {
+			pkg, err := e.Resolve(l, manifest.ExactSelector(ref), false)
+			if err != nil {
+				l.Warnf("Could not resolve package %s (does \"hermit update\" need to be run?): %v", ref, err)
+				continue
+			}
+			out = append(out, pkg)
+		}
 	}
 	return out, nil
 }
