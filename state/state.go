@@ -318,7 +318,22 @@ func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 		return nil
 	}
 
-	release, err := s.acquireLock(b, "downloading and extracting %s", p)
+	// Download outside the lock — network I/O no longer blocks other hermit processes.
+	// This is safe because cache paths are content-addressed and the cache layer
+	// uses temp files + atomic os.Rename (see cache/http.go downloadHTTP()).
+	if !s.isCached(p) {
+		mirrors := make([]string, len(p.Mirrors))
+		copy(mirrors, p.Mirrors)
+		mirrors = append(mirrors, s.generateMirrors(p.Source)...)
+		_, etag, _, err := s.cache.Download(b, p.SHA256, p.Source, mirrors...)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		p.ETag = etag
+	}
+
+	// Lock only for extract + link (fast local filesystem operations).
+	release, err := s.acquireLock(b, "extracting %s", p)
 	if err != nil {
 		return errors.WithStack(err)
 	}
