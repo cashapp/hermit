@@ -10,7 +10,7 @@ import (
 )
 
 type addDigestsCmd struct {
-	Manifest []string `arg:"" help:"List of files that need to be updated with digests"`
+	Manifest []string `arg:"" type:"existingfile" help:"List of files that need to be updated with digests" predictor:"hclfile"`
 }
 
 func (*addDigestsCmd) Help() string {
