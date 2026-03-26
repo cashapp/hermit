@@ -8,7 +8,7 @@ import (
 )
 
 type testCmd struct {
-	Pkg          []manifest.GlobSelector `arg:"" required:"" help:"Run sanity tests for these packages."`
+	Pkg          []manifest.GlobSelector `arg:"" required:"" help:"Run sanity tests for these packages." predictor:"package"`
 	CheckSources bool                    `help:"Check that package sources are reachable" default:"true" negatable:""`
 }
 
