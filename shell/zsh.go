@@ -9,6 +9,12 @@ import (
 
 var zshShellHooks = `
 chpwd_functions+=(change_hermit_env)
+change_hermit_env
+
+if [[ -n ${HERMIT_ENV+_} ]] && ! type deactivate-hermit >/dev/null 2>&1 && [[ -f "${HERMIT_ENV}/bin/activate-hermit" ]]; then
+  unset ACTIVE_HERMIT HERMIT_ENV_OPS HERMIT_BIN_CHANGE
+  . "${HERMIT_ENV}/bin/activate-hermit"
+fi
 
 # shellcheck disable=SC2154
 if [[ -n ${_comps+x} ]]; then
