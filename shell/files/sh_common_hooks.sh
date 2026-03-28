@@ -2,6 +2,7 @@ change_hermit_env() {
   local CUR=${PWD}
   while [ "$CUR" != "/" ]; do
     if [ -n "${HERMIT_ENV+_}" ] && [ "${CUR}" -ef "${HERMIT_ENV}" ]; then
+      type update_hermit_env >/dev/null 2>&1 && update_hermit_env
       return
     fi
     if [ -f "${CUR}/bin/activate-hermit" ]; then

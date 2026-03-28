@@ -37,7 +37,7 @@ _hermit_deactivate() {
 {{- end}}
 
 {{- if .Zsh }}
-  precmd_functions=(${precmd_functions:#update_hermit_env})
+  precmd_functions=(${precmd_functions:#(update_hermit_env|update_hermit_ps1)})
 {{- end}}
 
 {{- if ne .Prompt "none"}}
@@ -59,7 +59,20 @@ export HERMIT_ENV_OPS="$("${HERMIT_ENV}/bin/hermit" env --ops)"
 export HERMIT_BIN_CHANGE="$(date -r "${HERMIT_ENV}/bin" +"%s")"
 
 {{- if ne .Prompt "none" }}
-if test -n "${PS1+_}"; then export _HERMIT_OLD_PS1="${PS1}"; PS1="{{if eq .Prompt "env"}}{{ .EnvName }}{{end}}🐚 ${PS1}"; fi
+if test -n "${PS1+_}"; then
+  {{- if .Zsh }}
+  precmd_functions+=( update_hermit_ps1 )
+  update_hermit_ps1 () {
+    [[ ! -v _HERMIT_OLD_PS1 ]] && typeset -g +x _HERMIT_OLD_PS1="${PS1}";
+    PS1="{{if eq .Prompt "env"}}{{ .EnvName }}{{end}}🐚 ${PS1}"
+  }
+  {{- end}}
+
+  {{- if .Bash }}
+  export _HERMIT_OLD_PS1="${PS1}";
+  PS1="{{if eq .Prompt "env"}}{{ .EnvName }}{{end}}🐚 ${PS1}"
+  {{- end}}
+fi
 {{- end}}
 
 update_hermit_env() {
