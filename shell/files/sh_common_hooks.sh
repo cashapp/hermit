@@ -2,6 +2,9 @@ change_hermit_env() {
   local CUR=${PWD}
   while [ "$CUR" != "/" ]; do
     if [ -n "${HERMIT_ENV+_}" ] && [ "${CUR}" -ef "${HERMIT_ENV}" ]; then
+      # If we're still in the same Hermit env, refresh it here as well. This
+      # covers zsh flows like subshells and command substitution that may not
+      # hit precmd before running the next command.
       type update_hermit_env >/dev/null 2>&1 && update_hermit_env
       return
     fi
