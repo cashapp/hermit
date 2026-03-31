@@ -66,8 +66,10 @@ if test -n "${PS1+_}"; then
   # setup (for example from /etc/zshrc).
   precmd_functions+=( update_hermit_ps1 )
   update_hermit_ps1 () {
-    [[ ! -v _HERMIT_OLD_PS1 ]] && typeset -g +x _HERMIT_OLD_PS1="${PS1}";
-    PS1="{{if eq .Prompt "env"}}{{ .EnvName }}{{end}}🐚 ${PS1}"
+    if [[ ! -v _HERMIT_OLD_PS1 ]]; then
+      typeset -g +x _HERMIT_OLD_PS1="${PS1}"
+      PS1="{{if eq .Prompt "env"}}{{ .EnvName }}{{end}}🐚 ${PS1}"
+    fi
   }
   {{- end}}
 
