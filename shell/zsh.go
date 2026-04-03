@@ -8,7 +8,16 @@ import (
 )
 
 var zshShellHooks = `
-precmd_functions+=(change_hermit_env)
+chpwd_functions+=(change_hermit_env)
+change_hermit_env
+
+# A child zsh can inherit HERMIT_ENV/ACTIVE_HERMIT from its parent without
+# inheriting shell-local helpers like deactivate-hermit. Re-source
+# activate-hermit so this shell rebuilds its Hermit functions and bookkeeping.
+if [[ -n ${HERMIT_ENV+_} ]] && ! type deactivate-hermit >/dev/null 2>&1 && [[ -f "${HERMIT_ENV}/bin/activate-hermit" ]]; then
+  unset ACTIVE_HERMIT HERMIT_ENV_OPS HERMIT_BIN_CHANGE
+  . "${HERMIT_ENV}/bin/activate-hermit"
+fi
 
 # shellcheck disable=SC2154
 if [[ -n ${_comps+x} ]]; then
