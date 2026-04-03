@@ -18,7 +18,9 @@ change_hermit_env() {
       fi
       return
     fi
-    CUR="$(dirname "${CUR}")"
+    # Set CUR to the next directory up. Avoid using dirname for performance.
+    CUR="${CUR%/*}"
+    CUR="${CUR:-/}"
   done
   unset DEACTIVATED_HERMIT
   if [ -n "${HERMIT_ENV+_}"  ]; then type _hermit_deactivate &>/dev/null && _hermit_deactivate; fi
