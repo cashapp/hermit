@@ -21,7 +21,7 @@ Called after a Hermit environment is activated. Has access to `$HERMIT_ENV` and 
 ```bash
 hermit_on_activate() {
   export MY_VAR="value"
-  PS1="🐚 $PS1"  # Customize prompt when prompt = "none" in bin/hermit.hcl
+  PS1="🐚 $PS1"  # Customize prompt when prompt = "none" in ~/.hermit.hcl
 }
 ```
 
@@ -53,7 +53,7 @@ end
 
 Define these functions in your shell's RC file (`~/.bashrc`, `~/.zshrc`, or `~/.config/fish/config.fish`). They are optional.
 
-**Tip:** Set `prompt = "none"` in your `bin/hermit.hcl` to disable Hermit's default prompt modification and use `hermit_on_activate` to customize `PS1` instead.
+**Tip:** Set `prompt = "none"` in your `~/.hermit.hcl` to disable Hermit's default prompt modification and use `hermit_on_activate` to customize `PS1` instead.
 
 ## Shell Hooks
 
