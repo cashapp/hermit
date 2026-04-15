@@ -33,11 +33,11 @@ func TestLogs(t *testing.T) {
 			assert.NoError(t, err)
 		},
 		tmpl: `
+			debug:tpkg-0.9.0:download: Downloading {{.Source}}
+			debug:tpkg-0.9.0:unpack: Extracting {{.Cache}} to {{.State}}/pkg/tpkg-0.9.0
 			info:tpkg-0.9.0:install: Installing tpkg-0.9.0
 			debug:tpkg-0.9.0:install: From {{.Source}}
 			debug:tpkg-0.9.0:install: To {{.State}}/pkg/tpkg-0.9.0
-			debug:tpkg-0.9.0:download: Downloading {{.Source}}
-			debug:tpkg-0.9.0:unpack: Extracting {{.Cache}} to {{.State}}/pkg/tpkg-0.9.0
 			debug:tpkg-0.9.0:link: Linking binaries for tpkg-0.9.0
 			debug:tpkg-0.9.0:link: ln -s "hermit" "{{.Bin}}/.tpkg-0.9.0.pkg"
 			debug:tpkg-0.9.0:link: ln -s ".tpkg-0.9.0.pkg" "{{.Bin}}/darwin_exe"`,
