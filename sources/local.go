@@ -19,8 +19,8 @@ func NewLocalSource(uri string, f fs.FS) *LocalSource {
 	}}
 }
 
-func (s *LocalSource) Sync(_ *ui.UI, _ bool) error { // nolint: golint
-	return nil
+func (s *LocalSource) Sync(_ *ui.UI, _ bool) (bool, error) { // nolint: golint
+	return true, nil
 }
 
 func (s *LocalSource) URI() string { // nolint: golint

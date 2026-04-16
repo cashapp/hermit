@@ -29,13 +29,13 @@ func NewGitSource(uri, sourceDir string, runner util.CommandRunner) *GitSource {
 	}, sourceDir, path, runner}
 }
 
-func (s *GitSource) Sync(p *ui.UI, force bool) error { // nolint: golint
+func (s *GitSource) Sync(p *ui.UI, force bool) (bool, error) { // nolint: golint
 	info, _ := os.Stat(s.path)
 	task := p.Task(s.fs.uri)
 	if info == nil || force || time.Since(info.ModTime()) >= SyncFrequency {
 		err := s.ensureSourcesDirExists()
 		if err != nil {
-			return errors.WithStack(err)
+			return false, errors.WithStack(err)
 		}
 
 		err = syncGit(task, s.sourceDir, s.fs.uri, s.path, s.runner)
@@ -44,14 +44,14 @@ func (s *GitSource) Sync(p *ui.UI, force bool) error { // nolint: golint
 		if err != nil {
 			if info != nil {
 				task.Warnf("git sync failed: %s", err)
-			} else {
-				return errors.Wrap(err, "git sync failed")
+				return false, nil
 			}
+			return false, errors.Wrap(err, "git sync failed")
 		}
-	} else {
-		task.Debugf("Update skipped, updated within the last %s", SyncFrequency)
+		return true, nil
 	}
-	return nil
+	task.Debugf("Update skipped, updated within the last %s", SyncFrequency)
+	return false, nil
 }
 
 func (s *GitSource) URI() string { // nolint: golint
