@@ -673,6 +673,21 @@ EOF
 				assert test "${CLEANUP_DONE:-}" = "yes"
 			`,
 		},
+		{
+			name:         "InstallOnActivateEnsuresPackagesAreUnpacked",
+			preparations: prep{fixture("testenv-install-on-activate"), activate(".")},
+			script: `
+			with-prompt-hooks hermit install testbin1
+			# Clean extracted packages to simulate a fresh clone where
+			# stubs exist but the package hasn't been unpacked yet.
+			hermit clean --packages
+			assert test ! -d "${TESTBIN1_ROOT}"
+			# Re-activate; install-on-activate should re-download/unpack.
+			. bin/activate-hermit
+			assert test -d "${TESTBIN1_ROOT}"
+			assert test -x "${TESTBIN1_ROOT}/testbin1"
+			`,
+		},
 	}
 
 	checkForShells(t)

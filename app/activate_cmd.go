@@ -35,6 +35,9 @@ func (a *activateCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, global
 	if err != nil {
 		return errors.WithStack(err)
 	}
+	if err := env.EnsureInstalled(l); err != nil {
+		return errors.WithStack(err)
+	}
 	messages, err := env.Trigger(l, manifest.EventEnvActivate)
 	if err != nil {
 		return errors.WithStack(err)

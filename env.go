@@ -90,11 +90,12 @@ const (
 
 // Config for a Hermit environment.
 type Config struct {
-	Envars        envars.Envars `hcl:"env,optional" help:"Extra environment variables."`
-	Sources       []string      `hcl:"sources,optional" help:"Package manifest sources."`
-	ManageGit     bool          `hcl:"manage-git,optional" default:"true" help:"Whether Hermit should automatically 'git add' new packages."`
-	InheritParent bool          `hcl:"inherit-parent,optional" default:"false" help:"Whether this environment inherits a potential parent environment from one of the parent directories"`
-	AddIJPlugin   bool          `hcl:"idea,optional" default:"false" help:"Whether Hermit should automatically add the IntelliJ IDEA plugin."`
+	Envars            envars.Envars `hcl:"env,optional" help:"Extra environment variables."`
+	Sources           []string      `hcl:"sources,optional" help:"Package manifest sources."`
+	ManageGit         bool          `hcl:"manage-git,optional" default:"true" help:"Whether Hermit should automatically 'git add' new packages."`
+	InheritParent     bool          `hcl:"inherit-parent,optional" default:"false" help:"Whether this environment inherits a potential parent environment from one of the parent directories"`
+	InstallOnActivate []string      `hcl:"install-on-activate,optional" help:"List of packages to eagerly download and unpack when the environment is activated."`
+	AddIJPlugin       bool          `hcl:"idea,optional" default:"false" help:"Whether Hermit should automatically add the IntelliJ IDEA plugin."`
 
 	GitHubTokenAuth GitHubTokenAuthConfig `hcl:"github-token-auth,block" help:"When to use GitHub token authentication."`
 }
@@ -427,6 +428,31 @@ next:
 			}
 		}
 		return errors.Errorf("%s has an unknown SHA256 signature (%s); verify that you trust this environment and run 'hermit init %s'", path, hash, e.envDir)
+	}
+	return nil
+}
+
+// EnsureInstalled downloads and unpacks packages listed in
+// install-on-activate when the environment is activated.
+func (e *Env) EnsureInstalled(l *ui.UI) error {
+	if len(e.config.InstallOnActivate) == 0 {
+		return nil
+	}
+	wanted := map[string]bool{}
+	for _, name := range e.config.InstallOnActivate {
+		wanted[name] = true
+	}
+	pkgs, err := e.ListInstalled(l)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	for _, pkg := range pkgs {
+		if !wanted[pkg.Reference.Name] {
+			continue
+		}
+		if err := e.state.CacheAndUnpack(l.Task(pkg.Reference.String()), pkg); err != nil {
+			return errors.WithStack(err)
+		}
 	}
 	return nil
 }
