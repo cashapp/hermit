@@ -219,6 +219,9 @@ func (e *Prepend) Envar() string { return e.Name } // nolint: golint
 func (e *Prepend) Apply(transform *Transform) { // nolint: golint
 	value, _ := transform.get(e.Name)
 	prepend := transform.expand(e.Value)
+	if alreadyPrefixed(value, prepend) {
+		return
+	}
 	out := splitAndDrop(value, prepend)
 	out = append([]string{prepend}, out...)
 	transform.set(e.Name, strings.Join(out, ":"))
@@ -332,6 +335,25 @@ func (f *Force) Apply(transform *Transform) { // nolint: golint
 
 func (f *Force) Revert(transform *Transform) { // nolint: golint
 	transform.unset(f.Name)
+}
+
+// alreadyPrefixed reports whether all components of "prepend" (split by ":")
+// already appear, in order, as a prefix of "value" (also split by ":").
+func alreadyPrefixed(value, prepend string) bool {
+	if value == "" || prepend == "" {
+		return false
+	}
+	prependParts := strings.Split(prepend, ":")
+	valueParts := strings.Split(value, ":")
+	if len(prependParts) > len(valueParts) {
+		return false
+	}
+	for i, p := range prependParts {
+		if valueParts[i] != p {
+			return false
+		}
+	}
+	return true
 }
 
 // Split "envar" by ":" and drop "value" from it.
