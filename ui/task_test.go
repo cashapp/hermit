@@ -31,7 +31,7 @@ func TestConcurrentTaskSizeAndAddNoDeadlock(t *testing.T) {
 	const iterations = 200
 
 	var wg sync.WaitGroup
-	for i := 0; i < tasks; i++ {
+	for range tasks {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
