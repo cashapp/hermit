@@ -42,13 +42,19 @@ func (o *Task) status() (progress int, size int, started bool) {
 
 // Size sets the size of the Task.
 func (o *Task) Size(n int) *Task {
+	// Lock ordering: update o.size under o.lock, then call swapSize separately.
+	// Callers of UI.redrawProgress acquire ui.lock first and then re-enter each
+	// task's lock via op.status(); if we held o.lock while calling swapSize
+	// (which takes ui.lock) two goroutines updating different tasks would
+	// deadlock — task_A.lock -> ui.lock vs. ui.lock -> task_A.lock.
 	o.lock.Lock()
-	defer o.lock.Unlock()
-	o.w.swapSize(o.size, n)
+	oldSize := o.size
 	o.size = n
 	if o.progress > o.size {
 		o.progress = o.size
 	}
+	o.lock.Unlock()
+	o.w.swapSize(oldSize, n)
 	return o
 }
 
