@@ -674,6 +674,15 @@ EOF
 			`,
 		},
 		{
+			name:         "HermitPrependPathIsRespected",
+			preparations: prep{fixture("testenv1")},
+			script: `
+				export HERMIT_PREPEND_PATH="/prepend/first:/prepend/second"
+				. bin/activate-hermit
+				assert echo "$PATH" | grep -q "^/prepend/first:/prepend/second:"
+			`,
+		},
+		{
 			name:         "InstallOnActivateEnsuresPackagesAreUnpacked",
 			preparations: prep{fixture("testenv-install-on-activate"), activate(".")},
 			script: `
