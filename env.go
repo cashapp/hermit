@@ -1429,6 +1429,9 @@ func (e *Env) allEnvarOpsForPackages(runtimeDeps []*manifest.Package, targetPkg 
 	}
 	ops = append(ops, e.localEnvarOps()...)
 	ops = append(ops, e.ephemeralEnvars...)
+	if prependPath := os.Getenv("HERMIT_PREPEND_PATH"); prependPath != "" {
+		ops = append(ops, &envars.Prepend{Name: "PATH", Value: prependPath})
+	}
 	return ops
 }
 
