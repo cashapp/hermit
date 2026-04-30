@@ -355,3 +355,60 @@ func TestZipEscapingSymlink(t *testing.T) {
 	assert.True(t, strings.Contains(err.Error(), "illegal symlink target"),
 		"expected error about illegal symlink target, got: %v", err)
 }
+
+// TestSymlinkChainEscape tests that a chain of symlinks where each individual hop
+// appears safe lexically cannot be used to escape the extraction root.
+// This is a bypass of the filepath.Clean-based check in PR #540: a chain like
+// A->B (within dest) followed by B->../../ (within dest relative to B's lexical path)
+// looks safe per filepath.Clean but escapes when on-disk symlinks are followed.
+func TestSymlinkChainEscape(t *testing.T) {
+	tmpDir := t.TempDir()
+	dest := filepath.Join(tmpDir, "extracted")
+	err := os.MkdirAll(dest, 0750)
+	assert.NoError(t, err)
+
+	// Build a tarball with a two-hop symlink chain:
+	//   hop1 -> hop2          (lexically within dest — passes individual check)
+	//   hop2 -> ../../escape  (lexically: dest/hop2/../../escape = tmpDir/escape — outside dest)
+	// The chain bypass: hop1/hop2 together resolve outside dest even though hop1 alone looks safe.
+	tarPath := filepath.Join(tmpDir, "chain_escape.tar.gz")
+	f, err := os.Create(tarPath)
+	assert.NoError(t, err)
+
+	gw := gzip.NewWriter(f)
+	tw := tar.NewWriter(gw)
+
+	// First hop: hop1 -> hop2 (within dest, passes lexical check)
+	err = tw.WriteHeader(&tar.Header{
+		Name:     "hop1",
+		Typeflag: tar.TypeSymlink,
+		Linkname: "hop2",
+	})
+	assert.NoError(t, err)
+
+	// Second hop: hop2 -> ../../escape (escapes dest via two levels)
+	err = tw.WriteHeader(&tar.Header{
+		Name:     "hop2",
+		Typeflag: tar.TypeSymlink,
+		Linkname: "../../escape",
+	})
+	assert.NoError(t, err)
+
+	assert.NoError(t, tw.Close())
+	assert.NoError(t, gw.Close())
+	assert.NoError(t, f.Close())
+
+	p, _ := ui.NewForTesting()
+	_, err = Extract(
+		p.Task("extract"),
+		tarPath,
+		&manifest.Package{Dest: dest, Source: "chain_escape.tar.gz"},
+	)
+	assert.Error(t, err, "expected extraction to fail due to symlink chain escape")
+	assert.True(t, strings.Contains(err.Error(), "illegal symlink target"),
+		"expected error about illegal symlink target, got: %v", err)
+
+	// Verify no files were written outside dest
+	_, statErr := os.Stat(filepath.Join(tmpDir, "escape"))
+	assert.True(t, os.IsNotExist(statErr), "escape file should not exist outside dest")
+}

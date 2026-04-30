@@ -668,7 +668,9 @@ func sanitizeExtractPath(filePath string, destination string) error {
 // linkTarget is the symlink target (can be relative or absolute).
 // destination is the root extraction directory that must contain the resolved symlink target.
 func sanitizeSymlinkTarget(destFile, linkTarget, destination string) error {
-	// Resolve the symlink target relative to the directory containing the symlink
+	cleanDest := filepath.Clean(destination)
+
+	// Compute the nominal target path lexically.
 	var resolvedTarget string
 	if filepath.IsAbs(linkTarget) {
 		resolvedTarget = linkTarget
@@ -677,10 +679,26 @@ func sanitizeSymlinkTarget(destFile, linkTarget, destination string) error {
 	}
 	resolvedTarget = filepath.Clean(resolvedTarget)
 
-	// Ensure the resolved target is within the destination directory
-	cleanDest := filepath.Clean(destination)
+	// Lexical check: catch obvious direct escapes early.
 	if !strings.HasPrefix(resolvedTarget, cleanDest+string(filepath.Separator)) && resolvedTarget != cleanDest {
 		return errors.Errorf("%s: illegal symlink target %q (resolves to %s which is outside %s)", destFile, linkTarget, resolvedTarget, destination)
 	}
+
+	// Chain escape check: resolve any previously-extracted symlinks in the parent
+	// directory of destFile using filepath.EvalSymlinks. filepath.Clean is purely
+	// lexical and cannot detect a chain where each individual hop looks safe (e.g.
+	// A->B, B->../../) but the resolved on-disk path escapes the extraction root.
+	if resolvedParent, err := filepath.EvalSymlinks(filepath.Dir(destFile)); err == nil {
+		var realTarget string
+		if filepath.IsAbs(linkTarget) {
+			realTarget = filepath.Clean(linkTarget)
+		} else {
+			realTarget = filepath.Clean(filepath.Join(resolvedParent, linkTarget))
+		}
+		if !strings.HasPrefix(realTarget, cleanDest+string(filepath.Separator)) && realTarget != cleanDest {
+			return errors.Errorf("%s: illegal symlink target %q escapes destination via symlink chain (real path %s is outside %s)", destFile, linkTarget, realTarget, destination)
+		}
+	}
+
 	return nil
 }
