@@ -364,8 +364,6 @@ func TestZipEscapingSymlink(t *testing.T) {
 func TestSymlinkChainEscape(t *testing.T) {
 	tmpDir := t.TempDir()
 	dest := filepath.Join(tmpDir, "extracted")
-	err := os.MkdirAll(dest, 0750)
-	assert.NoError(t, err)
 
 	// Build a tarball with a two-hop symlink chain:
 	//   hop1 -> hop2          (lexically within dest — passes individual check)
