@@ -25,7 +25,7 @@ func TestGitDoesNotRemoveSourceAfterSyncFailure(t *testing.T) {
 
 	// Create the initial directory for sources by successfully syncing
 	u, _ := ui.NewForTesting()
-	err := source.Sync(u, true)
+	_, err := source.Sync(u, true)
 	assert.NoError(t, err)
 	files, err := os.ReadDir(sourceDir)
 	assert.NoError(t, err)
@@ -34,7 +34,7 @@ func TestGitDoesNotRemoveSourceAfterSyncFailure(t *testing.T) {
 
 	// Fail the sync
 	git.err = errors.New("failing git fails")
-	err = source.Sync(u, true)
+	_, err = source.Sync(u, true)
 
 	// no error as it was not an initial clone
 	assert.NoError(t, err)

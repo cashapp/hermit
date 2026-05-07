@@ -3,6 +3,9 @@ package app
 import (
 	"fmt"
 	"os"
+	"runtime"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/cashapp/hermit"
 	"github.com/cashapp/hermit/envars"
@@ -14,7 +17,8 @@ import (
 )
 
 type installCmd struct {
-	Packages []manifest.GlobSelector `arg:"" optional:"" name:"package" help:"Packages to install (<name>[-<version>]). Version can be a glob to find the latest version with." predictor:"package"`
+	Packages    []manifest.GlobSelector `arg:"" optional:"" name:"package" help:"Packages to install (<name>[-<version>]). Version can be a glob to find the latest version with." predictor:"package"`
+	Concurrency int                     `short:"j" help:"Number of parallel downloads." default:"0"`
 }
 
 func (i *installCmd) Help() string {
@@ -25,6 +29,10 @@ into the environment will be downloaded and installed. Packages will be pinned t
 }
 
 func (i *installCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
+	concurrency := i.Concurrency
+	if concurrency <= 0 {
+		concurrency = runtime.NumCPU()
+	}
 	installed, err := env.ListInstalledReferences()
 	if err != nil {
 		return errors.WithStack(err)
@@ -38,19 +46,33 @@ func (i *installCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
 	}
 
 	if len(selectors) == 0 {
-		// Checking that all the packages are downloaded and unarchived
+		// Resolve all packages first (sequential — resolver may hold shared state).
+		type resolvedRef struct {
+			pkg  *manifest.Package
+			task *ui.Task
+		}
+		refs := make([]resolvedRef, 0, len(installed))
 		for _, ref := range installed {
 			task := l.Task(ref.String())
 			pkg, err := env.Resolve(l, manifest.ExactSelector(ref), true)
 			if err != nil {
 				return errors.WithStack(err)
 			}
-			err = state.CacheAndUnpack(task, pkg)
-			pkg.LogWarnings(l)
-			task.Done()
-			if err != nil {
-				return errors.WithStack(err)
-			}
+			refs = append(refs, resolvedRef{pkg: pkg, task: task})
+		}
+		// Download and unpack all packages in parallel.
+		g := errgroup.Group{}
+		g.SetLimit(concurrency)
+		for _, r := range refs {
+			g.Go(func() error {
+				err := state.CacheAndUnpack(r.task, r.pkg)
+				r.pkg.LogWarnings(l)
+				r.task.Done()
+				return err
+			})
+		}
+		if err := g.Wait(); err != nil {
+			return errors.WithStack(err)
 		}
 		return nil
 	}
@@ -76,6 +98,20 @@ func (i *installCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
 			return errors.Wrap(err, search.String())
 		}
 	}
+	// Download and unpack all packages in parallel.
+	g := errgroup.Group{}
+	g.SetLimit(concurrency)
+	for _, pkg := range pkgs {
+		g.Go(func() error {
+			task := l.Task(pkg.Reference.String())
+			defer task.Done()
+			return state.CacheAndUnpack(task, pkg)
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return errors.WithStack(err)
+	}
+
 	changes := shell.NewChanges(envars.Parse(os.Environ()))
 	w := l.WriterAt(ui.LevelInfo)
 	defer w.Sync() // nolint

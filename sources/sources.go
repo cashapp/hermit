@@ -19,8 +19,9 @@ const SyncFrequency = time.Hour * 24
 
 // Source is a single source for manifest files
 type Source interface {
-	// Sync synchronises these sources from the possibly remote origin
-	Sync(p *ui.UI, force bool) error
+	// Sync synchronises these sources from the possibly remote origin.
+	// Returns true if the source was actually updated.
+	Sync(p *ui.UI, force bool) (bool, error)
 	// URI returns a URI for the source
 	URI() string
 	// Bundle returns a fs.FS for the manifests from this source
@@ -65,17 +66,21 @@ func (s *Sources) Add(source Source) {
 
 // Sync synchronises manifests from remote repos.
 // Will be synced at most every SyncFrequency unless "force" is true.
-// A Sources set can only be synchronised once. Following calls will not have any effect.
+// Sources will only be synchronised once per invocation. Following calls will not have any effect.
 func (s *Sources) Sync(p *ui.UI, force bool) error {
-	if s.isSynchronised && !force {
+	if s.isSynchronised {
 		return nil
 	}
-	s.isSynchronised = true
+	synced := false
 	for _, source := range s.sources {
-		err := source.Sync(p, force)
+		did, err := source.Sync(p, force)
 		if err != nil {
 			return errors.WithStack(err)
 		}
+		synced = synced || did
+	}
+	if synced {
+		s.isSynchronised = true
 	}
 	return nil
 }

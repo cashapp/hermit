@@ -18,8 +18,8 @@ func NewMemSource(name, content string) *MemSource {
 	return &MemSource{name, content}
 }
 
-func (s *MemSource) Sync(_ *ui.UI, _ bool) error { // nolint: golint
-	return nil
+func (s *MemSource) Sync(_ *ui.UI, _ bool) (bool, error) { // nolint: golint
+	return true, nil
 }
 
 func (s *MemSource) URI() string { // nolint: golint

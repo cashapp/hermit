@@ -17,6 +17,7 @@ present in an active environment are:
 |-----------|------|
 | `HERMIT_ENV` | Path to the active Hermit environment. |
 | `HERMIT_BIN` | Path to the active Hermit environment `bin` directory. |
+| `HERMIT_PREPEND_PATH` | If set, prepends its value to the front of `PATH` after all other environment operations are applied. Useful for ensuring specific directories always take precedence over Hermit-managed packages. |
 
 An empty environment might look something like the following:
 

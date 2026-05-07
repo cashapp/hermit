@@ -16,8 +16,8 @@ func NewBuiltInSource(dir fs.FS) *BuiltInSource {
 	return &BuiltInSource{dir}
 }
 
-func (s *BuiltInSource) Sync(_ *ui.UI, _ bool) error { // nolint: golint
-	return nil
+func (s *BuiltInSource) Sync(_ *ui.UI, _ bool) (bool, error) { // nolint: golint
+	return true, nil
 }
 
 func (s *BuiltInSource) URI() string { // nolint: golint
