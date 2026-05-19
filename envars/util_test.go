@@ -97,6 +97,42 @@ func TestExpandNoEscape(t *testing.T) {
 	}))
 }
 
+func TestValidateKey(t *testing.T) {
+	cases := []struct {
+		name    string
+		key     string
+		wantErr bool
+	}{
+		{name: "Simple", key: "FOO", wantErr: false},
+		{name: "Underscore", key: "_HERMIT", wantErr: false},
+		{name: "Mixed", key: "PATH_2", wantErr: false},
+		{name: "Lowercase", key: "abc", wantErr: false},
+		{name: "Empty", key: "", wantErr: true},
+		{name: "LeadingDigit", key: "1FOO", wantErr: true},
+		{name: "Hyphen", key: "FOO-BAR", wantErr: true},
+		{name: "Space", key: "FOO BAR", wantErr: true},
+		{name: "Semicolon", key: "EVIL; touch /tmp/x; X", wantErr: true},
+		{name: "Backtick", key: "FOO`id`", wantErr: true},
+		{name: "Dollar", key: "FOO$BAR", wantErr: true},
+		{name: "Newline", key: "FOO\nBAR", wantErr: true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := ValidateKey(tc.key)
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestEnvarsValidate(t *testing.T) {
+	assert.NoError(t, Envars{"FOO": "1", "BAR_2": "2"}.Validate())
+	assert.Error(t, Envars{"FOO": "1", "EVIL; touch /tmp/x; X": "v"}.Validate())
+}
+
 func TestExpandDateTime(t *testing.T) {
 	mapping := Mapping("foo", "foo", platform.Platform{})
 

@@ -318,6 +318,23 @@ func TestResolver_Resolve(t *testing.T) {
 			WithSource("www.example.com/foo/bar").
 			Result(),
 	}, {
+		// Regression test for VULN-78160: shell command injection via env-var key.
+		name: "Rejects env keys that are not valid POSIX identifiers",
+		files: map[string]string{
+			`evil.hcl`: `
+			description = ""
+			binaries = ["bin/evil"]
+			version "1.0.0" {
+				source = "www.example.com"
+				env = {
+					"EVIL; touch /tmp/x; X": "innocent",
+				}
+			}
+			`,
+		},
+		reference: "evil-1.0.0",
+		wantErr:   `memory:///evil.hcl: evil-1.0.0: invalid environment variable name "EVIL; touch /tmp/x; X" (must match ^[A-Za-z_][A-Za-z0-9_]*$)`,
+	}, {
 		name: "Returns an error when expanding version if channel has no version range",
 		files: map[string]string{
 			`test.hcl`: `
