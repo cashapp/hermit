@@ -587,6 +587,9 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	}
 
 	for _, env := range layerEnvars {
+		if err := env.Validate(); err != nil {
+			return nil, errors.Wrapf(err, "%s: %s", manifest.Path, found)
+		}
 		for k, v := range env {
 			// Expand manifest variables but keep other variable references.
 			// Envars are expanded again while applying envar Ops, so we need to

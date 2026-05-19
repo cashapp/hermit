@@ -48,6 +48,9 @@ func (sh *Fish) ActivationHooksCode() (script string, err error) { // nolint: go
 }
 
 func (sh *Fish) ApplyEnvars(w io.Writer, env envars.Envars) error {
+	if err := env.Validate(); err != nil {
+		return errors.WithStack(err)
+	}
 	for key, value := range env {
 		if value == "" {
 			fmt.Fprintf(w, "set -e %s\n", key)

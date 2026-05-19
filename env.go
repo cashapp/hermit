@@ -287,6 +287,9 @@ func readConfig(configFile string) (*Config, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, configFile)
 		}
+		if err := config.Envars.Validate(); err != nil {
+			return nil, errors.Wrap(err, configFile)
+		}
 	}
 	return config, nil
 }
@@ -340,6 +343,9 @@ func OpenEnv(
 	scriptSums []string,
 	sourceRewriters ...sources.URLRewriter,
 ) (*Env, error) {
+	if err := ephemeral.Validate(); err != nil {
+		return nil, errors.WithStack(err)
+	}
 	useGit := info.Config.ManageGit && isEnvAGitRepo(info.Root)
 	if len(scriptSums) == 0 {
 		scriptSums = ScriptSHAs
@@ -1189,6 +1195,9 @@ func (e *Env) EnvOps(l *ui.UI) (envars.Ops, error) {
 
 // SetEnv sets an extra environment variable.
 func (e *Env) SetEnv(key, value string) error {
+	if err := envars.ValidateKey(key); err != nil {
+		return errors.WithStack(err)
+	}
 	e.config.Envars[key] = value
 	data, err := hcl.Marshal(e.config)
 	if err != nil {

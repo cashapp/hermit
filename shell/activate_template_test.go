@@ -37,6 +37,29 @@ func TestPosixActivationScriptQuotesPathsWithSpaces(t *testing.T) {
 	}
 }
 
+func TestActivateHermitRejectsMaliciousEnvKey(t *testing.T) {
+	// Regression test for VULN-78160: shell command injection via env-var key.
+	maliciousEnv := envars.Envars{
+		"EVIL; touch /tmp/pwned; X": "innocent",
+	}
+	cases := []Shell{&Bash{}, &Zsh{}, &Fish{}}
+	for _, sh := range cases {
+		t.Run(sh.Name(), func(t *testing.T) {
+			var out bytes.Buffer
+			err := ActivateHermit(&out, sh, ActivationConfig{
+				Root:   "/tmp/env",
+				Prompt: "none",
+				Env:    maliciousEnv,
+			})
+			assert.Error(t, err)
+
+			out.Reset()
+			err = sh.ApplyEnvars(&out, maliciousEnv)
+			assert.Error(t, err)
+		})
+	}
+}
+
 func TestFishActivationScriptQuotesPathsWithSpaces(t *testing.T) {
 	root := "/tmp/Application Support/hermit env"
 

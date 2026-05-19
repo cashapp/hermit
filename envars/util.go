@@ -4,11 +4,40 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
+	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/platform"
 )
+
+// validEnvKey matches names that are safe to interpolate directly into POSIX
+// shell and fish scripts. The pattern is the standard POSIX identifier syntax
+// used for environment variable names: an initial letter or underscore
+// followed by any number of letters, digits, or underscores.
+var validEnvKey = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+
+// ValidateKey returns an error if key is not a valid POSIX environment
+// variable name. Hermit emits keys verbatim into shell scripts, so anything
+// outside this pattern is rejected to prevent shell command injection.
+func ValidateKey(key string) error {
+	if !validEnvKey.MatchString(key) {
+		return errors.Errorf("invalid environment variable name %q (must match %s)", key, validEnvKey)
+	}
+	return nil
+}
+
+// Validate returns an error if any key in e is not a valid POSIX environment
+// variable name. See [ValidateKey].
+func (e Envars) Validate() error {
+	for key := range e {
+		if err := ValidateKey(key); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 // Parse a KEY=VALUE list of environment variables into an [Envars] map.
 func Parse(envars []string) Envars {

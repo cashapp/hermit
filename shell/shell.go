@@ -165,6 +165,9 @@ func (c Changes) Merge(o *Changes) *Changes {
 
 // ActivateHermit prints out the hermit activation script for the given shell.
 func ActivateHermit(w io.Writer, shell Shell, config ActivationConfig) error {
+	if err := config.Env.Validate(); err != nil {
+		return errors.WithStack(err)
+	}
 	if err := shell.ActivationScript(w, config); err != nil {
 		return errors.WithStack(err)
 	}
