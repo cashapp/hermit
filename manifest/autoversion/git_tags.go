@@ -2,12 +2,13 @@ package autoversion
 
 import (
 	"bufio"
-	"github.com/cashapp/hermit/errors"
-	"github.com/cashapp/hermit/manifest"
 	"os/exec"
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/manifest"
 )
 
 func gitTagsAutoVersion(autoVersion *manifest.AutoVersionBlock) (string, error) {
@@ -26,7 +27,7 @@ func gitTagsAutoVersion(autoVersion *manifest.AutoVersionBlock) (string, error) 
 	// output format of refs is
 	// <oid> TAB <ref> LF
 	// source: https://git-scm.com/docs/git-ls-remote
-	out, err := exec.Command("git", "ls-remote", "--tags", "--refs", remoteURL).Output()
+	out, err := exec.Command("git", "ls-remote", "--tags", "--refs", "--", remoteURL).Output()
 	if err != nil {
 		return "", errors.Wrapf(err, "error listing tags for %s", remoteURL)
 	}
