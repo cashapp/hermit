@@ -8,7 +8,7 @@ import (
 )
 
 var bashShellHooks = `
-if test -n "${PROMPT_COMMAND+_}"; then 
+if test -n "${PROMPT_COMMAND+_}"; then
   PROMPT_COMMAND="change_hermit_env; $PROMPT_COMMAND"
 else
   PROMPT_COMMAND="change_hermit_env"
@@ -22,9 +22,9 @@ type Bash struct{ posixMixin }
 
 var _ Shell = &Bash{}
 
-func (sh *Bash) Name() string { return "bash" } // nolint: golint
+func (sh *Bash) Name() string { return "bash" }
 
-func (sh *Bash) ActivationScript(w io.Writer, config ActivationConfig) error { // nolint: golint
+func (sh *Bash) ActivationScript(w io.Writer, config ActivationConfig) error {
 	err := posixActivationScriptTmpl.Execute(w, &posixActivationContext{
 		ActivationConfig: config,
 		EnvName:          filepath.Base(config.Root),
@@ -33,10 +33,10 @@ func (sh *Bash) ActivationScript(w io.Writer, config ActivationConfig) error { /
 	return errors.WithStack(err)
 }
 
-func (sh *Bash) ActivationHooksInstallation() (path, script string, err error) { // nolint: golint
+func (sh *Bash) ActivationHooksInstallation() (path, script string, err error) {
 	return activationHooksInstallation(".bashrc", "bash")
 }
 
-func (sh *Bash) ActivationHooksCode() (script string, err error) { // nolint: golint
+func (sh *Bash) ActivationHooksCode() (script string, err error) {
 	return commonHooks + bashShellHooks, nil
 }

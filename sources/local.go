@@ -19,14 +19,14 @@ func NewLocalSource(uri string, f fs.FS) *LocalSource {
 	}}
 }
 
-func (s *LocalSource) Sync(_ *ui.UI, _ bool) (bool, error) { // nolint: golint
+func (s *LocalSource) Sync(_ *ui.UI, _ bool) (bool, error) {
 	return true, nil
 }
 
-func (s *LocalSource) URI() string { // nolint: golint
+func (s *LocalSource) URI() string {
 	return s.fs.uri
 }
 
-func (s *LocalSource) Bundle() fs.FS { // nolint: golint
+func (s *LocalSource) Bundle() fs.FS {
 	return s.fs
 }

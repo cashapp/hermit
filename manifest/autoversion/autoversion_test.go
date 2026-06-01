@@ -50,7 +50,7 @@ func TestAutoVersion(t *testing.T) {
 			// Copy input manifest to a temporary path.
 			tmpFile, err := os.CreateTemp(t.TempDir(), "*.hcl")
 			assert.NoError(t, err)
-			defer tmpFile.Close() // nolint
+			defer tmpFile.Close()
 
 			inputContent, err := os.ReadFile(input)
 			assert.NoError(t, err)

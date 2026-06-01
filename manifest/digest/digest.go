@@ -219,7 +219,7 @@ func tryGetSHA(task *ui.Task, client *http.Client, pkg *manifest.Package) string
 			content = string(data)
 			checksumCache.Store(variant, content)
 		}
-		lines := strings.Split(strings.TrimSpace(content.(string)), "\n") // nolint
+		lines := strings.Split(strings.TrimSpace(content.(string)), "\n") //nolint
 		allowMissingFilename := len(lines) == 1
 		for _, line := range lines {
 			task.Tracef("%s: %s", variant, line)
@@ -246,8 +246,8 @@ func updateHCLSHA256Sums(ast *hcl.AST, updated []pkgAndDigest) error {
 
 	for _, pkg := range updated {
 		sha256Sums.Map = append(sha256Sums.Map, &hcl.MapEntry{
-			Key:   &hcl.Value{Str: &pkg.source}, //nolint:exportloopref
-			Value: &hcl.Value{Str: &pkg.digest}, //nolint:exportloopref
+			Key:   &hcl.Value{Str: &pkg.source},
+			Value: &hcl.Value{Str: &pkg.digest},
 		})
 	}
 

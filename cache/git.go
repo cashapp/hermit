@@ -75,7 +75,7 @@ func (s *gitSource) Validate() error {
 	if tag == "" {
 		tag = "HEAD"
 	}
-	cmd := exec.Command("git", "ls-remote", "--", repo, tag)
+	cmd := exec.Command("git", "ls-remote", "--", repo, tag) //nolint
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return errors.Wrapf(err, "error getting remote HEAD: %s", string(out))

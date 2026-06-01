@@ -71,7 +71,7 @@ func TestContinueFlock(t *testing.T) {
 
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.Go(func() error {
-		release, err := Acquire(ctx, lockfile, "test")
+		release, err := Acquire(ctx, lockfile, "test") //nolint
 		if err != nil {
 			return err
 		}

@@ -114,7 +114,7 @@ func (i *installCmd) Run(l *ui.UI, env *hermit.Env, state *state.State) error {
 
 	changes := shell.NewChanges(envars.Parse(os.Environ()))
 	w := l.WriterAt(ui.LevelInfo)
-	defer w.Sync() // nolint
+	defer w.Sync() //nolint
 	for _, pkg := range pkgs {
 		// Skip possible dependencies that have already been installed
 		exists := false

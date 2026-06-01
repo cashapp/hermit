@@ -27,7 +27,7 @@ func makeWritable(path string) error {
 		if err != nil {
 			return err
 		}
-		return os.Chmod(path, info.Mode()|0200) // Add write permission
+		return os.Chmod(path, info.Mode()|0200) //nolint:gosec // This is test code
 	})
 }
 

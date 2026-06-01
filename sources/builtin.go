@@ -16,14 +16,14 @@ func NewBuiltInSource(dir fs.FS) *BuiltInSource {
 	return &BuiltInSource{dir}
 }
 
-func (s *BuiltInSource) Sync(_ *ui.UI, _ bool) (bool, error) { // nolint: golint
+func (s *BuiltInSource) Sync(_ *ui.UI, _ bool) (bool, error) {
 	return true, nil
 }
 
-func (s *BuiltInSource) URI() string { // nolint: golint
+func (s *BuiltInSource) URI() string {
 	return "builtin:///"
 }
 
-func (s *BuiltInSource) Bundle() fs.FS { // nolint: golint
+func (s *BuiltInSource) Bundle() fs.FS {
 	return &uriFS{s.URI(), s.fs}
 }

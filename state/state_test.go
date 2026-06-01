@@ -19,7 +19,7 @@ func TestCacheAndUnpackDownloadsOnlyWhenNeeded(t *testing.T) {
 		WithHTTPHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			fr, err := os.Open("../archive/testdata/archive.tar.gz")
 			assert.NoError(t, err)
-			defer fr.Close() // nolint
+			defer fr.Close()
 			_, err = io.Copy(w, fr)
 			assert.NoError(t, err)
 			calls++
@@ -46,7 +46,7 @@ func TestCacheAndUnpackHooksRunOnMutablePackage(t *testing.T) {
 		WithHTTPHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			fr, err := os.Open("../archive/testdata/archive.tar.gz")
 			assert.NoError(t, err)
-			defer fr.Close() // nolint
+			defer fr.Close()
 			_, err = io.Copy(w, fr)
 			assert.NoError(t, err)
 		}))
@@ -82,7 +82,7 @@ func TestLinksMissingBinaries(t *testing.T) {
 		WithHTTPHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			fr, err := os.Open("../archive/testdata/archive.tar.gz")
 			assert.NoError(t, err)
-			defer fr.Close() // nolint
+			defer fr.Close()
 			_, err = io.Copy(w, fr)
 			assert.NoError(t, err)
 		}))
@@ -122,7 +122,7 @@ func TestCacheAndUnpackCreatesBinarySymlinks(t *testing.T) {
 		WithHTTPHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			fr, err := os.Open("../archive/testdata/archive.tar.gz")
 			assert.NoError(t, err)
-			defer fr.Close() // nolint
+			defer fr.Close()
 			_, err = io.Copy(w, fr)
 			assert.NoError(t, err)
 		}))
@@ -146,7 +146,7 @@ func TestUpdateSymlinks(t *testing.T) {
 		WithHTTPHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			fr, err := os.Open("../archive/testdata/archive.tar.gz")
 			assert.NoError(t, err)
-			defer fr.Close() // nolint
+			defer fr.Close()
 			_, err = io.Copy(w, fr)
 			assert.NoError(t, err)
 		}))

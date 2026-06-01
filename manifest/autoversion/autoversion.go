@@ -91,7 +91,7 @@ blocks:
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
-	defer w.Close() // nolint
+	defer w.Close()
 	defer os.Remove(w.Name())
 	_, err = w.Write(content)
 	if err != nil {
@@ -113,7 +113,7 @@ func parseVersionBlockFromManifest(ast *hcl.AST) ([]versionBlock, error) {
 			if err := hcl.UnmarshalBlock(node, autoVersion); err != nil {
 				return errors.WithStack(err)
 			}
-			autoVersionedBlock := node.Parent.(*hcl.Entry).Parent.(*hcl.Block)
+			autoVersionedBlock := node.Parent.(*hcl.Entry).Parent.(*hcl.Block) //nolint
 
 			blocks = append(blocks, versionBlock{autoVersion, autoVersionedBlock})
 		}

@@ -43,7 +43,7 @@ func (f *StateTestFixture) Clean() {
 	}
 	for r := range f.roots {
 		_ = filepath.Walk(r, func(path string, info fs.FileInfo, err error) error {
-			_ = os.Chmod(path, 0700) // nolint
+			_ = os.Chmod(path, 0700)
 			return nil
 		})
 		err := os.RemoveAll(r)

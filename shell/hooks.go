@@ -33,7 +33,7 @@ func installationScript(shell string) string {
 	)
 }
 
-func activationHooksInstallation(fileName, shellFlag string) (path, script string, err error) { // nolint: golint
+func activationHooksInstallation(fileName, shellFlag string) (path, script string, err error) {
 	home, err := system.UserHomeDir()
 	if err != nil {
 		return "", "", errors.WithStack(err)

@@ -29,7 +29,7 @@ func NewGitSource(uri, sourceDir string, runner util.CommandRunner) *GitSource {
 	}, sourceDir, path, runner}
 }
 
-func (s *GitSource) Sync(p *ui.UI, force bool) (bool, error) { // nolint: golint
+func (s *GitSource) Sync(p *ui.UI, force bool) (bool, error) {
 	info, _ := os.Stat(s.path)
 	task := p.Task(s.fs.uri)
 	if info == nil || force || time.Since(info.ModTime()) >= SyncFrequency {
@@ -54,11 +54,11 @@ func (s *GitSource) Sync(p *ui.UI, force bool) (bool, error) { // nolint: golint
 	return false, nil
 }
 
-func (s *GitSource) URI() string { // nolint: golint
+func (s *GitSource) URI() string {
 	return s.fs.uri
 }
 
-func (s *GitSource) Bundle() fs.FS { // nolint: golint
+func (s *GitSource) Bundle() fs.FS {
 	return s.fs
 }
 

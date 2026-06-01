@@ -32,7 +32,7 @@ type MessageAction struct {
 
 func (m *MessageAction) position() hcl.Position { return m.Pos }
 func (m *MessageAction) String() string         { return "echo " + shell.Quote(m.Text) }
-func (m *MessageAction) Apply(p *Package) error { return nil } // nolint
+func (m *MessageAction) Apply(p *Package) error { return nil }
 
 // RenameAction renames a file.
 type RenameAction struct {
@@ -46,7 +46,7 @@ func (r *RenameAction) position() hcl.Position { return r.Pos }
 func (r *RenameAction) String() string {
 	return fmt.Sprintf("mv %s %s", shell.Quote(r.From), shell.Quote(r.To))
 }
-func (r *RenameAction) Apply(*Package) error { // nolint
+func (r *RenameAction) Apply(*Package) error {
 	return os.Rename(r.From, r.To)
 }
 
@@ -64,7 +64,7 @@ func (d *DeleteAction) String() string {
 	}
 	return "rm " + strings.Join(d.Files, " ")
 }
-func (d *DeleteAction) Apply(*Package) error { // nolint
+func (d *DeleteAction) Apply(*Package) error {
 	for _, file := range d.Files {
 		if d.Recursive {
 			if err := os.RemoveAll(file); err != nil {
@@ -106,13 +106,13 @@ func (r *RunAction) position() hcl.Position { return r.Pos }
 func (r *RunAction) String() string {
 	return fmt.Sprintf("%s %s", r.Command, shellquote.Join(r.Args...))
 }
-func (r *RunAction) Apply(p *Package) error { // nolint
+func (r *RunAction) Apply(p *Package) error {
 	args, err := shellquote.Split(r.Command)
 	if err != nil {
 		return errors.Wrapf(err, "%s: invalid shell command %q", p, r.Command)
 	}
 	args = append(args, r.Args...)
-	cmd := exec.Command(args[0], args[1:]...)
+	cmd := exec.Command(args[0], args[1:]...) //nolint:gosec,noctx // Actions are explicitly arbitrary shell commands.
 	cmd.Env = r.Env
 	if r.Dir == "" {
 		cmd.Dir = p.Root
@@ -147,7 +147,7 @@ func (c *CopyAction) String() string {
 	}
 	return fmt.Sprintf("install -m %04o %s %s", mode, shell.Quote(c.From), shell.Quote(c.To))
 }
-func (c *CopyAction) Apply(p *Package) error { // nolint
+func (c *CopyAction) Apply(p *Package) error {
 	fromFS := p.FS
 	if filepath.IsAbs(c.From) {
 		fromFS = os.DirFS("/")
@@ -182,7 +182,7 @@ func (m *MkdirAction) String() string {
 	}
 	return fmt.Sprintf("mkdir -m %04o -p %s", mode, shell.Quote(m.Dir))
 }
-func (m *MkdirAction) Apply(*Package) error { // nolint
+func (m *MkdirAction) Apply(*Package) error {
 	mode := m.Mode
 	if mode == 0 {
 		mode = 0750
@@ -202,6 +202,6 @@ func (s *SymlinkAction) position() hcl.Position { return s.Pos }
 func (s *SymlinkAction) String() string {
 	return fmt.Sprintf("ln -sf %s %s", shell.Quote(s.From), shell.Quote(s.To))
 }
-func (s *SymlinkAction) Apply(*Package) error { // nolint
+func (s *SymlinkAction) Apply(*Package) error {
 	return os.Symlink(s.From, s.To)
 }

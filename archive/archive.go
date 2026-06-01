@@ -91,7 +91,7 @@ func Extract(b *ui.Task, source string, pkg *manifest.Package) (finalise func() 
 					return err
 				}
 				task.Tracef("chmod a-w %q", path)
-				err = os.Chmod(path, info.Mode()&^0222)
+				err = os.Chmod(path, info.Mode()&^0222) //nolint:gosec // TODO: we separately validate symlink targets, though we should migrate to os.Root()
 				if errors.Is(err, os.ErrNotExist) {
 					task.Debugf("file did not exist during finalisation %q", path)
 					return nil
@@ -118,7 +118,7 @@ func Extract(b *ui.Task, source string, pkg *manifest.Package) (finalise func() 
 	if err != nil {
 		return finalise, err
 	}
-	defer f.Close() // nolint: gosec
+	defer f.Close()
 
 	info, err := f.Stat()
 	if err != nil {
@@ -222,7 +222,7 @@ func installMacDMG(b *ui.Task, source string, pkg *manifest.Package) error {
 	if entry == nil {
 		return errors.New("couldn't determine volume information from hdiutil attach, volume may still be mounted :(")
 	}
-	defer util.Run(b, "hdiutil", "detach", entry.DevEntry) // nolint: errcheck
+	defer util.Run(b, "hdiutil", "detach", entry.DevEntry) //nolint: errcheck
 	switch {
 	case len(pkg.Apps) != 0:
 		for _, app := range pkg.Apps {
@@ -255,11 +255,11 @@ func extractExecutable(r io.Reader, dest, executableName string) error {
 		destExe = strings.TrimSuffix(destExe, ext)
 	}
 
-	w, err := os.OpenFile(destExe, os.O_CREATE|os.O_WRONLY, 0700) // nolint: gosec
+	w, err := os.OpenFile(destExe, os.O_CREATE|os.O_WRONLY, 0700) //nolint:gosec
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	defer w.Close() // nolint: gosec
+	defer w.Close()
 	_, err = io.Copy(w, r)
 	return errors.WithStack(err)
 }
@@ -271,7 +271,7 @@ func copyDirect(r io.Reader, dest, filename string) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	defer w.Close() // nolint: gosec
+	defer w.Close()
 	_, err = io.Copy(w, r)
 	return errors.WithStack(err)
 }
@@ -366,7 +366,7 @@ func extractMacPKG(b *ui.Task, path, dest string, strip int) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	defer changesf.Close() // nolint: gosec
+	defer changesf.Close()
 	defer os.Remove(changesf.Name())
 	fmt.Fprint(changesf, os.Expand(extractMacPkgChangesXML, func(s string) string { return dest }))
 	_ = changesf.Close()
@@ -433,7 +433,7 @@ func extractZipFile(zf *zip.File, destFile string, dest string) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	_, err = io.Copy(w, zfr) // nolint: gosec
+	_, err = io.Copy(w, zfr) //nolint: gosec
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -485,7 +485,7 @@ func extractPackageTarball(b *ui.Task, r io.Reader, dest string, strip int) erro
 
 		case hdr.Typeflag&(tar.TypeLink|tar.TypeGNULongLink) != 0 && hdr.Linkname != "":
 			// Convert hard links into symlinks so we don't have to track inodes later on during relocation.
-			src := filepath.Join(dest, hdr.Linkname) // nolint: gosec
+			src := filepath.Join(dest, hdr.Linkname) //nolint: gosec
 			if err := sanitizeSymlinkTarget(destFile, src, dest); err != nil {
 				return err
 			}
@@ -507,7 +507,7 @@ func extractPackageTarball(b *ui.Task, r io.Reader, dest string, strip int) erro
 			if err != nil {
 				return errors.WithStack(err)
 			}
-			_, err = io.Copy(w, tr) // nolint: gosec
+			_, err = io.Copy(w, tr) //nolint: gosec
 			_ = w.Close()
 			if err != nil {
 				return errors.WithStack(err)
@@ -526,13 +526,13 @@ func extractDebianPackage(b *ui.Task, r io.Reader, dest string, pkg *manifest.Pa
 			return errors.WithStack(err)
 		}
 		if strings.HasPrefix(header.Name, "data.tar") {
-			r := io.LimitReader(reader, header.Size)
+			limitReader := io.LimitReader(reader, header.Size)
 			filename := filepath.Join(dest, header.Name)
 			w, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 			if err != nil {
 				return errors.WithStack(err)
 			}
-			_, err = io.Copy(w, r)
+			_, err = io.Copy(w, limitReader)
 			_ = w.Close()
 			if err != nil {
 				return errors.WithStack(err)
@@ -576,7 +576,7 @@ func extract7Zip(r io.ReaderAt, size int64, dest string, strip int) error {
 		}
 
 		// Create file
-		f, err := os.OpenFile(destFile, os.O_CREATE|os.O_RDWR, 0755) // nolint: gosec
+		f, err := os.OpenFile(destFile, os.O_CREATE|os.O_RDWR, 0755) //nolint: gosec
 		if err != nil {
 			return errors.WithStack(err)
 		}

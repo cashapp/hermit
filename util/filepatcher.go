@@ -26,7 +26,7 @@ func (fp *FilePatcher) Patch(fileName, content string) (bool, error) {
 	if err != nil {
 		return false, errors.WithStack(err)
 	}
-	defer file.Close() // nolint: gosec
+	defer file.Close()
 
 	previousBts, err := os.ReadFile(fileName)
 	if err != nil {
@@ -52,7 +52,7 @@ func (fp *FilePatcher) Patch(fileName, content string) (bool, error) {
 		return false, nil
 	}
 
-	err = os.WriteFile(fileName, []byte(result), 0600)
+	err = os.WriteFile(fileName, []byte(result), 0600) //nolint:gosec
 	if err != nil {
 		return false, errors.WithStack(err)
 	}

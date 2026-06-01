@@ -159,7 +159,7 @@ func Main(config Config) {
 	isActivated := false
 	envPath, err := os.Getwd()
 	if err != nil {
-		log.Fatalf("couldn't get working directory: %s", err) // nolint: gocritic
+		log.Fatalf("couldn't get working directory: %s", err) //nolint: gocritic
 	}
 	common := cliBase{Plugins: config.KongPlugins}
 
@@ -304,7 +304,7 @@ func Main(config Config) {
 	if pprofPath := cli.getCPUProfile(); pprofPath != "" {
 		f, err := os.Create(pprofPath)
 		fatalIfError(p, ctx, err)
-		defer f.Close() // nolint: gosec
+		defer f.Close()
 		err = pprof.StartCPUProfile(f)
 		fatalIfError(p, ctx, err)
 		defer pprof.StopCPUProfile()
@@ -313,7 +313,7 @@ func Main(config Config) {
 	if pprofPath := cli.getMemProfile(); pprofPath != "" {
 		f, err := os.Create(pprofPath)
 		fatalIfError(p, ctx, err)
-		defer f.Close() // nolint: gosec
+		defer f.Close()
 		defer func() {
 			runtime.GC() // get up-to-date statistics
 			err = pprof.Lookup("allocs").WriteTo(f, 0)

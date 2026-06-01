@@ -20,7 +20,7 @@ func jsonAutoVersion(client *http.Client, autoVersion *manifest.AutoVersionBlock
 	}
 
 	url := autoVersion.JSON.URL
-	resp, err := client.Get(url) // nolint
+	resp, err := client.Get(url) //nolint:noctx
 	if err != nil {
 		return "", errors.Wrapf(err, "could not retrieve auto-version information")
 	}

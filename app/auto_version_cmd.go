@@ -35,7 +35,7 @@ func (a *autoVersionCmd) Run(l *ui.UI, hclient *http.Client, state *state.State,
 				return errors.Wrap(err, path)
 			}
 			l.Warnf("Could not update digests for %q: %s", path, err)
-			err = os.WriteFile(path, original, info.Mode())
+			err = os.WriteFile(path, original, info.Mode()) //nolint:gosec
 			if err != nil {
 				return errors.Wrapf(err, "could not restore original manifest: %s", path)
 			}

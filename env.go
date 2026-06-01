@@ -248,7 +248,7 @@ func FindEnvDir(binary string) (envDir string, err error) {
 	// Prefer an adjacent environment
 	envDir, err = EnvDirFromProxyLink(binary)
 	if err == nil {
-		return
+		return //nolint
 	}
 
 	// Fallback to the environment from the environment variable

@@ -22,7 +22,7 @@ func htmlAutoVersion(client *http.Client, autoVersion *manifest.AutoVersionBlock
 		return "", errors.WithStack(err)
 	}
 	url := autoVersion.HTML.URL
-	resp, err := client.Get(url) // nolint
+	resp, err := client.Get(url) //nolint:noctx
 	if err != nil {
 		return "", errors.Wrapf(err, "could not retrieve auto-version information")
 	}
@@ -104,7 +104,7 @@ func (m *htmlXPathMatcher) FindAll(node *html.Node) ([]string, error) {
 	case *xpath.NodeIterator:
 		for matches.MoveNext() {
 			match := matches.Current()
-			switch match.NodeType() {
+			switch match.NodeType() { //nolint:exhaustive
 			case xpath.AttributeNode, xpath.TextNode, xpath.ElementNode:
 				candidates = append(candidates, match.Value())
 
@@ -144,7 +144,7 @@ func compileCSSMatcher(raw string) (*htmlCSSMatcher, error) {
 func (m *htmlCSSMatcher) FindAll(node *html.Node) ([]string, error) {
 	var candidates []string
 	for _, match := range m.sel.MatchAll(node) {
-		switch match.Type {
+		switch match.Type { //nolint:exhaustive
 		case html.TextNode, html.ElementNode:
 			candidates = append(candidates, strings.TrimSpace(match.FirstChild.Data))
 

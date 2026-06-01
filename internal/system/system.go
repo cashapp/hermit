@@ -10,7 +10,7 @@ import (
 
 // UserHomeDir tries to determine the current user's home directory.
 func UserHomeDir() (string, error) {
-	dir, err := os.UserHomeDir() // nolint: forbidigo
+	dir, err := os.UserHomeDir() //nolint: forbidigo
 	if err == nil {
 		return dir, nil
 	}

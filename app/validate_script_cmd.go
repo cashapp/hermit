@@ -159,7 +159,7 @@ func collectFuncDecl(parser *syntax.Parser, node syntax.Node, localFunctions map
 					collectErr = errors.Wrapf(err, "could not open %q", path)
 					return false
 				}
-				defer r.Close() // nolint
+				defer r.Close()
 				ast, err := parser.Parse(r, path)
 				if err != nil {
 					collectErr = errors.Wrapf(err, "failed to parse %q", path)
@@ -183,7 +183,7 @@ func check(parser *syntax.Parser, validCommands map[string]bool, allow map[strin
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not open %q", path)
 	}
-	defer r.Close() // nolint
+	defer r.Close()
 	ast, err := parser.Parse(r, path)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse %q", path)
