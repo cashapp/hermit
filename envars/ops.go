@@ -111,7 +111,7 @@ func UnmarshalOps(data []byte) (Ops, error) {
 		if !ok {
 			return nil, errors.Errorf("unsupported envar op key %q", key)
 		}
-		op := reflect.New(typ).Interface().(Op)
+		op := reflect.New(typ).Interface().(Op) //nolint
 		if err = json.Unmarshal(encodedOp, op); err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -191,15 +191,15 @@ func (e *Append) sealed() {}
 func (e *Append) String() string {
 	return fmt.Sprintf(`%s="${%s}:%s"`, e.Name, e.Name, shellquote.Join(e.Value))
 }
-func (e *Append) Envar() string { return e.Name } // nolint: golint
-func (e *Append) Apply(transform *Transform) { // nolint: golint
+func (e *Append) Envar() string { return e.Name }
+func (e *Append) Apply(transform *Transform) {
 	value, _ := transform.get(e.Name)
 	out := splitAndDrop(value, e.Value)
 	out = append(out, e.Value)
 	transform.set(e.Name, strings.Join(out, ":"))
 }
 
-func (e *Append) Revert(transform *Transform) { // nolint: golint
+func (e *Append) Revert(transform *Transform) {
 	value, _ := transform.get(e.Name)
 	out := splitAndDrop(value, e.Value)
 	transform.set(e.Name, strings.Join(out, ":"))
@@ -215,15 +215,15 @@ func (e *Prepend) sealed() {}
 func (e *Prepend) String() string {
 	return fmt.Sprintf(`%s=%s:${%s}`, e.Name, shellquote.Join(e.Value), e.Name)
 }
-func (e *Prepend) Envar() string { return e.Name } // nolint: golint
-func (e *Prepend) Apply(transform *Transform) { // nolint: golint
+func (e *Prepend) Envar() string { return e.Name }
+func (e *Prepend) Apply(transform *Transform) {
 	value, _ := transform.get(e.Name)
 	prepend := transform.expand(e.Value)
 	out := splitAndDrop(value, prepend)
 	out = append([]string{prepend}, out...)
 	transform.set(e.Name, strings.Join(out, ":"))
 }
-func (e *Prepend) Revert(transform *Transform) { // nolint: golint
+func (e *Prepend) Revert(transform *Transform) {
 	value, _ := transform.get(e.Name)
 	prepend := transform.expand(e.Value)
 	out := splitAndDrop(value, prepend)
@@ -240,14 +240,14 @@ func (p *Prefix) sealed() {}
 func (p *Prefix) String() string {
 	return fmt.Sprintf(`%s=%s${%s}`, p.Name, shellquote.Join(p.Prefix), p.Name)
 }
-func (p *Prefix) Envar() string { return p.Name } // nolint: golint
-func (p *Prefix) Apply(transform *Transform) { // nolint: golint
+func (p *Prefix) Envar() string { return p.Name }
+func (p *Prefix) Apply(transform *Transform) {
 	prefix := transform.expand(p.Prefix)
 	if value, ok := transform.get(p.Name); ok && !strings.HasPrefix(value, prefix) {
 		transform.set(p.Name, prefix+value)
 	}
 }
-func (p *Prefix) Revert(transform *Transform) { // nolint: golint
+func (p *Prefix) Revert(transform *Transform) {
 	prefix := transform.expand(p.Prefix)
 	if value, ok := transform.get(p.Name); ok && strings.HasPrefix(value, prefix) {
 		transform.set(p.Name, strings.TrimPrefix(value, prefix))
@@ -262,8 +262,8 @@ type Set struct {
 
 func (e *Set) sealed()        {}
 func (e *Set) String() string { return fmt.Sprintf(`%s="%s"`, e.Name, shellquote.Join(e.Value)) }
-func (e *Set) Envar() string  { return e.Name } // nolint: golint
-func (e *Set) Apply(transform *Transform) { // nolint: golint
+func (e *Set) Envar() string  { return e.Name }
+func (e *Set) Apply(transform *Transform) {
 	if value, ok := transform.get(e.Name); ok {
 		old := makeRevertKey(transform, e)
 		if _, keep := transform.get(old); !keep {
@@ -272,7 +272,7 @@ func (e *Set) Apply(transform *Transform) { // nolint: golint
 	}
 	transform.set(e.Name, e.Value)
 }
-func (e *Set) Revert(transform *Transform) { // nolint: golint
+func (e *Set) Revert(transform *Transform) {
 	old := makeRevertKey(transform, e)
 	// Check if the user has changed the value and if so, do nothing.
 	if currentValue, ok := transform.get(e.Name); ok && currentValue != transform.expand(e.Value) {
@@ -293,16 +293,16 @@ type Unset struct {
 
 func (e *Unset) sealed()        {}
 func (e *Unset) String() string { return "unset " + e.Name }
-func (e *Unset) Envar() string  { return e.Name } // nolint: golint
-func (e *Unset) Apply(transform *Transform) { // nolint: golint
+func (e *Unset) Envar() string  { return e.Name }
+func (e *Unset) Apply(transform *Transform) {
 	if value, ok := transform.get(e.Name); ok {
 		old := makeRevertKey(transform, e)
 		transform.set(old, value)
 	}
 	transform.unset(e.Name)
 }
-func (e *Unset) Revert(transform *Transform) { // nolint: golint
-	old := makeRevertKey(transform, e) // nolint: ifshort
+func (e *Unset) Revert(transform *Transform) {
+	old := makeRevertKey(transform, e)
 	// If user has subsequently set the environment variable, do nothing.
 	if value, ok := transform.get(e.Name); ok && value != "" {
 		transform.unset(old)
@@ -325,12 +325,12 @@ func (f *Force) sealed() {}
 func (f *Force) String() string {
 	return fmt.Sprintf(`%s="%s"`, f.Name, shellquote.Join(f.Value))
 }
-func (f *Force) Envar() string { return f.Name } // nolint: golint
-func (f *Force) Apply(transform *Transform) { // nolint: golint
+func (f *Force) Envar() string { return f.Name }
+func (f *Force) Apply(transform *Transform) {
 	transform.set(f.Name, f.Value)
 }
 
-func (f *Force) Revert(transform *Transform) { // nolint: golint
+func (f *Force) Revert(transform *Transform) {
 	transform.unset(f.Name)
 }
 
@@ -354,7 +354,6 @@ skip:
 var zero = []byte{0}
 
 // Creates a unique and deterministic key for storing a revert, from an Op.
-// nolint: errcheck
 func makeRevertKey(transform *Transform, op Op) string {
 	hash := fnv.New64a()
 	hash.Write([]byte(transform.envRoot))

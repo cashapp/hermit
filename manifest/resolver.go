@@ -372,7 +372,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	}
 
 	// Clone the entire manifest, as we mutate stuff.
-	manifest = reprint.This(manifest).(*AnnotatedManifest)
+	manifest = reprint.This(manifest).(*AnnotatedManifest) //nolint
 	// Resolve version in manifest from ref.
 	var foundUpdateInterval time.Duration
 	// Search versions first.
@@ -436,7 +436,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	files := map[string]string{}
 
 	// Merge all the layers.
-	layers, err := manifest.layers(found, config.OS, config.Arch)
+	layers, err := manifest.layers(found, config.OS, config.Arch) //nolint
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -549,10 +549,10 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 			return version, version != ""
 
 		case "dest":
-			return layers.field("Dest", p.Dest).(string), true
+			return layers.field("Dest", p.Dest).(string), true //nolint
 
 		case "root":
-			return layers.field("Root", p.Root).(string), true
+			return layers.field("Root", p.Root).(string), true //nolint
 
 		default:
 			// TODO: Should these extra vars go in envars.Mapping?
@@ -601,7 +601,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 		sort.Slice(ops, func(i, j int) bool { return ops[i].Envar() < ops[j].Envar() })
 		p.Env = append(p.Env, ops...)
 	}
-	p.Strip = layers.field("Strip", 0).(int)
+	p.Strip = layers.field("Strip", 0).(int) //nolint
 	p.Dest = envars.Expand(p.Dest, mapping)
 	p.Root = envars.Expand(p.Root, mapping)
 	p.Test = envars.Expand(p.Test, mapping)

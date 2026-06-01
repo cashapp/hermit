@@ -18,15 +18,15 @@ func NewMemSource(name, content string) *MemSource {
 	return &MemSource{name, content}
 }
 
-func (s *MemSource) Sync(_ *ui.UI, _ bool) (bool, error) { // nolint: golint
+func (s *MemSource) Sync(_ *ui.UI, _ bool) (bool, error) {
 	return true, nil
 }
 
-func (s *MemSource) URI() string { // nolint: golint
+func (s *MemSource) URI() string {
 	return s.name
 }
 
-func (s *MemSource) Bundle() fs.FS { // nolint: golint
+func (s *MemSource) Bundle() fs.FS {
 	return vfs.InMemoryFS(map[string]string{
 		s.name: s.content,
 	})

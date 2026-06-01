@@ -21,7 +21,7 @@ type CommandRunner interface {
 // RealCommandRunner actually calls command
 type RealCommandRunner struct{}
 
-func (g *RealCommandRunner) RunInDir(task *ui.Task, dir string, commands ...string) error { // nolint: golint
+func (g *RealCommandRunner) RunInDir(task *ui.Task, dir string, commands ...string) error {
 	return errors.WithStack(RunInDir(task, dir, commands...))
 }
 
@@ -33,14 +33,14 @@ func Run(log *ui.Task, args ...string) error {
 // Capture runs a command, returning combined stdout and stderr.
 func Capture(log ui.Logger, args ...string) ([]byte, error) {
 	log.Debugf("%s", shellquote.Join(args...))
-	cmd := exec.Command(args[0], args[1:]...)
+	cmd := exec.Command(args[0], args[1:]...) //nolint:gosec,noctx
 	return captureOutput(log, cmd)
 }
 
 // CaptureInDir runs a command in the given dir, returning combined stdout and stderr.
 func CaptureInDir(log ui.Logger, dir string, args ...string) ([]byte, error) {
 	log.Debugf("%s", shellquote.Join(args...))
-	cmd := exec.Command(args[0], args[1:]...)
+	cmd := exec.Command(args[0], args[1:]...) //nolint:gosec,noctx
 	cmd.Dir = dir
 	return captureOutput(log, cmd)
 }
@@ -78,7 +78,7 @@ func Command(log *ui.Task, args ...string) (*exec.Cmd, *bytes.Buffer) {
 	log.Debugf("%s", shellquote.Join(args...))
 	b := &bytes.Buffer{}
 	w := io.MultiWriter(b, log)
-	cmd := exec.Command(args[0], args[1:]...)
+	cmd := exec.Command(args[0], args[1:]...) //nolint:gosec,noctx
 	cmd.Stdout = w
 	cmd.Stderr = w
 	return cmd, b

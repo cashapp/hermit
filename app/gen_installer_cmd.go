@@ -52,7 +52,7 @@ func (g *genInstallerCmd) Run(config Config) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	defer w.Close() // nolint
+	defer w.Close()
 	script, sum, err := GenInstaller(config)
 	if err != nil {
 		return errors.WithStack(err)

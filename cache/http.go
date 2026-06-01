@@ -94,7 +94,7 @@ func downloadHTTP(b *ui.Task, response *http.Response, checksum string, uri stri
 	if err != nil {
 		return "", "", "", errors.Wrap(err, "couldn't create temporary for download")
 	}
-	defer w.Close() // nolint: gosec
+	defer w.Close()
 	defer os.Remove(w.Name())
 
 	// For HTTP files we download and cache them, then return the cached file.

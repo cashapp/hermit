@@ -42,7 +42,7 @@ func Acquire(ctx context.Context, path, message string) (release func() error, e
 	}
 	start := time.Now()
 	for {
-		release, err := acquire(absPath, message)
+		release, err := acquire(absPath, message) //nolint
 		if err == nil {
 			return release, nil
 		}
@@ -53,9 +53,9 @@ func Acquire(ctx context.Context, path, message string) (release func() error, e
 		// If our own PID is holding the lock, we can return a no-op release function.
 		//
 		// We can safely ignore errors here because the comparison will fail anway if the file doesn't contain our PID.
-		pidBytes, _ := os.ReadFile(absPath) //nolint:errcheck
+		pidBytes, _ := os.ReadFile(absPath)
 		pid := pidFile{}
-		_ = json.Unmarshal(pidBytes, &pid) //nolint:errcheck
+		_ = json.Unmarshal(pidBytes, &pid)
 		if pid.PID == getPID() {
 			return func() error { return nil }, nil
 		}

@@ -41,7 +41,7 @@ func main() {
 	}
 	w, err := os.Create(cli.Dest)
 	kctx.FatalIfErrorf(err)
-	defer w.Close() // nolint
+	defer w.Close()
 	err = installerTemplate.Execute(w, cli)
 	kctx.FatalIfErrorf(err)
 }

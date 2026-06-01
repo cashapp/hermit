@@ -1,4 +1,3 @@
-// nolint
 package main
 
 import (
@@ -114,7 +113,7 @@ title: %q
 				continue
 			}
 			seen[backref] = true
-			title := backref
+			title := backref //nolint
 			if backref == "manifest" {
 				title = "&lt;manifest>"
 			}

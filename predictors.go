@@ -19,7 +19,7 @@ func NewPackagePredictor(s *state.State, e *Env, l *ui.UI) *PackagePredictor {
 	return &PackagePredictor{s, e, l}
 }
 
-func (p *PackagePredictor) Predict(args complete.Args) []string { // nolint: golint
+func (p *PackagePredictor) Predict(args complete.Args) []string {
 	p.l.SetLevel(ui.LevelFatal)
 
 	var res []string
@@ -44,7 +44,7 @@ func NewInstalledPackagePredictor(e *Env, l *ui.UI) *InstalledPackagePredictor {
 	return &InstalledPackagePredictor{e, l}
 }
 
-func (p *InstalledPackagePredictor) Predict(args complete.Args) []string { // nolint: golint
+func (p *InstalledPackagePredictor) Predict(args complete.Args) []string {
 	p.l.SetLevel(ui.LevelFatal)
 
 	// if there is an error, just quietly return an empty list

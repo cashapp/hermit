@@ -222,7 +222,7 @@ func (w *UI) redrawProgress() {
 	defer w.lock.Unlock()
 	if state := w.operationState(); state == w.state {
 		return
-	} else { // nolint
+	} else { //nolint:revive
 		w.state = state
 	}
 	w.clearProgress()

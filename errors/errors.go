@@ -1,7 +1,7 @@
 package errors
 
 import (
-	"errors" // nolint: depguard
+	"errors"
 	"fmt"
 	"path/filepath"
 	"runtime"

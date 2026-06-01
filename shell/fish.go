@@ -3,11 +3,12 @@ package shell
 import (
 	_ "embed"
 	"fmt"
-	"github.com/cashapp/hermit/envars"
-	"github.com/cashapp/hermit/errors"
 	"io"
 	"path/filepath"
 	"text/template"
+
+	"github.com/cashapp/hermit/envars"
+	"github.com/cashapp/hermit/errors"
 )
 
 var (
@@ -28,9 +29,9 @@ type Fish struct{}
 
 var _ Shell = &Fish{}
 
-func (sh *Fish) Name() string { return "fish" } // nolint: golint
+func (sh *Fish) Name() string { return "fish" }
 
-func (sh *Fish) ActivationScript(w io.Writer, config ActivationConfig) error { // nolint: golint
+func (sh *Fish) ActivationScript(w io.Writer, config ActivationConfig) error {
 	err := fishActivationScriptTmpl.Execute(w, &fishActivationContext{
 		ActivationConfig: config,
 		EnvName:          filepath.Base(config.Root),
@@ -39,11 +40,11 @@ func (sh *Fish) ActivationScript(w io.Writer, config ActivationConfig) error { /
 	return errors.WithStack(err)
 }
 
-func (sh *Fish) ActivationHooksInstallation() (path, script string, err error) { // nolint: golint
+func (sh *Fish) ActivationHooksInstallation() (path, script string, err error) {
 	return activationHooksInstallation(".config/fish/conf.d/hermit.fish", "fish")
 }
 
-func (sh *Fish) ActivationHooksCode() (script string, err error) { // nolint: golint
+func (sh *Fish) ActivationHooksCode() (script string, err error) {
 	return fishShellHooks, nil
 }
 

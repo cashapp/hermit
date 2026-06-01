@@ -154,7 +154,7 @@ func (a *Client) decode(url string, dest interface{}) error {
 	var body *bytes.Reader
 	ibody, ok := a.cache.Load(url)
 	if ok {
-		body = bytes.NewReader(ibody.([]byte))
+		body = bytes.NewReader(ibody.([]byte)) //nolint
 	} else {
 		req, err := a.request("GET", url, http.Header{})
 		if err != nil {
@@ -185,7 +185,7 @@ func (a *Client) decode(url string, dest interface{}) error {
 }
 
 func (a *Client) request(method string, url string, headers http.Header) (*http.Request, error) {
-	req, err := http.NewRequest(method, url, nil) // nolint: noctx
+	req, err := http.NewRequest(method, url, nil) //nolint: noctx
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

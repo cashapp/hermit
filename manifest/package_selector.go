@@ -47,36 +47,6 @@ type GlobSelector struct {
 	version glob.Glob
 }
 
-func (m *GlobSelector) UnmarshalText(input []byte) error {
-	gs, err := ParseGlobSelector(string(input))
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	*m = gs
-	return nil
-}
-
-func (m GlobSelector) IsFullyQualified() bool { // nolint
-	return m.name != "" && (m.version != nil || m.channel != "")
-}
-
-func (m GlobSelector) Matches(ref Reference) bool { // nolint
-	if ref.Name != m.name {
-		return false
-	}
-	if m.channel != "" && ref.Channel != m.channel {
-		return false
-	}
-	if m.version != nil && !m.version.Match(ref.Version.String()) {
-		return false
-	}
-	return true
-}
-
-func (m GlobSelector) Name() string { // nolint
-	return m.name
-}
-
 // ParseGlobSelector parses the given search string into a Glob based selector
 func ParseGlobSelector(from string) (GlobSelector, error) {
 	name, v, c := splitNameAndQualifier(from)
@@ -99,6 +69,36 @@ func MustParseGlobSelector(from string) GlobSelector {
 		panic(err)
 	}
 	return sel
+}
+
+func (m *GlobSelector) UnmarshalText(input []byte) error {
+	gs, err := ParseGlobSelector(string(input))
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	*m = gs
+	return nil
+}
+
+func (m GlobSelector) IsFullyQualified() bool {
+	return m.name != "" && (m.version != nil || m.channel != "")
+}
+
+func (m GlobSelector) Matches(ref Reference) bool {
+	if ref.Name != m.name {
+		return false
+	}
+	if m.channel != "" && ref.Channel != m.channel {
+		return false
+	}
+	if m.version != nil && !m.version.Match(ref.Version.String()) {
+		return false
+	}
+	return true
+}
+
+func (m GlobSelector) Name() string {
+	return m.name
 }
 
 func splitNameAndQualifier(from string) (name string, version string, channel string) {

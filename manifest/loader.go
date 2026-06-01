@@ -32,7 +32,7 @@ type AnnotatedManifest struct {
 func (f *AnnotatedManifest) String() string { return f.Path }
 
 // ManifestErrors are collection of errors for named manifests
-type ManifestErrors map[string][]error
+type ManifestErrors map[string][]error //nolint:revive
 
 // LogErrors to the given logger
 func (merrors ManifestErrors) LogErrors(l ui.Logger) {

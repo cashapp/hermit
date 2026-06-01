@@ -22,7 +22,7 @@ func (u *uninstallCmd) Run(l *ui.UI, env *hermit.Env) error {
 		return errors.WithStack(err)
 	}
 	w := l.WriterAt(ui.LevelInfo)
-	defer w.Sync() // nolint
+	defer w.Sync() //nolint
 	changes := shell.NewChanges(envars.Parse(os.Environ()))
 next:
 	for _, selector := range u.Packages {

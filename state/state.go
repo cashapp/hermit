@@ -295,7 +295,7 @@ func (s *State) removeRecursive(b *ui.Task, dest string) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		err = os.Chmod(path, info.Mode()|0o200)
+		err = os.Chmod(path, info.Mode()|0o200) //nolint:gosec // TODO: Switch to use os.Root()
 
 		if errors.Is(err, os.ErrNotExist) {
 			task.Debugf("file did not exist during removal %q", path)

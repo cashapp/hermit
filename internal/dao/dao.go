@@ -44,7 +44,7 @@ func (d *DAO) GetPackage(pkgRef string) (*Package, error) {
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	defer r.Close() // nolint
+	defer r.Close()
 	info, err := r.Stat()
 	if err != nil {
 		return nil, errors.WithStack(err)

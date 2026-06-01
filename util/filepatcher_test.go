@@ -86,7 +86,7 @@ foobar
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			patcher := NewFilePatcher("#START", "#END")
-			file := filepath.Join(dir, strconv.Itoa(rand.Int())) // nolint: gosec
+			file := filepath.Join(dir, strconv.Itoa(rand.Int()))
 			if test.contents != "" {
 				file = fileWith(t, dir, test.contents)
 			}
@@ -106,7 +106,7 @@ func fileWith(t *testing.T, dir, content string) (fileName string) {
 	file, err := os.CreateTemp(dir, ".file")
 	assert.NoError(t, err)
 	name := file.Name()
-	err = os.WriteFile(name, []byte(content), 0644) // nolint: gosec
+	err = os.WriteFile(name, []byte(content), 0644)
 	assert.NoError(t, err)
 	return name
 }

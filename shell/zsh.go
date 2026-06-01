@@ -31,9 +31,9 @@ type Zsh struct{ posixMixin }
 
 var _ Shell = &Zsh{}
 
-func (sh *Zsh) Name() string { return "zsh" } // nolint: golint
+func (sh *Zsh) Name() string { return "zsh" }
 
-func (sh *Zsh) ActivationScript(w io.Writer, config ActivationConfig) error { // nolint: golint
+func (sh *Zsh) ActivationScript(w io.Writer, config ActivationConfig) error {
 	err := posixActivationScriptTmpl.Execute(w, &posixActivationContext{
 		EnvName:          filepath.Base(config.Root),
 		ActivationConfig: config,
@@ -42,10 +42,10 @@ func (sh *Zsh) ActivationScript(w io.Writer, config ActivationConfig) error { //
 	return errors.WithStack(err)
 }
 
-func (sh *Zsh) ActivationHooksInstallation() (path, script string, err error) { // nolint: golint
+func (sh *Zsh) ActivationHooksInstallation() (path, script string, err error) {
 	return activationHooksInstallation(".zshrc", "zsh")
 }
 
-func (sh *Zsh) ActivationHooksCode() (script string, err error) { // nolint: golint
+func (sh *Zsh) ActivationHooksCode() (script string, err error) {
 	return commonHooks + zshShellHooks, nil
 }
