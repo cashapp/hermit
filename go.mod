@@ -2,7 +2,7 @@ module github.com/cashapp/hermit
 
 go 1.25.0
 
-toolchain go1.26.3
+toolchain go1.26.4
 
 require (
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
@@ -12,7 +12,7 @@ require (
 	github.com/alecthomas/kong v1.15.0
 	github.com/alecthomas/participle/v2 v2.1.4
 	github.com/alecthomas/repr v0.5.2
-	github.com/andybalholm/cascadia v1.3.3
+	github.com/andybalholm/cascadia v1.3.4
 	github.com/antchfx/htmlquery v1.3.6
 	github.com/antchfx/xpath v1.3.6
 	github.com/avvmoto/buf-readerat v0.0.0-20171115124131-a17c8cb89270
@@ -35,9 +35,9 @@ require (
 	github.com/willabides/kongplete v0.4.0
 	github.com/willdonnelly/passwd v0.0.0-20141013001024-7935dab3074c
 	golang.org/x/net v0.55.0
-	golang.org/x/sync v0.20.0
-	golang.org/x/sys v0.45.0
-	golang.org/x/term v0.43.0
+	golang.org/x/sync v0.21.0
+	golang.org/x/sys v0.46.0
+	golang.org/x/term v0.44.0
 	howett.net/plist v1.0.1
 	mvdan.cc/sh v2.6.4+incompatible
 )
