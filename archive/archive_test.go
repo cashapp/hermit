@@ -355,3 +355,94 @@ func TestZipEscapingSymlink(t *testing.T) {
 	assert.True(t, strings.Contains(err.Error(), "illegal symlink target"),
 		"expected error about illegal symlink target, got: %v", err)
 }
+
+// TestSymlinkChainEscape ensures that extraction cannot be tricked into writing
+// outside the destination via nested symlinks in the archive, and that any such
+// archive is rejected without modifying files outside the destination.
+func TestSymlinkChainEscape(t *testing.T) {
+	tmpDir := t.TempDir()
+	// Extraction unpacks into a temp dir alongside dest, so "../canary.txt" from there
+	// lands in dest's parent.
+	dest := filepath.Join(tmpDir, "extracted")
+	canary := filepath.Join(tmpDir, "canary.txt")
+	assert.NoError(t, os.WriteFile(canary, []byte("ORIGINAL"), 0600))
+
+	tarball := filepath.Join(tmpDir, "chain.tar.gz")
+	f, err := os.Create(tarball)
+	assert.NoError(t, err)
+	gw := gzip.NewWriter(f)
+	tw := tar.NewWriter(gw)
+
+	symlink := func(name, target string) {
+		assert.NoError(t, tw.WriteHeader(&tar.Header{
+			Name: name, Typeflag: tar.TypeSymlink, Linkname: target, Mode: 0777,
+		}))
+	}
+	symlink("a", ".")
+	symlink("a/b", ".")
+	symlink("a/b/c", ".")
+	symlink("a/b/c/pwn", "../canary.txt")
+	assert.NoError(t, tw.WriteHeader(&tar.Header{
+		Name: "a/b/c/pwn", Typeflag: tar.TypeReg, Mode: 0600, Size: int64(len("PWNED")),
+	}))
+	_, err = tw.Write([]byte("PWNED"))
+	assert.NoError(t, err)
+	assert.NoError(t, tw.Close())
+	assert.NoError(t, gw.Close())
+	assert.NoError(t, f.Close())
+
+	p, _ := ui.NewForTesting()
+	t.Cleanup(func() { _ = makeWritable(tmpDir) })
+	_, err = Extract(
+		p.Task("extract"),
+		tarball,
+		&manifest.Package{Dest: dest, Source: "chain.tar.gz"},
+	)
+	assert.Error(t, err)
+
+	got, _ := os.ReadFile(canary)
+	assert.Equal(t, "ORIGINAL", string(got), "canary outside dest must not be modified")
+}
+
+// TestSymlinkTargetComponentEscape covers the variant where a symlinked component
+// appears in the symlink target itself rather than only in the parent path.
+func TestSymlinkTargetComponentEscape(t *testing.T) {
+	tmpDir := t.TempDir()
+	dest := filepath.Join(tmpDir, "extracted")
+	canary := filepath.Join(tmpDir, "canary.txt")
+	assert.NoError(t, os.WriteFile(canary, []byte("ORIGINAL"), 0600))
+
+	tarball := filepath.Join(tmpDir, "component.tar.gz")
+	f, err := os.Create(tarball)
+	assert.NoError(t, err)
+	gw := gzip.NewWriter(f)
+	tw := tar.NewWriter(gw)
+
+	symlink := func(name, target string) {
+		assert.NoError(t, tw.WriteHeader(&tar.Header{
+			Name: name, Typeflag: tar.TypeSymlink, Linkname: target, Mode: 0777,
+		}))
+	}
+	symlink("x", ".")
+	symlink("pwn", "x/../canary.txt")
+	assert.NoError(t, tw.WriteHeader(&tar.Header{
+		Name: "pwn", Typeflag: tar.TypeReg, Mode: 0600, Size: int64(len("PWNED")),
+	}))
+	_, err = tw.Write([]byte("PWNED"))
+	assert.NoError(t, err)
+	assert.NoError(t, tw.Close())
+	assert.NoError(t, gw.Close())
+	assert.NoError(t, f.Close())
+
+	p, _ := ui.NewForTesting()
+	t.Cleanup(func() { _ = makeWritable(tmpDir) })
+	_, err = Extract(
+		p.Task("extract"),
+		tarball,
+		&manifest.Package{Dest: dest, Source: "component.tar.gz"},
+	)
+	assert.Error(t, err)
+
+	got, _ := os.ReadFile(canary)
+	assert.Equal(t, "ORIGINAL", string(got), "canary outside dest must not be modified")
+}
