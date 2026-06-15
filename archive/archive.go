@@ -14,6 +14,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	bufra "github.com/avvmoto/buf-readerat"
 	"github.com/blakesmith/ar"
@@ -723,7 +724,7 @@ func createSymlink(root *os.Root, destFile, rel, linkTarget, dest string) error 
 	if err := root.Symlink(linkTarget, rel); err != nil {
 		return errors.Wrapf(err, "%s: failed to create symlink to %s", destFile, linkTarget)
 	}
-	if _, err := root.Stat(rel); err != nil && !errors.Is(err, os.ErrNotExist) {
+	if symlinkEscapesRoot(root, rel) {
 		_ = root.Remove(rel)
 		return errors.Errorf("%s: illegal symlink target %q (resolves outside %s)", destFile, linkTarget, dest)
 	}
@@ -744,13 +745,30 @@ func validateSymlinks(root *os.Root) error {
 		if d.Type()&fs.ModeSymlink == 0 {
 			return nil
 		}
-		// Stat follows the link with root-aware semantics: a target that escapes the
-		// root yields an error other than NotExist (a link that is still legitimately
-		// dangling within the root yields NotExist and is allowed).
-		if _, err := root.Stat(name); err != nil && !errors.Is(err, os.ErrNotExist) {
+		if symlinkEscapesRoot(root, name) {
 			target, _ := root.Readlink(name)
 			return errors.Errorf("%s: illegal symlink target %q (resolves outside extraction root)", name, target)
 		}
 		return nil
 	})
+}
+
+// symlinkEscapesRoot reports whether the symlink at name (relative to root) resolves
+// to a location outside the root. os.Root.Stat refuses to traverse outside the root,
+// so a target that escapes yields a "path escapes from parent" error. Links that are
+// broken but contained — dangling targets, symlink loops, or a non-directory path
+// component — do not escape and are not flagged, preserving behaviour for the
+// (unusual but harmless) packages that contain them.
+func symlinkEscapesRoot(root *os.Root, name string) bool {
+	_, err := root.Stat(name)
+	switch {
+	case err == nil: // resolves to a real path within the root
+		return false
+	case errors.Is(err, os.ErrNotExist), // dangling within the root
+		errors.Is(err, syscall.ELOOP),   // symlink loop, contained
+		errors.Is(err, syscall.ENOTDIR): // non-directory component, contained
+		return false
+	default:
+		return true
+	}
 }
