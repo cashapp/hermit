@@ -446,3 +446,44 @@ func TestSymlinkTargetComponentEscape(t *testing.T) {
 	got, _ := os.ReadFile(canary)
 	assert.Equal(t, "ORIGINAL", string(got), "canary outside dest must not be modified")
 }
+
+// TestSymlinkChainEscapeOutOfOrder covers the ordering where the escaping link is
+// written before the symlinked component that makes it escape, so the link looks
+// harmlessly dangling at creation time and is only resolvable as an escape once the
+// later component exists.
+func TestSymlinkChainEscapeOutOfOrder(t *testing.T) {
+	tmpDir := t.TempDir()
+	dest := filepath.Join(tmpDir, "extracted")
+	canary := filepath.Join(tmpDir, "canary.txt")
+	assert.NoError(t, os.WriteFile(canary, []byte("ORIGINAL"), 0600))
+
+	tarball := filepath.Join(tmpDir, "ooo.tar.gz")
+	f, err := os.Create(tarball)
+	assert.NoError(t, err)
+	gw := gzip.NewWriter(f)
+	tw := tar.NewWriter(gw)
+	symlink := func(name, target string) {
+		assert.NoError(t, tw.WriteHeader(&tar.Header{
+			Name: name, Typeflag: tar.TypeSymlink, Linkname: target, Mode: 0777,
+		}))
+	}
+	// pwn is written first (x does not exist yet, so it looks dangling), then x -> .
+	// is created, which makes pwn resolve above dest.
+	symlink("pwn", "x/../canary.txt")
+	symlink("x", ".")
+	assert.NoError(t, tw.Close())
+	assert.NoError(t, gw.Close())
+	assert.NoError(t, f.Close())
+
+	p, _ := ui.NewForTesting()
+	t.Cleanup(func() { _ = makeWritable(tmpDir) })
+	_, err = Extract(
+		p.Task("extract"),
+		tarball,
+		&manifest.Package{Dest: dest, Source: "ooo.tar.gz"},
+	)
+	assert.Error(t, err)
+
+	got, _ := os.ReadFile(canary)
+	assert.Equal(t, "ORIGINAL", string(got), "canary outside dest must not be modified")
+}

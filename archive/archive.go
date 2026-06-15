@@ -411,7 +411,7 @@ func extractZip(b *ui.Task, f *os.File, info os.FileInfo, dest string, strip int
 			return errors.Wrap(err, destFile)
 		}
 	}
-	return nil
+	return validateSymlinks(root)
 }
 
 func extractZipFile(root *os.Root, zf *zip.File, destFile string, dest string) error {
@@ -530,7 +530,7 @@ func extractPackageTarball(b *ui.Task, r io.Reader, dest string, strip int) erro
 			_ = root.Chtimes(rel, hdr.AccessTime, hdr.ModTime) // Best effort.
 		}
 	}
-	return nil
+	return validateSymlinks(root)
 }
 
 func extractDebianPackage(b *ui.Task, r io.Reader, dest string, pkg *manifest.Package) error {
@@ -728,4 +728,29 @@ func createSymlink(root *os.Root, destFile, rel, linkTarget, dest string) error 
 		return errors.Errorf("%s: illegal symlink target %q (resolves outside %s)", destFile, linkTarget, dest)
 	}
 	return nil
+}
+
+// validateSymlinks re-checks every symlink in the extracted tree against the final
+// on-disk state. The per-link check in createSymlink treats a link with a missing
+// target component as a harmless dangling link, but a later archive entry can create
+// that component (e.g. as a symlink to ".") and turn the earlier link into one that
+// resolves outside the root. This pass runs once extraction is complete, so it sees
+// the final resolution of each link and rejects any that escapes the root.
+func validateSymlinks(root *os.Root) error {
+	return fs.WalkDir(root.FS(), ".", func(name string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.Type()&fs.ModeSymlink == 0 {
+			return nil
+		}
+		// Stat follows the link with root-aware semantics: a target that escapes the
+		// root yields an error other than NotExist (a link that is still legitimately
+		// dangling within the root yields NotExist and is allowed).
+		if _, err := root.Stat(name); err != nil && !errors.Is(err, os.ErrNotExist) {
+			target, _ := root.Readlink(name)
+			return errors.Errorf("%s: illegal symlink target %q (resolves outside extraction root)", name, target)
+		}
+		return nil
+	})
 }
