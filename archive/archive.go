@@ -90,8 +90,14 @@ func Extract(b *ui.Task, source string, pkg *manifest.Package) (finalise func() 
 				if err != nil {
 					return err
 				}
+				// Never chmod through symlinks: os.Chmod follows them, which would
+				// let an extracted symlink alter the permissions of a file outside
+				// the destination.
+				if info.Mode()&os.ModeSymlink != 0 {
+					return nil
+				}
 				task.Tracef("chmod a-w %q", path)
-				err = os.Chmod(path, info.Mode()&^0222) //nolint:gosec // TODO: we separately validate symlink targets, though we should migrate to os.Root()
+				err = os.Chmod(path, info.Mode()&^0222) //nolint:gosec
 				if errors.Is(err, os.ErrNotExist) {
 					task.Debugf("file did not exist during finalisation %q", path)
 					return nil
@@ -384,6 +390,13 @@ func extractZip(b *ui.Task, f *os.File, info os.FileInfo, dest string, strip int
 	}
 	task := b.SubProgress("unpack", len(zr.File))
 	defer task.Done()
+	// Confine all filesystem operations to dest via os.Root so that symlinks in
+	// the archive cannot redirect writes outside the destination.
+	root, err := os.OpenRoot(dest)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer root.Close()
 	for _, zf := range zr.File {
 		b.Tracef("  %s", zf.Name)
 		task.Add(1)
@@ -394,22 +407,26 @@ func extractZip(b *ui.Task, f *os.File, info os.FileInfo, dest string, strip int
 		if destFile == "" {
 			continue
 		}
-		err = extractZipFile(zf, destFile, dest)
+		err = extractZipFile(root, zf, destFile, dest)
 		if err != nil {
 			return errors.Wrap(err, destFile)
 		}
 	}
-	return nil
+	return validateSymlinks(root)
 }
 
-func extractZipFile(zf *zip.File, destFile string, dest string) error {
+func extractZipFile(root *os.Root, zf *zip.File, destFile string, dest string) error {
+	rel, err := filepath.Rel(dest, destFile)
+	if err != nil {
+		return errors.WithStack(err)
+	}
 	zfr, err := zf.Open()
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	defer zfr.Close()
 	if zf.Mode().IsDir() {
-		return errors.WithStack(os.MkdirAll(destFile, 0700))
+		return errors.WithStack(root.MkdirAll(rel, 0700))
 	}
 	// Handle symlinks.
 	if zf.Mode()&os.ModeSymlink != 0 {
@@ -417,19 +434,15 @@ func extractZipFile(zf *zip.File, destFile string, dest string) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		symlinkTarget := string(symlink)
-		if err := sanitizeSymlinkTarget(destFile, symlinkTarget, dest); err != nil {
-			return err
-		}
-		return errors.WithStack(os.Symlink(symlinkTarget, destFile))
+		return createSymlink(root, destFile, rel, string(symlink), dest)
 	}
 
-	err = os.MkdirAll(filepath.Dir(destFile), 0700)
+	err = root.MkdirAll(filepath.Dir(rel), 0700)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	w, err := os.OpenFile(destFile, os.O_CREATE|os.O_WRONLY, zf.Mode()&^0077)
+	w, err := root.OpenFile(rel, os.O_CREATE|os.O_WRONLY, zf.Mode()&^0077)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -441,12 +454,19 @@ func extractZipFile(zf *zip.File, destFile string, dest string) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	_ = os.Chtimes(destFile, zf.Modified, zf.Modified) // Best effort.
+	_ = root.Chtimes(rel, zf.Modified, zf.Modified) // Best effort.
 	return nil
 }
 
 func extractPackageTarball(b *ui.Task, r io.Reader, dest string, strip int) error {
 	tr := tar.NewReader(r)
+	// Confine all filesystem operations to dest via os.Root so that symlinks in
+	// the archive cannot redirect writes outside the destination.
+	root, err := os.OpenRoot(dest)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer root.Close()
 	for {
 		hdr, err := tr.Next()
 		if errors.Is(err, io.EOF) {
@@ -462,48 +482,44 @@ func extractPackageTarball(b *ui.Task, r io.Reader, dest string, strip int) erro
 		if destFile == "" {
 			continue
 		}
+		rel, err := filepath.Rel(dest, destFile)
+		if err != nil {
+			return errors.WithStack(err)
+		}
 		b.Tracef("  %s -> %s", hdr.Name, destFile)
-		err = os.MkdirAll(filepath.Dir(destFile), 0700)
+		err = root.MkdirAll(filepath.Dir(rel), 0700)
 		if err != nil {
 			return errors.WithStack(err)
 		}
 		switch {
 		case mode.IsDir():
-			err = os.MkdirAll(destFile, 0700)
+			err = root.MkdirAll(rel, 0700)
 			if err != nil {
 				return errors.Wrapf(err, "%s: failed to create directory", destFile)
 			}
 
 		case mode&os.ModeSymlink != 0:
-			if err := sanitizeSymlinkTarget(destFile, hdr.Linkname, dest); err != nil {
+			if err := createSymlink(root, destFile, rel, hdr.Linkname, dest); err != nil {
 				return err
-			}
-			err = syscall.Symlink(hdr.Linkname, destFile)
-			if err != nil {
-				return errors.Wrapf(err, "%s: failed to create symlink to %s", destFile, hdr.Linkname)
 			}
 
 		case hdr.Typeflag&(tar.TypeLink|tar.TypeGNULongLink) != 0 && hdr.Linkname != "":
 			// Convert hard links into symlinks so we don't have to track inodes later on during relocation.
 			src := filepath.Join(dest, hdr.Linkname) //nolint: gosec
-			if err := sanitizeSymlinkTarget(destFile, src, dest); err != nil {
-				return err
-			}
 			rp, err := filepath.Rel(filepath.Dir(destFile), src)
 			if err != nil {
 				return errors.WithStack(err)
 			}
-			err = os.Symlink(rp, destFile)
-			if err != nil {
-				return errors.WithStack(err)
+			if err := createSymlink(root, destFile, rel, rp, dest); err != nil {
+				return err
 			}
 
 		default:
-			err := os.MkdirAll(filepath.Dir(destFile), 0700)
+			err = root.MkdirAll(filepath.Dir(rel), 0700)
 			if err != nil {
 				return errors.WithStack(err)
 			}
-			w, err := os.OpenFile(destFile, os.O_CREATE|os.O_WRONLY, mode)
+			w, err := root.OpenFile(rel, os.O_CREATE|os.O_WRONLY, mode)
 			if err != nil {
 				return errors.WithStack(err)
 			}
@@ -512,10 +528,10 @@ func extractPackageTarball(b *ui.Task, r io.Reader, dest string, strip int) erro
 			if err != nil {
 				return errors.WithStack(err)
 			}
-			_ = os.Chtimes(destFile, hdr.AccessTime, hdr.ModTime) // Best effort.
+			_ = root.Chtimes(rel, hdr.AccessTime, hdr.ModTime) // Best effort.
 		}
 	}
-	return nil
+	return validateSymlinks(root)
 }
 
 func extractDebianPackage(b *ui.Task, r io.Reader, dest string, pkg *manifest.Package) error {
@@ -527,7 +543,10 @@ func extractDebianPackage(b *ui.Task, r io.Reader, dest string, pkg *manifest.Pa
 		}
 		if strings.HasPrefix(header.Name, "data.tar") {
 			limitReader := io.LimitReader(reader, header.Size)
-			filename := filepath.Join(dest, header.Name)
+			// Use a fixed name rather than the archive-controlled header.Name when
+			// writing the nested payload. The nested archive type is detected from
+			// content, so the extension is irrelevant.
+			filename := filepath.Join(dest, "data.tar")
 			w, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 			if err != nil {
 				return errors.WithStack(err)
@@ -683,4 +702,73 @@ func sanitizeSymlinkTarget(destFile, linkTarget, destination string) error {
 		return errors.Errorf("%s: illegal symlink target %q (resolves to %s which is outside %s)", destFile, linkTarget, resolvedTarget, destination)
 	}
 	return nil
+}
+
+// createSymlink creates a symlink at rel (relative to root, which is rooted at dest)
+// pointing at linkTarget, refusing any link whose target escapes dest.
+//
+// sanitizeSymlinkTarget is a fast lexical reject for the obvious cases, but lexical
+// checks alone are not sufficient, so os.Root is the real containment boundary:
+// os.Root.Symlink keeps the link inside the root, and os.Root.Stat resolves it with
+// root-aware semantics so a target that escapes the root yields an error other than
+// NotExist (a legitimate dangling link within the root yields NotExist and is allowed).
+func createSymlink(root *os.Root, destFile, rel, linkTarget, dest string) error {
+	if err := sanitizeSymlinkTarget(destFile, linkTarget, dest); err != nil {
+		return err
+	}
+	if dir := filepath.Dir(rel); dir != "." {
+		if err := root.MkdirAll(dir, 0700); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+	if err := root.Symlink(linkTarget, rel); err != nil {
+		return errors.Wrapf(err, "%s: failed to create symlink to %s", destFile, linkTarget)
+	}
+	if symlinkEscapesRoot(root, rel) {
+		_ = root.Remove(rel)
+		return errors.Errorf("%s: illegal symlink target %q (resolves outside %s)", destFile, linkTarget, dest)
+	}
+	return nil
+}
+
+// validateSymlinks re-checks every symlink in the extracted tree against the final
+// on-disk state. The per-link check in createSymlink treats a link with a missing
+// target component as a harmless dangling link, but a later archive entry can create
+// that component (e.g. as a symlink to ".") and turn the earlier link into one that
+// resolves outside the root. This pass runs once extraction is complete, so it sees
+// the final resolution of each link and rejects any that escapes the root.
+func validateSymlinks(root *os.Root) error {
+	return fs.WalkDir(root.FS(), ".", func(name string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.Type()&fs.ModeSymlink == 0 {
+			return nil
+		}
+		if symlinkEscapesRoot(root, name) {
+			target, _ := root.Readlink(name)
+			return errors.Errorf("%s: illegal symlink target %q (resolves outside extraction root)", name, target)
+		}
+		return nil
+	})
+}
+
+// symlinkEscapesRoot reports whether the symlink at name (relative to root) resolves
+// to a location outside the root. os.Root.Stat refuses to traverse outside the root,
+// so a target that escapes yields a "path escapes from parent" error. Links that are
+// broken but contained — dangling targets, symlink loops, or a non-directory path
+// component — do not escape and are not flagged, preserving behaviour for the
+// (unusual but harmless) packages that contain them.
+func symlinkEscapesRoot(root *os.Root, name string) bool {
+	_, err := root.Stat(name)
+	switch {
+	case err == nil: // resolves to a real path within the root
+		return false
+	case errors.Is(err, os.ErrNotExist), // dangling within the root
+		errors.Is(err, syscall.ELOOP),   // symlink loop, contained
+		errors.Is(err, syscall.ENOTDIR): // non-directory component, contained
+		return false
+	default:
+		return true
+	}
 }
