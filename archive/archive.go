@@ -668,15 +668,23 @@ func makeDestPath(dest, path string, strip int) (string, error) {
 	if len(parts) <= strip {
 		return "", nil
 	}
-	destFile := strings.Join(parts[strip:], "/")
-	destFile = filepath.Join(dest, destFile)
+	stripped := strings.Join(parts[strip:], "/")
+	// Re-validate after stripping: the remaining path must still resolve within
+	// dest, which the pre-strip check does not guarantee.
+	if err := sanitizeExtractPath(stripped, dest); err != nil {
+		return "", err
+	}
+	destFile := filepath.Join(dest, stripped)
 	return destFile, nil
 }
 
 // https://snyk.io/research/zip-slip-vulnerability
 func sanitizeExtractPath(filePath string, destination string) error {
 	destPath := filepath.Join(destination, filePath)
-	if !strings.HasPrefix(destPath, filepath.Clean(destination)) {
+	cleanDest := filepath.Clean(destination)
+	// Require a separator after the destination so a path is only accepted when
+	// it is genuinely inside it, not merely sharing its name as a prefix.
+	if destPath != cleanDest && !strings.HasPrefix(destPath, cleanDest+string(filepath.Separator)) {
 		return errors.Errorf("%s: illegal file path (%s not under %s)", filePath, destPath, destination)
 	}
 	return nil

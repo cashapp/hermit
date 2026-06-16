@@ -487,3 +487,56 @@ func TestSymlinkChainEscapeOutOfOrder(t *testing.T) {
 	got, _ := os.ReadFile(canary)
 	assert.Equal(t, "ORIGINAL", string(got), "canary outside dest must not be modified")
 }
+
+// TestMakeDestPathStripBypass checks the shared path computation used by all
+// extractors (tar, zip, 7z, rpm) keeps extracted paths within the destination,
+// including after strip is applied, and that a legitimate path still works.
+func TestMakeDestPathStripBypass(t *testing.T) {
+	dest := filepath.Join(t.TempDir(), "dest")
+
+	_, err := makeDestPath(dest, "p/q/../../victim/PWNED", 2)
+	assert.Error(t, err, "path that resolves outside dest after strip must be rejected")
+
+	err = sanitizeExtractPath("../dest-evil/x", dest)
+	assert.Error(t, err, "path that only shares the dest name prefix must be rejected")
+
+	// A legitimate stripped path is still accepted.
+	got, err := makeDestPath(dest, "top/bin/tool", 1)
+	assert.NoError(t, err)
+	assert.Equal(t, filepath.Join(dest, "bin", "tool"), got)
+}
+
+// TestStripBypassRegularFile checks that a regular-file entry cannot be written
+// outside the destination when strip is applied.
+func TestStripBypassRegularFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	dest := filepath.Join(tmpDir, "extracted")
+	canary := filepath.Join(tmpDir, "canary.txt")
+	assert.NoError(t, os.WriteFile(canary, []byte("ORIGINAL"), 0600))
+
+	tarball := filepath.Join(tmpDir, "strip.tar.gz")
+	f, err := os.Create(tarball)
+	assert.NoError(t, err)
+	gw := gzip.NewWriter(f)
+	tw := tar.NewWriter(gw)
+	assert.NoError(t, tw.WriteHeader(&tar.Header{
+		Name: "p/q/../../canary.txt", Typeflag: tar.TypeReg, Mode: 0600, Size: int64(len("PWNED")),
+	}))
+	_, err = tw.Write([]byte("PWNED"))
+	assert.NoError(t, err)
+	assert.NoError(t, tw.Close())
+	assert.NoError(t, gw.Close())
+	assert.NoError(t, f.Close())
+
+	p, _ := ui.NewForTesting()
+	t.Cleanup(func() { _ = makeWritable(tmpDir) })
+	_, err = Extract(
+		p.Task("extract"),
+		tarball,
+		&manifest.Package{Dest: dest, Source: "strip.tar.gz", Strip: 2},
+	)
+	assert.Error(t, err)
+
+	got, _ := os.ReadFile(canary)
+	assert.Equal(t, "ORIGINAL", string(got), "canary outside dest must not be modified")
+}
