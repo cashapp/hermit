@@ -1,4 +1,10 @@
 change_hermit_env() {
+  # zsh sets `compstate` only while its completion system is running. The _cd
+  # completer canonicalises `../` paths by running `cd` in a $(...) subshell,
+  # which would otherwise trigger a full (and immediately discarded) env switch
+  # on every TAB. Skip activation in that case; real `cd` and `(cd ... && cmd)`
+  # leave `compstate` unset and are unaffected.
+  if [ -n "${compstate+_}" ]; then return 0; fi
   local CUR=${PWD}
   while [ "$CUR" != "/" ]; do
     if [ -n "${HERMIT_ENV+_}" ] && [ "${CUR}" -ef "${HERMIT_ENV}" ]; then

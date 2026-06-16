@@ -8,7 +8,13 @@ import (
 )
 
 var zshShellHooks = `
-chpwd_functions+=(change_hermit_env)
+# Use add-zsh-hook (not chpwd_functions+=) so re-sourcing this block - e.g. the
+# hooks appearing in both .zprofile and .zshrc, or a "source ~/.zshrc" reload -
+# does not register change_hermit_env more than once. add-zsh-hook is idempotent;
+# a bare += (or even typeset -gU) would accumulate duplicates and run the hook,
+# and its hermit shell-out, repeatedly on every cd.
+autoload -Uz add-zsh-hook
+add-zsh-hook chpwd change_hermit_env
 change_hermit_env
 
 # A child zsh can inherit HERMIT_ENV/ACTIVE_HERMIT from its parent without
