@@ -35,3 +35,5 @@ function __complete_hermit
 end
 
 complete -f -c hermit -a "(__complete_hermit)"
+
+activate_hermit
