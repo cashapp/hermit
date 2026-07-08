@@ -9,6 +9,9 @@ Hermit installs tools for software projects in self-contained, isolated sets, so
 
 See https://cashapp.github.io/hermit for full documentation.
 
+An AI coding agent skill for Hermit-managed repositories is available in
+[skills/hermit](skills/hermit).
+
 ![hermit intro screen cast](docs/docs/static/screencasts/using.svg)
 
 ## Releasing new versions
@@ -30,4 +33,3 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-
