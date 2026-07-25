@@ -201,13 +201,14 @@ func Init(l *ui.UI, env string, distURL string, stateDir string, config Config, 
 			}
 		}
 	}
+	detectedShell, _ := shell.Detect()
 	l.Infof(`
 
 Hermit environment initialised in %s
 
 To activate the environment run:
 
-  . %s/bin/activate-hermit
+  %s
 
 Then run the following to list available commands:
 
@@ -218,8 +219,15 @@ To deactivate the environment run:
   deactivate-hermit
 
 For more information please refer to https://github.com/cashapp/hermit
-`, env, env)
+`, env, activationCommand(env, detectedShell))
 	return nil
+}
+
+func activationCommand(env string, detectedShell shell.Shell) string {
+	if detectedShell != nil && detectedShell.Name() == "fish" {
+		return fmt.Sprintf(". %s/bin/activate-hermit.fish", env)
+	}
+	return fmt.Sprintf(". %s/bin/activate-hermit", env)
 }
 
 // EnvDirFromProxyLink finds a Hermit environment given a proxy symlink.
