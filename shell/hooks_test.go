@@ -1,6 +1,7 @@
 package shell
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -27,10 +28,13 @@ func TestActivationHooksInstallationFindsHermitOnPath(t *testing.T) {
 
 			shellPath, err := exec.LookPath(tt.name)
 			if err != nil {
-				if tt.name == "bash" {
-					t.Fatalf("bash is required to test POSIX shell hook installation: %v", err)
+				// LookPath returns ErrNotFound both when an executable is absent and
+				// when PATH cannot resolve it. Optional shells may be skipped locally,
+				// but CI installs every shell and must fail if one is not discoverable.
+				if errors.Is(err, exec.ErrNotFound) && tt.name != "bash" && os.Getenv("CI") == "" {
+					t.Skipf("%s is not installed", tt.name)
 				}
-				t.Skipf("%s is not installed", tt.name)
+				t.Fatalf("failed to locate %s: %v", tt.name, err)
 			}
 
 			script += `
