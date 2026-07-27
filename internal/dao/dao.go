@@ -135,6 +135,15 @@ func (d *DAO) readCheckedAt(pkgRef string) (time.Time, error) {
 // UpdateCheckedAt (see above), which is the same degraded-but-safe behaviour
 // as running against an older Hermit version that never writes the sidecar
 // at all.
+//
+// The two files are written with separate renames, not swapped in together,
+// so two UpdatePackage calls for the same package racing each other can
+// interleave: caller A's etag write can be immediately followed by caller
+// B's checked-at write, leaving a GetPackage that reads in between with A's
+// etag paired with B's checked-at time. This is a pre-existing risk carried
+// over from the single-JSON-file format this replaced (which had the same
+// last-writer-wins exposure across the two logical fields, just within one
+// file); it is not introduced by the two-file split.
 func (d *DAO) UpdatePackage(pkgRef string, pkg *Package) error {
 	checkedAt := pkg.UpdateCheckedAt
 	if checkedAt.IsZero() {

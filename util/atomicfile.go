@@ -22,9 +22,19 @@ func AtomicWriteFile(path string, data []byte, perm os.FileMode) error {
 	defer os.Remove(tmpPath)
 
 	_, writeErr := tmp.Write(data)
+	var syncErr error
+	if writeErr == nil {
+		// Without this, a crash shortly after Rename can leave path pointing
+		// at a temp file the filesystem never flushed, ie. a zero-length or
+		// truncated file, despite the rename itself being durable.
+		syncErr = tmp.Sync()
+	}
 	closeErr := tmp.Close()
 	if writeErr != nil {
 		return errors.WithStack(writeErr)
+	}
+	if syncErr != nil {
+		return errors.WithStack(syncErr)
 	}
 	if closeErr != nil {
 		return errors.WithStack(closeErr)

@@ -462,7 +462,11 @@ func (s *State) extract(b *ui.Task, p *manifest.Package) error {
 		}
 	}
 	if _, err = p.Trigger(b, manifest.EventUnpack); err != nil {
-		_ = os.RemoveAll(p.Dest)
+		// p.Dest is already published (archive.Extract renames it into place
+		// before returning), so an unlocked reader could be looking at it --
+		// remove it the same reader-safe way as everywhere else in this
+		// package rather than deleting it out from under them entry by entry.
+		_ = util.RemoveAllAtomic(p.Dest)
 		return errors.WithStack(err)
 	}
 	return errors.WithStack(finalise())

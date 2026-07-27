@@ -69,6 +69,12 @@ func SwapDir(src, finalDest string) error {
 //
 // The caller must ensure no other goroutine or process can be concurrently
 // mutating dir.
+//
+// Unlike os.RemoveAll, RemoveAllAtomic is not nil-safe for a wholly-missing
+// path: it requires dir's parent directory to exist (MkdirTemp needs
+// somewhere to create the sibling), and returns an error if the parent is
+// itself missing. A missing dir with an existing parent is still handled --
+// that case returns nil, same as os.RemoveAll.
 func RemoveAllAtomic(dir string) error {
 	aside, err := os.MkdirTemp(filepath.Dir(dir), filepath.Base(dir)+DirSwapAsideSuffix+"-*")
 	if err != nil {
