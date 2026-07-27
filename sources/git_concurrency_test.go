@@ -104,6 +104,24 @@ func pollForVanishAfterAppearing(stop <-chan struct{}, path string, errCh chan<-
 	}
 }
 
+// waitForFile polls for path to exist, failing the test if timeout elapses
+// first. Used to synchronise on a real cross-process event (e.g. "the child
+// has acquired the lock") without a fixed sleep, which would either race or
+// needlessly slow the test down.
+func waitForFile(t *testing.T, path string, timeout time.Duration) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for {
+		if _, err := os.Stat(path); err == nil {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("timed out after %s waiting for %s to appear", timeout, path)
+		}
+		time.Sleep(time.Millisecond)
+	}
+}
+
 // assertOneClone asserts exactly one clone occurred, ie. there was no
 // thundering herd of redundant clones once the lock and double-checked
 // locking are in place.
@@ -140,9 +158,13 @@ func assertNoScratchDirs(t *testing.T, sourceDir string) {
 // GitSource.Sync writes and fails the test if it ever sees the manifest
 // vanish after having first seen it exist.
 //
-// This exercises the process-local mutex in sources/lock.go (hence -race),
-// but not flock's cross-process behaviour -- see
-// TestConcurrentSyncAcrossProcesses for that.
+// This exercises whatever process-local synchronisation sources/lock.go adds
+// (hence -race), but not flock's cross-process behaviour -- see
+// TestConcurrentSyncAcrossProcesses for that. On an unfixed tree, this test
+// is not guaranteed to reproduce the race on every run, since all n
+// goroutines racing through Sync at once is a timing-dependent condition,
+// not a certainty -- see the start barrier below, which maximises the odds
+// by holding every goroutine at the gate until all are spawned.
 func TestConcurrentSyncInProcess(t *testing.T) {
 	const n = 8
 	sourceDir := t.TempDir()
@@ -155,17 +177,24 @@ func TestConcurrentSyncInProcess(t *testing.T) {
 	readerErr := make(chan error, 1)
 	go pollForVanishAfterAppearing(stop, manifestPath, readerErr)
 
+	var ready sync.WaitGroup
+	start := make(chan struct{})
 	var wg sync.WaitGroup
+	ready.Add(n)
 	for range n {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			ready.Done()
+			<-start
 			u, _ := ui.NewForTesting()
 			source := sources.NewGitSource(uri, sourceDir, runner)
 			_, err := source.Sync(u, true)
 			assert.NoError(t, err)
 		}()
 	}
+	ready.Wait()
+	close(start)
 	wg.Wait()
 	close(stop)
 	assert.NoError(t, <-readerErr)
@@ -192,6 +221,8 @@ func TestConcurrentSyncAcrossProcesses(t *testing.T) {
 	const n = 8
 	sourceDir := t.TempDir()
 	cloneLog := filepath.Join(t.TempDir(), "clones.log")
+	readyDir := t.TempDir()
+	goFile := filepath.Join(t.TempDir(), "go")
 	uri := "git://concurrent-cross-process-test"
 	manifestPath := filepath.Join(sourceDir, util.Hash(uri), "pkg.hcl")
 
@@ -205,6 +236,7 @@ func TestConcurrentSyncAcrossProcesses(t *testing.T) {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
+			readyFile := filepath.Join(readyDir, fmt.Sprintf("%d", i))
 			cmd := exec.Command(os.Args[0], "-test.run=TestSyncChildProcess", "-test.v")
 			cmd.Env = append(os.Environ(),
 				"HERMIT_TEST_CHILD=1",
@@ -212,6 +244,8 @@ func TestConcurrentSyncAcrossProcesses(t *testing.T) {
 				"HERMIT_TEST_SOURCE_DIR="+sourceDir,
 				"HERMIT_TEST_CLONE_LOG="+cloneLog,
 				"HERMIT_TEST_CLONE_DELAY=100ms",
+				"HERMIT_TEST_READY_FILE="+readyFile,
+				"HERMIT_TEST_GO_FILE="+goFile,
 			)
 			out, err := cmd.CombinedOutput()
 			if err != nil {
@@ -219,6 +253,17 @@ func TestConcurrentSyncAcrossProcesses(t *testing.T) {
 			}
 		}(i)
 	}
+
+	// Hold every child at the gate (each blocked on its own readyFile
+	// existing, then waiting on goFile) until all n have signalled ready,
+	// then release them all at once -- this maximises the odds that all n
+	// children race through Sync concurrently, same as the in-process
+	// start barrier above.
+	for i := range n {
+		waitForFile(t, filepath.Join(readyDir, fmt.Sprintf("%d", i)), 30*time.Second)
+	}
+	assert.NoError(t, os.WriteFile(goFile, nil, 0600))
+
 	wg.Wait()
 	close(stop)
 	assert.NoError(t, <-readerErr)
@@ -244,6 +289,17 @@ func TestSyncChildProcess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("bad clone delay: %s", err)
 	}
+
+	// Signal the parent we're up, then wait for its go-ahead: this holds all
+	// n children at the gate so they race through Sync together, rather than
+	// however staggered process spawn happens to make them.
+	if readyFile := os.Getenv("HERMIT_TEST_READY_FILE"); readyFile != "" {
+		if err := os.WriteFile(readyFile, nil, 0600); err != nil {
+			t.Fatalf("failed to write ready file: %s", err)
+		}
+		waitForFile(t, os.Getenv("HERMIT_TEST_GO_FILE"), 30*time.Second)
+	}
+
 	runner := newSlowCloningGit(delay, cloneLog)
 	source := sources.NewGitSource(uri, sourceDir, runner)
 	u, _ := ui.NewForTesting()
