@@ -688,6 +688,18 @@ func (e *Env) Install(l *ui.UI, pkg *manifest.Package) (*shell.Changes, error) {
 	return allChanges.Merge(changes), nil
 }
 
+// isUnresolved reports whether err means a package reference couldn't be
+// resolved, whether because it's genuinely unknown (manifest.ErrUnknownPackage)
+// or because a source needed to confirm that was transiently unreachable
+// (sources.ErrSourceUnavailable). Callers that fall back to an alternate
+// resolution strategy (a virtual package, a different selector, a resync)
+// should attempt that fallback in both cases: a transiently-unavailable
+// source is not evidence that the alternate strategy would fail too, and may
+// well succeed via a different, healthy source.
+func isUnresolved(err error) bool {
+	return errors.Is(err, manifest.ErrUnknownPackage) || errors.Is(err, sources.ErrSourceUnavailable)
+}
+
 // resolveRuntimeDependencies checks all runtime dependencies for a package are available.
 //
 // Aggregate and collect the package names and binaries of all runtime dependencies to avoid collisions.
@@ -702,7 +714,7 @@ func (e *Env) resolveRuntimeDependencies(l *ui.UI, p *manifest.Package, aggregat
 
 		depPkg, err := e.Resolve(l, manifest.ExactSelector(ref), true)
 		// If the package doesn't exist, try resolving as a virtual package
-		if err != nil && errors.Is(err, manifest.ErrUnknownPackage) {
+		if err != nil && isUnresolved(err) {
 			virtualRef, verr := e.resolveVirtual(l, ref.Name)
 			if verr != nil {
 				return errors.WithStack(err) // Return original error
@@ -945,7 +957,7 @@ func (e *Env) Resolve(l *ui.UI, selector manifest.Selector, syncOnMissing bool) 
 	}
 	resolved, err := resolver.Resolve(l, selector)
 	// If the package is missing sync sources and try again, once.
-	if syncOnMissing && errors.Is(err, manifest.ErrUnknownPackage) {
+	if syncOnMissing && isUnresolved(err) {
 		if err = resolver.Sync(l, true); err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -1575,7 +1587,7 @@ func (e *Env) ResolveWithDeps(l *ui.UI, installed []manifest.Reference, selector
 
 		// First search from virtual providers
 		ref, err = e.resolveVirtual(l, req)
-		if err != nil && errors.Is(err, manifest.ErrUnknownPackage) {
+		if err != nil && isUnresolved(err) {
 			// Secondly search by the package name
 			sel, err := manifest.ParseGlobSelector(req)
 			if err != nil {
