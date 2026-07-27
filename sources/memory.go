@@ -19,7 +19,10 @@ func NewMemSource(name, content string) *MemSource {
 }
 
 func (s *MemSource) Sync(_ *ui.UI, _ bool) (bool, error) {
-	return true, nil
+	// See the equivalent comment on BuiltInSource.Sync: this source performs
+	// no actual synchronisation, so it must report "false" here or it
+	// poisons Sources.isSynchronised for every other source.
+	return false, nil
 }
 
 func (s *MemSource) URI() string {

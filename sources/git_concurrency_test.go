@@ -307,3 +307,44 @@ func TestSyncChildProcess(t *testing.T) {
 		t.Fatalf("sync failed: %s", err)
 	}
 }
+
+// TestSyncLockTimeoutFallsBackToExistingCopy verifies that, when a source
+// already has a usable copy on disk but the sync lock can't be acquired
+// within the configured timeout, Sync degrades to using the existing copy
+// rather than failing outright. Lock contention is exercised with a genuine
+// separate process (TestHoldSourceLockChildProcess), for the same
+// per-PID-reentrancy reason as the cross-process clone test above.
+func TestSyncLockTimeoutFallsBackToExistingCopy(t *testing.T) {
+	if testing.Short() {
+		t.Skip("spawns a subprocess; skipped in -short")
+	}
+	sourceDir := t.TempDir()
+	uri := "git://lock-timeout-test"
+	runner := newSlowCloningGit(0, filepath.Join(t.TempDir(), "clones.log"))
+	source := sources.NewGitSource(uri, sourceDir, runner)
+
+	// Populate an initial copy so Sync has an existing tree to fall back to.
+	u, _ := ui.NewForTesting()
+	_, err := source.Sync(u, true)
+	assert.NoError(t, err)
+
+	path := filepath.Join(sourceDir, util.Hash(uri))
+	holdFor := 500 * time.Millisecond
+	cmd := exec.Command(os.Args[0], "-test.run=TestHoldSourceLockChildProcess", "-test.v")
+	cmd.Env = append(os.Environ(),
+		"HERMIT_TEST_CHILD=1",
+		"HERMIT_TEST_LOCK_PATH="+path,
+		"HERMIT_TEST_LOCK_HOLD="+holdFor.String(),
+	)
+	assert.NoError(t, cmd.Start())
+
+	// Give the child a moment to actually acquire the lock before we race it.
+	time.Sleep(50 * time.Millisecond)
+
+	shortTimeoutSource := sources.NewGitSourceWithLockTimeout(uri, sourceDir, runner, 10*time.Millisecond)
+	did, err := shortTimeoutSource.Sync(u, true)
+	assert.NoError(t, err)
+	assert.False(t, did, "should have skipped syncing and fallen back to the existing copy")
+
+	assert.NoError(t, cmd.Wait())
+}
