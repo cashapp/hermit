@@ -454,18 +454,22 @@ func (s *State) extract(b *ui.Task, p *manifest.Package) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
+	// From here on, p.Dest is already published: archive.Extract renames it
+	// into place before returning, not after finalise() runs. That means an
+	// unlocked reader could be looking at it, and archive.Extract itself
+	// refuses to extract into a p.Dest that already exists -- so any failure
+	// below must clean it up the same reader-safe way as everywhere else in
+	// this package, or a retry of this package is permanently wedged behind
+	// "destination already exists".
 	// Copy manifest referred files
 	for _, file := range p.Files {
 		err = vfs.CopyFile(file.FS, file.FromPath, file.ToPath)
 		if err != nil {
+			_ = util.RemoveAllAtomic(p.Dest)
 			return errors.WithStack(err)
 		}
 	}
 	if _, err = p.Trigger(b, manifest.EventUnpack); err != nil {
-		// p.Dest is already published (archive.Extract renames it into place
-		// before returning), so an unlocked reader could be looking at it --
-		// remove it the same reader-safe way as everywhere else in this
-		// package rather than deleting it out from under them entry by entry.
 		_ = util.RemoveAllAtomic(p.Dest)
 		return errors.WithStack(err)
 	}
