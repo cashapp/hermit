@@ -1223,7 +1223,7 @@ func (e *Env) SetEnv(key, value string) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	return os.WriteFile(e.configFile, data, 0600)
+	return errors.WithStack(util.AtomicWriteFile(e.configFile, data, 0600))
 }
 
 // DelEnv deletes a custom environment variable.
@@ -1233,7 +1233,7 @@ func (e *Env) DelEnv(key string) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	return os.WriteFile(e.configFile, data, 0600)
+	return errors.WithStack(util.AtomicWriteFile(e.configFile, data, 0600))
 }
 
 // Clean parts of the hermit system.

@@ -262,6 +262,13 @@ func (s *State) ReadPackageState(pkg *manifest.Package) {
 }
 
 // WritePackageState updates the fields and usage time stamp of the given package
+//
+// A zero UpdateCheckedAt (when p.UpdateInterval <= 0, ie. this package never
+// checks for updates) is stored as "now" by dao.UpdatePackage rather than as
+// a literal zero time -- see its docs. That's harmless here specifically:
+// EnsureChannelIsUpToDate short-circuits on UpdateInterval == 0 before ever
+// consulting UpdatedAt, so the substituted value is never read back for a
+// package in this state.
 func (s *State) WritePackageState(p *manifest.Package) error {
 	updatedAt := time.Time{}
 	if p.UpdateInterval > 0 {
@@ -304,7 +311,7 @@ func (s *State) removeRecursive(b *ui.Task, dest string) error {
 		return errors.WithStack(err)
 	})
 	task.Debugf("rm -rf %s", dest)
-	return errors.WithStack(os.RemoveAll(dest))
+	return errors.WithStack(util.RemoveAllAtomic(dest))
 }
 
 // CacheAndUnpack downloads a package and extracts it if it is not present.

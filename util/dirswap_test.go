@@ -72,3 +72,26 @@ func TestSwapDirNoPreviousDest(t *testing.T) {
 	_, err := os.Stat(filepath.Join(finalDest, "new.txt"))
 	assert.NoError(t, err)
 }
+
+func TestRemoveAllAtomic(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "victim")
+	assert.NoError(t, os.MkdirAll(target, 0700))
+	assert.NoError(t, os.WriteFile(filepath.Join(target, "f"), []byte("data"), 0600))
+
+	assert.NoError(t, RemoveAllAtomic(target))
+
+	_, err := os.Stat(target)
+	assert.True(t, os.IsNotExist(err))
+	entries, err := os.ReadDir(dir)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(entries), "no scratch entries should be left behind")
+}
+
+// TestRemoveAllAtomicMissingTarget verifies RemoveAllAtomic is a no-op (not
+// an error) when the target doesn't exist, matching os.RemoveAll's
+// semantics.
+func TestRemoveAllAtomicMissingTarget(t *testing.T) {
+	dir := t.TempDir()
+	assert.NoError(t, RemoveAllAtomic(filepath.Join(dir, "does-not-exist")))
+}

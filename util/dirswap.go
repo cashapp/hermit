@@ -2,6 +2,7 @@ package util
 
 import (
 	"os"
+	"path/filepath"
 
 	"github.com/cashapp/hermit/errors"
 )
@@ -57,5 +58,32 @@ func SwapDir(src, finalDest string) error {
 	// synchronously here. We deliberately don't defer this to a goroutine:
 	// Hermit's exec path ends in syscall.Exec, which would silently kill any
 	// in-flight background cleanup and leak the directory forever.
+	return errors.WithStack(os.RemoveAll(aside))
+}
+
+// RemoveAllAtomic removes dir in a way that's safe for an unlocked reader:
+// dir is first renamed to a uniquely-named sibling, then removed. This closes
+// the same reader-visible window SwapDir does for replacement -- a reader
+// that stats or opens dir sees either the whole original tree or ENOENT,
+// never a tree with some entries already unlinked out from under it.
+//
+// The caller must ensure no other goroutine or process can be concurrently
+// mutating dir.
+func RemoveAllAtomic(dir string) error {
+	aside, err := os.MkdirTemp(filepath.Dir(dir), filepath.Base(dir)+DirSwapAsideSuffix+"-*")
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	// MkdirTemp creates aside itself; remove the placeholder so the rename
+	// below can take its place.
+	if err := os.Remove(aside); err != nil {
+		return errors.WithStack(err)
+	}
+	if err := os.Rename(dir, aside); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return errors.WithStack(err)
+	}
 	return errors.WithStack(os.RemoveAll(aside))
 }
