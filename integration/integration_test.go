@@ -683,6 +683,41 @@ EOF
 			`,
 		},
 		{
+			// Hermit hooks can activate an environment before the user's own
+			// startup files run (eg. from /etc/zshrc), letting anything they
+			// prepend to PATH afterwards (eg. RVM) shadow the environment. zsh
+			// re-asserts Hermit's PATH entries at the first prompt.
+			name:         "ZshReassertsPathPrecedenceAtFirstPrompt",
+			preparations: prep{fixture("testenv1")},
+			script: `
+				. bin/activate-hermit
+				if [ -n "${ZSH_VERSION-}" ]; then
+					assert test "${path[1]}" = "${HERMIT_ENV}/bin"
+					PATH="/rvm/bin:$PATH"
+					# Run the precmd hooks as an interactive shell would at the next prompt.
+					for f in $precmd_functions; do "$f"; done
+					assert test "${path[1]}" = "${HERMIT_ENV}/bin"
+					assert test "${path[2]}" = "/rvm/bin"
+				fi
+			`,
+		},
+		{
+			name:         "ZshKeepsHermitPrependPathFirstWhenReassertingPath",
+			preparations: prep{fixture("testenv1")},
+			script: `
+				export HERMIT_PREPEND_PATH="/prepend/first:/prepend/second"
+				. bin/activate-hermit
+				if [ -n "${ZSH_VERSION-}" ]; then
+					PATH="/rvm/bin:$PATH"
+					for f in $precmd_functions; do "$f"; done
+					assert test "${path[1]}" = "/prepend/first"
+					assert test "${path[2]}" = "/prepend/second"
+					assert test "${path[3]}" = "${HERMIT_ENV}/bin"
+					assert test "${path[4]}" = "/rvm/bin"
+				fi
+			`,
+		},
+		{
 			name:         "InstallOnActivateEnsuresPackagesAreUnpacked",
 			preparations: prep{fixture("testenv-install-on-activate"), activate(".")},
 			script: `
