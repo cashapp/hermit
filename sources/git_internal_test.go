@@ -1,9 +1,11 @@
 package sources
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -99,6 +101,20 @@ func runGit(t *testing.T, dir string, args ...string) {
 	assert.NoError(t, err, "git %v: %s", args, out)
 }
 
+// gitEnvIsolated points HOME, XDG_CONFIG_HOME and the global/system gitconfig
+// locations at throwaway paths for the duration of t, so a hook, alias or
+// setting in the machine running the test (eg. commit.gpgsign, a
+// core.hooksPath) can't affect a test that only cares about plumbing
+// commands.
+func gitEnvIsolated(t *testing.T) {
+	t.Helper()
+	empty := t.TempDir()
+	t.Setenv("HOME", empty)
+	t.Setenv("XDG_CONFIG_HOME", empty)
+	t.Setenv("GIT_CONFIG_GLOBAL", filepath.Join(empty, "gitconfig-does-not-exist"))
+	t.Setenv("GIT_CONFIG_SYSTEM", filepath.Join(empty, "gitconfig-does-not-exist"))
+}
+
 // TestSyncGitIncrementalUpdate exercises syncGit's incremental-update branch
 // (taken once finalDest is already a clone) against a real "git" binary. This
 // replaced a "--reference-if-able" clone that turned out to be a silent
@@ -107,18 +123,27 @@ func runGit(t *testing.T, dir string, args ...string) {
 // shipped broken. syncGit is called directly (rather than via GitSource.Sync)
 // so this doesn't depend on the wall-clock/mtime-granularity slack in
 // syncedSince's double-checked-locking skip.
+//
+// The upstream repo is addressed via a "file://" URL rather than a bare local
+// path: git silently ignores "--depth" for a local-filesystem path ("--depth
+// is ignored in local clones"), which would make finalDest never actually
+// shallow and defeat the point of this test -- "file://" forces the real
+// smart-transport, shallow-fetch code path, the same one used against a real
+// remote like the default hermit-packages source.
 func TestSyncGitIncrementalUpdate(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")
 	}
+	gitEnvIsolated(t)
 
-	upstream := t.TempDir()
-	runGit(t, upstream, "init", "-q", "-b", "main")
-	runGit(t, upstream, "config", "user.email", "test@example.com")
-	runGit(t, upstream, "config", "user.name", "Test")
-	assert.NoError(t, os.WriteFile(filepath.Join(upstream, "first.hcl"), []byte("description = \"first\"\n"), 0600))
-	runGit(t, upstream, "add", "first.hcl")
-	runGit(t, upstream, "commit", "-q", "-m", "first")
+	upstreamDir := t.TempDir()
+	upstream := "file://" + upstreamDir
+	runGit(t, upstreamDir, "init", "-q", "-b", "main")
+	runGit(t, upstreamDir, "config", "user.email", "test@example.com")
+	runGit(t, upstreamDir, "config", "user.name", "Test")
+	assert.NoError(t, os.WriteFile(filepath.Join(upstreamDir, "first.hcl"), []byte("description = \"first\"\n"), 0600))
+	runGit(t, upstreamDir, "add", "first.hcl")
+	runGit(t, upstreamDir, "commit", "-q", "-m", "first")
 
 	dir := t.TempDir()
 	finalDest := filepath.Join(dir, "abc123")
@@ -132,23 +157,44 @@ func TestSyncGitIncrementalUpdate(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "description = \"first\"\n", string(first))
 
-	// Add a second commit upstream, then sync again: finalDest now has a
-	// ".git", so this must take the incremental-update branch.
-	assert.NoError(t, os.WriteFile(filepath.Join(upstream, "second.hcl"), []byte("description = \"second\"\n"), 0600))
-	runGit(t, upstream, "add", "second.hcl")
-	runGit(t, upstream, "commit", "-q", "-m", "second")
+	// Sync several more times, each adding a new commit upstream: finalDest
+	// now has a ".git", so every one of these takes the incremental-update
+	// branch. Repeating this (rather than syncing just once more) is what
+	// actually exercises incrementalBranch's persistence -- a version of this
+	// path that left finalDest with a detached HEAD passed a single-sync
+	// version of this test, but silently degraded into a full-cost clone
+	// starting from the second incremental sync.
+	for i := 2; i <= 4; i++ {
+		name := fmt.Sprintf("commit%d.hcl", i)
+		content := fmt.Sprintf("description = \"commit %d\"\n", i)
+		assert.NoError(t, os.WriteFile(filepath.Join(upstreamDir, name), []byte(content), 0600))
+		runGit(t, upstreamDir, "add", name)
+		runGit(t, upstreamDir, "commit", "-q", "-m", fmt.Sprintf("commit %d", i))
 
+		assert.NoError(t, syncGit(u.Task("test"), dir, upstream, finalDest, runner))
+
+		got, err := os.ReadFile(filepath.Join(finalDest, name))
+		assert.NoError(t, err, "sync %d", i)
+		assert.Equal(t, content, string(got), "sync %d", i)
+
+		// incrementalBranch must persist as a real ref across syncs -- if
+		// this is ever a detached HEAD instead, the *next* sync's local
+		// clone of finalDest has no branch to send as a "have", and its
+		// fetch silently regresses into transferring a full pack.
+		branch, err := exec.Command("git", "-C", finalDest, "branch", "--show-current").CombinedOutput()
+		assert.NoError(t, err, "sync %d: %s", i, branch)
+		assert.Equal(t, incrementalBranch, strings.TrimSpace(string(branch)), "sync %d", i)
+	}
+
+	// Deleting a file upstream must propagate too: "checkout -B" replaces the
+	// whole tree, it doesn't merge, so this would fail if the incremental
+	// path ever left a stale copy of a removed file behind.
+	runGit(t, upstreamDir, "rm", "-q", "first.hcl")
+	runGit(t, upstreamDir, "commit", "-q", "-m", "remove first.hcl")
 	assert.NoError(t, syncGit(u.Task("test"), dir, upstream, finalDest, runner))
+	_, err = os.Stat(filepath.Join(finalDest, "first.hcl"))
+	assert.True(t, os.IsNotExist(err), "first.hcl should have been removed by the incremental checkout")
 
-	// The new commit's content must be present...
-	second, err := os.ReadFile(filepath.Join(finalDest, "second.hcl"))
-	assert.NoError(t, err)
-	assert.Equal(t, "description = \"second\"\n", string(second))
-	// ...and finalDest must still be a valid, checked-out git repo, not left
-	// mid-checkout by "git clone --no-checkout".
-	first, err = os.ReadFile(filepath.Join(finalDest, "first.hcl"))
-	assert.NoError(t, err)
-	assert.Equal(t, "description = \"first\"\n", string(first))
 	info, err := os.Stat(filepath.Join(finalDest, ".git"))
 	assert.NoError(t, err)
 	assert.True(t, info.IsDir())
@@ -157,6 +203,46 @@ func TestSyncGitIncrementalUpdate(t *testing.T) {
 	entries, err := os.ReadDir(dir)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(entries), "expected only finalDest, got %v", entries)
+}
+
+// TestSyncGitIncrementalUpdateFallsBackOnCorruptClone verifies that a
+// corrupt/truncated finalDest ".git" (eg. from an interrupted earlier write,
+// or a filesystem issue) doesn't wedge every future sync: syncGit should
+// notice the incremental path failed and fall back to a fresh clone, the way
+// a from-scratch sync always could, rather than leaving finalDest stuck with
+// a warning on every subsequent command.
+func TestSyncGitIncrementalUpdateFallsBackOnCorruptClone(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+	gitEnvIsolated(t)
+
+	upstreamDir := t.TempDir()
+	upstream := "file://" + upstreamDir
+	runGit(t, upstreamDir, "init", "-q", "-b", "main")
+	runGit(t, upstreamDir, "config", "user.email", "test@example.com")
+	runGit(t, upstreamDir, "config", "user.name", "Test")
+	assert.NoError(t, os.WriteFile(filepath.Join(upstreamDir, "first.hcl"), []byte("description = \"first\"\n"), 0600))
+	runGit(t, upstreamDir, "add", "first.hcl")
+	runGit(t, upstreamDir, "commit", "-q", "-m", "first")
+
+	dir := t.TempDir()
+	finalDest := filepath.Join(dir, "abc123")
+	// A finalDest with a ".git" directory that isn't actually a valid repo:
+	// takes the incremental branch, and "git clone --no-checkout finalDest
+	// dest" must fail against it.
+	assert.NoError(t, os.MkdirAll(filepath.Join(finalDest, ".git"), 0700))
+	assert.NoError(t, os.WriteFile(filepath.Join(finalDest, "stale.hcl"), []byte("stale"), 0600))
+
+	u, _ := ui.NewForTesting()
+	runner := &util.RealCommandRunner{}
+	assert.NoError(t, syncGit(u.Task("test"), dir, upstream, finalDest, runner))
+
+	first, err := os.ReadFile(filepath.Join(finalDest, "first.hcl"))
+	assert.NoError(t, err)
+	assert.Equal(t, "description = \"first\"\n", string(first))
+	_, err = os.Stat(filepath.Join(finalDest, "stale.hcl"))
+	assert.True(t, os.IsNotExist(err), "stale content from the corrupt clone should not survive")
 }
 
 // TestHoldSourceLockChildProcess is not a real test: it's a worker spawned by

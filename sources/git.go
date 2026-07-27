@@ -142,6 +142,21 @@ func (s *GitSource) ensureSourcesDirExists() error {
 	return nil
 }
 
+// incrementalBranch is the local branch syncGit's incremental-update path
+// resets and checks out on every sync, instead of leaving finalDest in a
+// detached-HEAD state. This is load-bearing, not cosmetic: "git clone"
+// (without "--no-checkout" or "--depth") only copies a source's
+// "refs/heads/*", not a detached HEAD, so a detached finalDest would give the
+// next incremental sync's local clone of it zero branches to send as "have"s
+// during the following "git fetch --depth=1". Without a "have", the server
+// can't tell what the client already has, and sends a full pack for the
+// requested commit -- silently degrading every sync after the first into the
+// same "full fresh clone" cost this path exists to avoid, and (verified
+// empirically) totally losing the branch by the second incremental sync.
+// Keeping a real, persistent branch ref here means every later sync's local
+// clone inherits it, so its fetch always has a "have" to negotiate against.
+const incrementalBranch = "hermit"
+
 // Atomically clone (or, if finalDest is already a clone, incrementally
 // update) a git repo.
 //
@@ -157,14 +172,23 @@ func (s *GitSource) ensureSourcesDirExists() error {
 // incrementally to keep the network cost close to a pull's: first a local,
 // working-tree-less clone of finalDest (a same-filesystem copy, not a
 // network operation), then a shallow fetch of just the latest commit from
-// the real source into it, then a checkout of that commit. A plain
-// "--reference-if-able" clone from source was tried here first and
-// discarded: finalDest is always itself a shallow (--depth=1) clone, and git
-// unconditionally refuses to use a shallow repository as a reference, so
-// that flag was silently a no-op and every sync was paying for a full fresh
-// clone. This incremental path was verified against the real default
-// source (632 manifests): ~0.9s versus ~3.3s for a fresh clone, close to
-// the ~0.7s a "git pull" on an already-current clone takes.
+// the real source into it, then a checkout of that commit onto
+// incrementalBranch (see its doc comment for why a real branch, not a
+// detached HEAD, is required for this to actually stay cheap on repeat
+// syncs). A plain "--reference-if-able" clone from source was tried here
+// first and discarded: finalDest is always itself a shallow (--depth=1)
+// clone, and git unconditionally refuses to use a shallow repository as a
+// reference, so that flag was silently a no-op and every sync was paying for
+// a full fresh clone. This incremental path was verified against the real
+// default source (632 manifests): ~0.9s versus ~3.3s for a fresh clone,
+// close to the ~0.7s a "git pull" on an already-current clone takes -- and,
+// separately, verified to stay that cheap across repeated syncs (not just
+// the first one) once incrementalBranch was introduced.
+//
+// If the incremental update fails (eg. finalDest's ".git" is corrupt or
+// truncated), this falls back to a fresh clone rather than surfacing the
+// failure, so a damaged existing copy can still self-heal the way a from-
+// scratch sync always could.
 //
 // The caller MUST hold the sync lock for finalDest.
 func syncGit(b *ui.Task, dir, source, finalDest string, runner util.CommandRunner) (err error) {
@@ -185,20 +209,41 @@ func syncGit(b *ui.Task, dir, source, finalDest string, runner util.CommandRunne
 	}
 	defer os.RemoveAll(dest)
 
+	freshClone := true
 	if info, _ := os.Stat(filepath.Join(finalDest, ".git")); info != nil {
-		if err = runner.RunInDir(b, dest, "git", "clone", "--no-checkout", finalDest, dest); err != nil {
+		if incErr := syncGitIncremental(b, dest, source, finalDest, runner); incErr == nil {
+			freshClone = false
+		} else {
+			b.Warnf("incremental sync from existing clone failed, falling back to a fresh clone: %s", incErr)
+			if err = os.RemoveAll(dest); err != nil {
+				return errors.WithStack(err)
+			}
+			if err = os.Mkdir(dest, 0700); err != nil {
+				return errors.WithStack(err)
+			}
+		}
+	}
+	if freshClone {
+		if err = runner.RunInDir(b, dest, "git", "clone", "--depth=1", source, dest); err != nil {
 			return errors.WithStack(err)
 		}
-		if err = runner.RunInDir(b, dest, "git", "fetch", "--depth=1", source, "HEAD"); err != nil {
-			return errors.WithStack(err)
-		}
-		if err = runner.RunInDir(b, dest, "git", "checkout", "--detach", "FETCH_HEAD"); err != nil {
-			return errors.WithStack(err)
-		}
-	} else if err = runner.RunInDir(b, dest, "git", "clone", "--depth=1", source, dest); err != nil {
-		return errors.WithStack(err)
 	}
 	return errors.WithStack(util.SwapDir(dest, finalDest))
+}
+
+// syncGitIncremental builds an updated tree at dest by cloning finalDest
+// locally (same-filesystem, not a network operation) and fetching just the
+// latest commit from the real source into it. See syncGit's doc comment for
+// why the result is checked out onto incrementalBranch rather than left
+// detached.
+func syncGitIncremental(b *ui.Task, dest, source, finalDest string, runner util.CommandRunner) error {
+	if err := runner.RunInDir(b, dest, "git", "clone", "--no-checkout", finalDest, dest); err != nil {
+		return errors.WithStack(err)
+	}
+	if err := runner.RunInDir(b, dest, "git", "fetch", "--depth=1", source, "HEAD"); err != nil {
+		return errors.WithStack(err)
+	}
+	return errors.WithStack(runner.RunInDir(b, dest, "git", "checkout", "-B", incrementalBranch, "FETCH_HEAD"))
 }
 
 // removeStaleScratchDirs removes leftover clone/swap scratch directories from
