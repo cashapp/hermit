@@ -214,6 +214,14 @@ func (u *uriFS) String() string                             { return u.uri }
 // instead of the usual fs.ErrNotExist when the failure is because this
 // source's entire backing directory is missing, rather than just the
 // requested file within it.
+//
+// The os.Stat below is necessarily retrospective and best-effort: it checks
+// whether the directory is missing *now*, not whether it was missing at the
+// moment FS.Open failed above. A directory that vanishes and reappears
+// between those two calls (eg. a fast concurrent resync) can still be
+// misreported either way. That's fine for our purposes -- callers only use
+// ErrSourceUnavailable as a signal to retry, never as an authoritative
+// answer -- but it means this is a heuristic, not a guarantee.
 func (u *uriFS) Open(name string) (fs.File, error) {
 	f, err := u.FS.Open(name)
 	if err != nil && u.dir != "" && errors.Is(err, fs.ErrNotExist) {

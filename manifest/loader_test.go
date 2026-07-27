@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/cashapp/hermit/errors"
@@ -82,6 +83,41 @@ func TestLoaderFallsBackToHealthySourceWhenAnotherIsUnavailable(t *testing.T) {
 	manifest, err := loader.get("protoc")
 	assert.NoError(t, err)
 	assert.Equal(t, "protoc is a compiler for protocol buffers definitions files.", manifest.Description)
+}
+
+// fakeCloneRunner is a util.CommandRunner whose "clone" writes a manifest
+// into dest instead of shelling out to git, modelling a source that has
+// simply never been cloned yet (rather than one that's genuinely broken).
+type fakeCloneRunner struct{}
+
+func (fakeCloneRunner) RunInDir(_ *ui.Task, dir string, args ...string) error {
+	if len(args) >= 2 && args[0] == "git" && args[1] == "clone" {
+		return os.WriteFile(filepath.Join(dir, "foo.hcl"), []byte(`description = "hi"`), 0600)
+	}
+	return errors.Errorf("unexpected command: %v", args)
+}
+
+// TestLoaderSyncsBeforeSleepingThroughBackoff verifies that Load, on hitting
+// ErrSourceUnavailable, actively syncs the source before falling back to the
+// bounded sleep-based backoff -- sleeping first would never make a source
+// that has never been cloned appear, and would add its full ~620ms worst
+// case to every such cold start for nothing. This is a regression test for
+// that ordering: with the old (sleep-first) order, this would still
+// eventually succeed, just roughly 620ms slower.
+func TestLoaderSyncsBeforeSleepingThroughBackoff(t *testing.T) {
+	l, _ := ui.NewForTesting()
+	stateDir := t.TempDir()
+	git := sources.NewGitSource("git://not-cloned-yet", filepath.Join(stateDir, "src"), fakeCloneRunner{})
+	srcs := sources.New(stateDir, []sources.Source{git})
+	loader := NewLoader(srcs)
+
+	start := time.Now()
+	manifest, err := loader.Load(l, "foo")
+	elapsed := time.Since(start)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "hi", manifest.Description)
+	assert.True(t, elapsed < 200*time.Millisecond, "Load took %s, expected a sync-first fast path, not the ~620ms backoff", elapsed)
 }
 
 // TestLoaderBuiltInSourceMissingManifestIsUnknownPackage guards against the

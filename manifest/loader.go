@@ -82,7 +82,18 @@ func (l *Loader) get(name string) (*AnnotatedManifest, error) {
 				continue
 			}
 			file = f
-			l.files[name] = file
+			if unavailable == nil {
+				// Only cache the result once every bundle consulted ahead of
+				// it, in preference order, was actually reachable. If a
+				// higher-preference bundle was unavailable, this answer may
+				// be shadowed by that bundle's own manifest once it
+				// recovers -- caching it here would let a transient outage
+				// permanently invert source precedence for the rest of this
+				// process's lifetime. Leaving it uncached means the next
+				// lookup re-tries the unavailable bundle from scratch, so it
+				// self-heals as soon as that bundle recovers.
+				l.files[name] = file
+			}
 			break
 		}
 		// Only report unavailability if the manifest was found nowhere else.
@@ -110,14 +121,6 @@ func (l *Loader) unknownPackageDetail(name string) string {
 	return fmt.Sprintf("%s (searched %s)", name, strings.Join(l.sources.Sources(), ", "))
 }
 
-// sourceUnavailableRetryBackoff bounds how long Load will wait for a
-// transiently-unavailable source (see sources.ErrSourceUnavailable, eg.
-// another Hermit process mid-sync) to become available again, before
-// falling back to the existing sync-and-retry below. Total worst case is
-// ~620ms, deliberately short so a genuinely unknown package is never
-// delayed by it.
-var sourceUnavailableRetryBackoff = []time.Duration{20 * time.Millisecond, 100 * time.Millisecond, 500 * time.Millisecond}
-
 // Load a manifest for the given package.
 // Syncs the sources if the manifest is not initially found.
 // Will return a wrapped ErrUnknownPackage if the package could not be found.
@@ -125,6 +128,28 @@ var sourceUnavailableRetryBackoff = []time.Duration{20 * time.Millisecond, 100 *
 // If any errors occur during the load, the first error will be returned.
 func (l *Loader) Load(u *ui.UI, name string) (*AnnotatedManifest, error) {
 	mnf, err := l.get(name)
+	if err != nil {
+		// Actively sync before falling back to sleeping through the bounded
+		// backoff below: a source that has never been cloned needs a real
+		// sync to ever become available, and sleeping first would add up to
+		// ~620ms of pure latency to every such cold start for no benefit --
+		// nothing changes the source's state on its own. This also covers
+		// the genuinely-unknown-package case, in case the source's cache is
+		// simply stale.
+		if syncErr := l.sources.Sync(u, true); syncErr != nil {
+			return nil, errors.WithStack(syncErr)
+		}
+		mnf, err = l.get(name)
+	}
+	// sourceUnavailableRetryBackoff bounds how long we'll additionally wait
+	// for a transiently-unavailable source (see sources.ErrSourceUnavailable,
+	// eg. another Hermit process mid-sync) to become available by itself --
+	// useful when our own Sync call above was a no-op (Sources.Sync skips
+	// sources once any one of them reports success) but a sibling process's
+	// concurrent sync of this specific source finishes in the meantime.
+	// Total worst case is ~620ms, deliberately short so a genuinely unknown
+	// package is never delayed by it.
+	sourceUnavailableRetryBackoff := []time.Duration{20 * time.Millisecond, 100 * time.Millisecond, 500 * time.Millisecond}
 	for _, backoff := range sourceUnavailableRetryBackoff {
 		if !errors.Is(err, sources.ErrSourceUnavailable) {
 			break
@@ -133,14 +158,7 @@ func (l *Loader) Load(u *ui.UI, name string) (*AnnotatedManifest, error) {
 		mnf, err = l.get(name)
 	}
 	if err != nil {
-		if err := l.sources.Sync(u, true); err != nil {
-			return nil, errors.WithStack(err)
-		}
-		// Try again.
-		mnf, err = l.get(name)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
+		return nil, errors.WithStack(err)
 	}
 	return mnf, nil
 }
