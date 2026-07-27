@@ -383,34 +383,43 @@ func (s *State) CacheAndDigest(b *ui.Task, p *manifest.Package) (string, error) 
 	return actualDigest, nil
 }
 
+// linkBinaries creates symlinks in s.binaryDir/<ref> for each of the
+// package's binaries, replacing any existing set.
+//
+// The new set of links is built in a temporary sibling directory and swapped
+// into place with util.SwapDir, rather than removing the existing directory
+// and recreating it in place. This method runs under s.acquireLock, but its
+// readers don't: CacheAndUnpack's pre-lock fast path (areBinariesLinked)
+// checks this directory without taking any lock, and by the time it returns
+// "linked", the caller may go on to actually exec a binary through it. A
+// destructive remove-then-recreate would leave a window during which the
+// directory is missing or only partially populated, visible to either of
+// those.
 func (s *State) linkBinaries(p *manifest.Package) error {
 	dir := filepath.Join(s.binaryDir, p.Reference.String())
-	// clean up the binaryDir before
-	if err := os.RemoveAll(dir); err != nil {
-		return errors.WithStack(err)
-	}
-
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return errors.WithStack(err)
-	}
 
 	bins, err := p.ResolveBinaries()
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
+	if err := os.MkdirAll(s.binaryDir, 0o700); err != nil {
+		return errors.WithStack(err)
+	}
+	tmp, err := os.MkdirTemp(s.binaryDir, filepath.Base(dir)+".tmp-*")
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer os.RemoveAll(tmp) // harmless once swapped into place
+
 	for _, bin := range bins {
-		to := filepath.Join(dir, filepath.Base(bin))
-
-		if dest, err := os.Readlink(to); err == nil && dest == bin {
-			continue
-		}
-
+		to := filepath.Join(tmp, filepath.Base(bin))
 		if err := os.Symlink(bin, to); err != nil {
 			return errors.WithStack(err)
 		}
 	}
-	return nil
+
+	return errors.WithStack(util.SwapDir(tmp, dir))
 }
 
 func (s *State) extract(b *ui.Task, p *manifest.Package) error {
