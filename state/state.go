@@ -456,12 +456,14 @@ func (s *State) extract(b *ui.Task, p *manifest.Package) error {
 	}
 	// From here on, p.Dest is already published: archive.Extract renames it
 	// into place before returning, not after finalise() runs. That means an
-	// unlocked reader could be looking at it, and archive.Extract itself
-	// refuses to extract into a p.Dest that already exists -- so any failure
-	// below must clean it up the same reader-safe way as everywhere else in
-	// this package, or a retry of this package is permanently wedged behind
-	// "destination already exists".
-	// Copy manifest referred files
+	// unlocked reader could be looking at it, so any failure below must clean
+	// it up the same reader-safe way as everywhere else in this package. For
+	// the common case where the manifest doesn't override "root" (so it
+	// defaults to p.Dest, see manifest.Package), leaving p.Dest behind on
+	// failure is worse than "wedged": CacheAndUnpack's isExtracted check
+	// would see p.Root already present and skip re-extraction on retry
+	// entirely, silently leaving the package installed without these files
+	// forever. Copy manifest referred files.
 	for _, file := range p.Files {
 		err = vfs.CopyFile(file.FS, file.FromPath, file.ToPath)
 		if err != nil {

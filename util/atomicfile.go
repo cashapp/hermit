@@ -17,11 +17,14 @@ import (
 // write and the underlying data actually reaching disk could otherwise leave
 // path pointing at a zero-length or truncated file), but on macOS, Go's
 // File.Sync issues fcntl(F_FULLFSYNC), which is roughly two orders of
-// magnitude slower than a plain write -- and this is called from
-// internal/dao.UpdatePackage on Hermit's "exec" hot path. The data this
-// protects (a cached etag and check timestamp) is not authoritative state:
-// losing it to a crash just costs one extra upstream check on the next run,
-// which doesn't justify that cost on every invocation.
+// magnitude slower than a plain write. That cost is judged not worth paying
+// here for either of this helper's callers: internal/dao.UpdatePackage's
+// writes (a cached etag and check timestamp) already sit behind a network
+// round trip and aren't authoritative -- losing one to a crash just costs one
+// extra upstream check next run -- and while Env.SetEnv/DelEnv's writes to
+// the user's bin/hermit.hcl are more consequential (a crash could lose a
+// just-persisted "hermit env" change), that's accepted as the cost of a
+// single shared helper rather than special-casing fsync per caller.
 func AtomicWriteFile(path string, data []byte, perm os.FileMode) error {
 	dir := filepath.Dir(path)
 	tmp, err := os.CreateTemp(dir, filepath.Base(path)+".tmp-*")

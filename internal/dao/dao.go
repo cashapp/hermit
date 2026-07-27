@@ -140,12 +140,12 @@ func (d *DAO) readCheckedAt(pkgRef string) (time.Time, error) {
 // so two UpdatePackage calls for the same package racing each other can
 // interleave: caller A's etag write can be immediately followed by caller
 // B's checked-at write, leaving a GetPackage that reads in between with A's
-// etag paired with B's checked-at time. The single-JSON-file format this
-// replaced wrote both fields in one atomic rename, so this specific
-// mismatched pairing is newly possible with the two-file split -- but it's
-// still benign: at worst it under- or over-estimates how recently a
-// concurrently-updated package was checked by one update cycle, which
-// self-corrects on the next check.
+// etag paired with B's checked-at time. The single etag file this replaced
+// produced both fields (the etag content and, via its mtime, the checked-at
+// time) from that one write, so this specific mismatched pairing is newly
+// possible with the two-file split -- but it's still benign: at worst it
+// under- or over-estimates how recently a concurrently-updated package was
+// checked by one update cycle, which self-corrects on the next check.
 func (d *DAO) UpdatePackage(pkgRef string, pkg *Package) error {
 	checkedAt := pkg.UpdateCheckedAt
 	if checkedAt.IsZero() {
