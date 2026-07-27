@@ -54,6 +54,7 @@ func NewGitSourceWithLockTimeout(uri, sourceDir string, runner util.CommandRunne
 	path := filepath.Join(sourceDir, key)
 	return &GitSource{&uriFS{
 		uri: uri,
+		dir: path,
 		FS:  os.DirFS(path),
 	}, sourceDir, path, runner, lockTimeout}
 }

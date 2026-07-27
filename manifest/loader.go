@@ -65,23 +65,58 @@ func (l *Loader) get(name string) (*AnnotatedManifest, error) {
 	file, ok := l.files[name]
 	if !ok {
 		path := name + ".hcl"
+		// unavailable records the first sources.ErrSourceUnavailable seen
+		// while searching, but we keep searching the remaining bundles: one
+		// transiently-unavailable source must never mask a package provided
+		// by another, healthy source.
+		var unavailable error
 		for _, bundle := range l.sources.Bundles() {
-			file = load(bundle, name, path)
-			if file == nil {
+			f, err := load(bundle, name, path)
+			if err != nil {
+				if unavailable == nil {
+					unavailable = err
+				}
 				continue
 			}
+			if f == nil {
+				continue
+			}
+			file = f
 			l.files[name] = file
 			break
 		}
+		// Only report unavailability if the manifest was found nowhere else.
+		// Callers (Load) use this to distinguish "retry, this was
+		// inconclusive" from a genuine ErrUnknownPackage.
+		if file == nil && unavailable != nil {
+			return nil, unavailable
+		}
 	}
 	if file == nil {
-		return nil, errors.Wrap(ErrUnknownPackage, name)
+		return nil, errors.Wrap(ErrUnknownPackage, l.unknownPackageDetail(name))
 	}
 	if len(file.Errors) > 0 {
 		return nil, errors.WithStack(file.Errors[0])
 	}
 	return file, nil
 }
+
+// unknownPackageDetail enumerates the sources consulted when a package could
+// not be found in any of them. Without this, a permanently misconfigured or
+// inaccessible source (a bad "sources = [...]" entry, the wrong
+// HERMIT_STATE_DIR, or a permissions problem) masquerades as "unknown
+// package" for every package name, with no indication of why.
+func (l *Loader) unknownPackageDetail(name string) string {
+	return fmt.Sprintf("%s (searched %s)", name, strings.Join(l.sources.Sources(), ", "))
+}
+
+// sourceUnavailableRetryBackoff bounds how long Load will wait for a
+// transiently-unavailable source (see sources.ErrSourceUnavailable, eg.
+// another Hermit process mid-sync) to become available again, before
+// falling back to the existing sync-and-retry below. Total worst case is
+// ~620ms, deliberately short so a genuinely unknown package is never
+// delayed by it.
+var sourceUnavailableRetryBackoff = []time.Duration{20 * time.Millisecond, 100 * time.Millisecond, 500 * time.Millisecond}
 
 // Load a manifest for the given package.
 // Syncs the sources if the manifest is not initially found.
@@ -90,10 +125,16 @@ func (l *Loader) get(name string) (*AnnotatedManifest, error) {
 // If any errors occur during the load, the first error will be returned.
 func (l *Loader) Load(u *ui.UI, name string) (*AnnotatedManifest, error) {
 	mnf, err := l.get(name)
+	for _, backoff := range sourceUnavailableRetryBackoff {
+		if !errors.Is(err, sources.ErrSourceUnavailable) {
+			break
+		}
+		time.Sleep(backoff)
+		mnf, err = l.get(name)
+	}
 	if err != nil {
-		err := l.sources.Sync(u, true)
-		if err != nil {
-			return nil, errors.Wrap(err, err.Error())
+		if err := l.sources.Sync(u, true); err != nil {
+			return nil, errors.WithStack(err)
 		}
 		// Try again.
 		mnf, err = l.get(name)
@@ -171,7 +212,14 @@ func (l *Loader) Glob(glob string) ([]*AnnotatedManifest, error) {
 			mu.Unlock()
 
 			wg.Go(func() error {
-				manifest := load(bundle, name, file)
+				manifest, err := load(bundle, name, file)
+				if err != nil {
+					// A transiently-unavailable source isn't fatal here:
+					// unlike Load, Glob/All are best-effort enumerations
+					// across every bundle, so just skip what this one
+					// bundle couldn't provide right now.
+					return nil //nolint:nilerr
+				}
 				if manifest != nil {
 					mftC <- result{manifest, name}
 				}
@@ -202,30 +250,37 @@ func (l *Loader) Errors() ManifestErrors {
 
 // Load manifest from bundle.
 //
-// Will return nil if it does not exist.
-func load(bundle fs.FS, name, filename string) *AnnotatedManifest {
+// Returns (nil, nil) if the manifest genuinely does not exist in this
+// bundle. Returns a non-nil error wrapping sources.ErrSourceUnavailable if
+// this bundle's backing source could not be read at all (eg. because
+// another process is mid-sync) -- callers should treat that as
+// "inconclusive", not "not found here".
+func load(bundle fs.FS, name, filename string) (*AnnotatedManifest, error) {
 	annotated := &AnnotatedManifest{
 		FS:   bundle,
 		Name: name,
 		Path: fmt.Sprintf("%s/%s", bundle, filename),
 	}
 	data, err := fs.ReadFile(bundle, filename)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
-	} else if err != nil {
+	switch {
+	case errors.Is(err, sources.ErrSourceUnavailable):
+		return nil, errors.WithStack(err)
+	case errors.Is(err, os.ErrNotExist):
+		return nil, nil
+	case err != nil:
 		annotated.Errors = append(annotated.Errors, errors.WithStack(err))
-		return annotated
+		return annotated, nil
 	}
 	manifest := &Manifest{}
 	err = hcl.Unmarshal(data, manifest)
 	if err != nil {
 		annotated.Errors = append(annotated.Errors, errors.WithStack(err))
-		return annotated
+		return annotated, nil
 	}
 	annotated.Manifest = manifest
 	annotated.Errors = append(annotated.Errors, annotated.validate()...)
 	synthesise(annotated)
-	return annotated
+	return annotated, nil
 }
 
 // LoadManifestFile Utility function to just load a manifest file.
