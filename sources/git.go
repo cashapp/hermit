@@ -43,10 +43,12 @@ func NewGitSource(uri, sourceDir string, runner util.CommandRunner) *GitSource {
 }
 
 // NewGitSourceWithLockTimeout returns a new GitSource with an explicit
-// timeout for the lock acquired around synchronisation.
+// timeout for the lock acquired around synchronisation. This is the
+// underlying constructor NewGitSource itself uses to apply
+// DefaultLockTimeout; tests use it directly to exercise timeout/contention
+// behaviour without waiting out the real default.
 //
-// A timeout <= 0 is treated as DefaultLockTimeout. This is primarily useful
-// for tests.
+// A timeout <= 0 is treated as DefaultLockTimeout.
 func NewGitSourceWithLockTimeout(uri, sourceDir string, runner util.CommandRunner, lockTimeout time.Duration) *GitSource {
 	key := util.Hash(uri)
 	path := filepath.Join(sourceDir, key)
@@ -112,6 +114,15 @@ func (s *GitSource) Sync(p *ui.UI, force bool) (bool, error) {
 // directory) shows it was successfully synced at or after "since", allowing
 // fsTimeGranularity of slack for filesystems that only store whole-second
 // mtimes (eg. HFS+).
+//
+// That slack means syncedSince can report true for a sync that was actually
+// requested up to fsTimeGranularity *after* the directory's real mtime --
+// ie. Sync's double-checked-locking skip ("synchronised by another process")
+// can fire even though the peer's sync, strictly, finished a moment before
+// we asked. This is intentional and safe: skipping in that narrow window
+// just means we use a copy that's at most fsTimeGranularity staler than the
+// most pedantically-correct answer, which SyncFrequency-bounded staleness
+// already tolerates far more of.
 func syncedSince(info os.FileInfo, since time.Time) bool {
 	return info != nil && !info.ModTime().Add(fsTimeGranularity).Before(since)
 }
@@ -131,7 +142,21 @@ func (s *GitSource) ensureSourcesDirExists() error {
 	return nil
 }
 
-// Atomically clone git repo.
+// Atomically clone (or, if finalDest is already a clone, re-clone) a git
+// repo.
+//
+// There is deliberately no in-place "git pull" path: readers in other Hermit
+// processes do not take the sync lock, so mutating finalDest's working tree
+// in place (as "git pull" does -- updating and deleting files directly
+// under it) is visible to them mid-update, and two concurrent "git pull"s
+// against the same working tree can also collide with each other (eg. on
+// ".git/index.lock"). Always cloning to a fresh directory and swapping it in
+// atomically (see util.SwapDir) avoids both problems, at the cost of always
+// paying for a fresh clone rather than an incremental fetch. That's mitigated
+// with "--reference-if-able": when finalDest already has a ".git" directory,
+// it's used as a local object-store cache for the clone below, so the
+// network cost is close to that of a pull, without mutating finalDest itself
+// until the clone has fully succeeded.
 //
 // The caller MUST hold the sync lock for finalDest.
 func syncGit(b *ui.Task, dir, source, finalDest string, runner util.CommandRunner) (err error) {
@@ -146,38 +171,21 @@ func syncGit(b *ui.Task, dir, source, finalDest string, runner util.CommandRunne
 
 	removeStaleScratchDirs(b, dir, finalDest)
 
-	// First, if a git repo exists, just pull.
-	info, _ := os.Stat(filepath.Join(finalDest, ".git"))
-	if info != nil {
-		err = runner.RunInDir(b, finalDest, "git", "pull")
-		if err == nil {
-			return nil
-		}
-		// If pull fails, assume the repo is corrupted and just try and re-clone it.
-	}
-	// No git repo, clone down to temporary directory.
 	dest, err := os.MkdirTemp(dir, filepath.Base(finalDest)+tmpInfix+"*")
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	defer os.RemoveAll(dest)
-	if err = runner.RunInDir(b, dest, "git", "clone", "--depth=1", source, dest); err != nil {
+
+	args := []string{"git", "clone", "--depth=1"}
+	if info, _ := os.Stat(filepath.Join(finalDest, ".git")); info != nil {
+		args = append(args, "--reference-if-able", finalDest, "--dissociate")
+	}
+	args = append(args, source, dest)
+	if err = runner.RunInDir(b, dest, args...); err != nil {
 		return errors.WithStack(err)
 	}
-	return errors.WithStack(swapDir(dest, finalDest))
-}
-
-// swapDir atomically (from the point of view of an unlocked reader) replaces
-// finalDest with src. See util.SwapDir for how.
-//
-// Readers in other Hermit processes do not take the sync lock, so this
-// matters here specifically to avoid the ENOENT-during-clone window that
-// makes every package look unknown while a large source tree is being
-// replaced.
-//
-// The caller MUST hold the sync lock for finalDest.
-func swapDir(src, finalDest string) error {
-	return util.SwapDir(src, finalDest)
+	return errors.WithStack(util.SwapDir(dest, finalDest))
 }
 
 // removeStaleScratchDirs removes leftover clone/swap scratch directories from

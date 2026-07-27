@@ -329,17 +329,30 @@ func TestSyncLockTimeoutFallsBackToExistingCopy(t *testing.T) {
 	assert.NoError(t, err)
 
 	path := filepath.Join(sourceDir, util.Hash(uri))
+	readyFile := filepath.Join(t.TempDir(), "lock-held")
 	holdFor := 500 * time.Millisecond
 	cmd := exec.Command(os.Args[0], "-test.run=TestHoldSourceLockChildProcess", "-test.v")
 	cmd.Env = append(os.Environ(),
 		"HERMIT_TEST_CHILD=1",
 		"HERMIT_TEST_LOCK_PATH="+path,
 		"HERMIT_TEST_LOCK_HOLD="+holdFor.String(),
+		"HERMIT_TEST_LOCK_READY_FILE="+readyFile,
 	)
 	assert.NoError(t, cmd.Start())
+	// Guarantee the child is reaped even if an assertion below fails the
+	// test early (assert.* calls t.Fatalf, which skips the cmd.Wait() at
+	// the end of this function): an orphaned child would otherwise keep
+	// holding the lock file open for the rest of holdFor.
+	t.Cleanup(func() {
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+	})
 
-	// Give the child a moment to actually acquire the lock before we race it.
-	time.Sleep(50 * time.Millisecond)
+	// Wait for the child to actually confirm it holds the lock, rather than
+	// guessing how long that takes: a fixed sleep here would be flaky on a
+	// slow/loaded machine (racing shortTimeoutSource.Sync below before the
+	// child has the lock at all) and wastes time everywhere else.
+	waitForFile(t, readyFile, 30*time.Second)
 
 	shortTimeoutSource := sources.NewGitSourceWithLockTimeout(uri, sourceDir, runner, 10*time.Millisecond)
 	did, err := shortTimeoutSource.Sync(u, true)

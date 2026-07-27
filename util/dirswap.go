@@ -23,8 +23,11 @@ const DirSwapAsideSuffix = ".old"
 // missing/partial for long enough) that a concurrent unlocked read observes
 // ENOENT or an incomplete directory. Instead, the existing tree is renamed
 // aside and the new one is renamed into its place. This shrinks the window
-// in which finalDest does not exist to the gap between two rename(2) calls
-// in the same directory, which is not observable by another process.
+// in which finalDest does not exist from however long it takes to remove and
+// repopulate a potentially large tree, down to the gap between two rename(2)
+// calls in the same directory -- not zero, but small and constant-time
+// regardless of tree size, and each rename itself is atomic so a reader never
+// observes a partially-written directory.
 //
 // The caller must ensure no other goroutine or process can be concurrently
 // mutating finalDest (eg. by holding an appropriate lock); SwapDir only

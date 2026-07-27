@@ -42,34 +42,6 @@ func TestSyncedSince(t *testing.T) {
 	}
 }
 
-// TestSwapDirRecoversFromMissingSource verifies that swapDir cleans up a
-// stale ".old" left behind by a process that crashed mid-swap, and leaves no
-// scratch directories behind on success.
-func TestSwapDirRecoversFromMissingSource(t *testing.T) {
-	dir := t.TempDir()
-	finalDest := filepath.Join(dir, "final")
-	assert.NoError(t, os.MkdirAll(finalDest, 0700))
-	assert.NoError(t, os.WriteFile(filepath.Join(finalDest, "old.hcl"), []byte("old"), 0600))
-
-	// Simulate a previous crash mid-swap: a stale ".old" already exists.
-	aside := finalDest + asideSuffix
-	assert.NoError(t, os.MkdirAll(aside, 0700))
-	assert.NoError(t, os.WriteFile(filepath.Join(aside, "junk"), []byte("junk"), 0600))
-
-	src := filepath.Join(dir, "new")
-	assert.NoError(t, os.MkdirAll(src, 0700))
-	assert.NoError(t, os.WriteFile(filepath.Join(src, "new.hcl"), []byte("new"), 0600))
-
-	assert.NoError(t, swapDir(src, finalDest))
-
-	_, err := os.Stat(filepath.Join(finalDest, "new.hcl"))
-	assert.NoError(t, err)
-	_, err = os.Stat(aside)
-	assert.True(t, os.IsNotExist(err))
-	_, err = os.Stat(src)
-	assert.True(t, os.IsNotExist(err))
-}
-
 // TestRemoveStaleScratchDirs verifies the age-gated cleanup sweep only
 // touches Hermit's own scratch-directory naming conventions, and only once
 // they're old enough that another (older, lock-unaware) Hermit process is
@@ -133,6 +105,11 @@ func TestHoldSourceLockChildProcess(t *testing.T) {
 	release, err := acquireSyncLock(u, path, DefaultLockTimeout, "test lock holder")
 	if err != nil {
 		t.Fatalf("failed to acquire lock: %s", err)
+	}
+	if readyFile := os.Getenv("HERMIT_TEST_LOCK_READY_FILE"); readyFile != "" {
+		if err := os.WriteFile(readyFile, nil, 0600); err != nil {
+			t.Fatalf("failed to signal lock held: %s", err)
+		}
 	}
 	time.Sleep(hold)
 	if err := release(); err != nil {

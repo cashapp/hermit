@@ -2,6 +2,7 @@ package sources
 
 import (
 	"context"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -9,6 +10,11 @@ import (
 	"github.com/cashapp/hermit/ui"
 	"github.com/cashapp/hermit/util/flock"
 )
+
+// slowLockWaitThreshold is how long acquireSyncLock will wait before it
+// considers the wait worth telling the user about at Info level: below this,
+// logging would just be noise for the common, fast, uncontended case.
+const slowLockWaitThreshold = time.Second
 
 // DefaultLockTimeout is how long Hermit will wait for another process to
 // finish synchronising a source before giving up.
@@ -39,13 +45,15 @@ var (
 	localLocks   = map[string]*sync.Mutex{}
 )
 
-func localLock(path string) *sync.Mutex {
+// localLock returns the process-local mutex for the given (already absolute)
+// lock path.
+func localLock(absPath string) *sync.Mutex {
 	localLocksMu.Lock()
 	defer localLocksMu.Unlock()
-	l, ok := localLocks[path]
+	l, ok := localLocks[absPath]
 	if !ok {
 		l = &sync.Mutex{}
-		localLocks[path] = l
+		localLocks[absPath] = l
 	}
 	return l
 }
@@ -63,17 +71,35 @@ func acquireSyncLock(log ui.Logger, dir string, timeout time.Duration, message s
 		timeout = DefaultLockTimeout
 	}
 	path := dir + lockSuffix
+	// Resolve to an absolute path before using it as a map key or handing it
+	// to flock: two different relative paths (or a relative and an absolute
+	// path) that resolve to the same file must serialise against each other,
+	// or the process-local mutex below is useless for callers that don't all
+	// construct "dir" identically.
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
 
-	local := localLock(path)
+	local := localLock(absPath)
 	local.Lock()
 
-	log.Tracef("acquiring source lock %s (timeout %s)", path, timeout)
+	log.Tracef("acquiring source lock %s (timeout %s)", absPath, timeout)
+	start := time.Now()
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	releaseFlock, err := flock.Acquire(ctx, path, message)
+	releaseFlock, err := flock.Acquire(ctx, absPath, message)
 	if err != nil {
 		local.Unlock()
-		return nil, errors.Wrapf(err, "failed to acquire source lock %s", path)
+		return nil, errors.Wrapf(err, "failed to acquire source lock %s", absPath)
+	}
+	if waited := time.Since(start); waited > slowLockWaitThreshold {
+		// The common, uncontended case acquires near-instantly and would
+		// make this pure noise; a wait long enough to notice is worth
+		// telling the user about, since otherwise a command silently hangs
+		// for up to "timeout" with only a Trace-level line (invisible by
+		// default) explaining why.
+		log.Infof("waited %s to acquire source lock for %s", waited.Round(time.Millisecond), absPath)
 	}
 	return func() error {
 		defer local.Unlock()
