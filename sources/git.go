@@ -243,7 +243,12 @@ func syncGitIncremental(b *ui.Task, dest, source, finalDest string, runner util.
 	if err := runner.RunInDir(b, dest, "git", "fetch", "--depth=1", source, "HEAD"); err != nil {
 		return errors.WithStack(err)
 	}
-	return errors.WithStack(runner.RunInDir(b, dest, "git", "checkout", "-B", incrementalBranch, "FETCH_HEAD"))
+	// "--force" makes materialising the worktree here not depend on dest
+	// having no ".git/index" (true today, since "clone --no-checkout" writes
+	// none) -- without it, a checkout that git considers a no-op change
+	// writes nothing, silently leaving dest's worktree empty were that ever
+	// no longer the case.
+	return errors.WithStack(runner.RunInDir(b, dest, "git", "checkout", "--force", "-B", incrementalBranch, "FETCH_HEAD"))
 }
 
 // removeStaleScratchDirs removes leftover clone/swap scratch directories from
