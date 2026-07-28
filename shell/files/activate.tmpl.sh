@@ -37,7 +37,7 @@ _hermit_deactivate() {
 {{- end}}
 
 {{- if .Zsh }}
-  precmd_functions=(${precmd_functions:#(update_hermit_env|update_hermit_ps1)})
+  precmd_functions=(${precmd_functions:#(update_hermit_env|update_hermit_ps1|update_hermit_path)})
 {{- end}}
 
 {{- if ne .Prompt "none"}}
@@ -102,6 +102,18 @@ fi
 
 {{- if .Zsh }}
 precmd_functions+=(update_hermit_env)
+
+# Like the prompt above, Hermit may have been activated before the user's
+# startup files ran (eg. from hooks in /etc/zshrc), in which case anything
+# they prepend to PATH (eg. RVM) would shadow the environment. Re-assert
+# Hermit's PATH entries once, at the first prompt.
+precmd_functions+=(update_hermit_path)
+update_hermit_path() {
+  precmd_functions=(${precmd_functions:#update_hermit_path})
+  local -a hermit_path
+  hermit_path=(${(s.:.)${HERMIT_PREPEND_PATH-}} "${HERMIT_ENV}/bin")
+  path=($hermit_path ${path:|hermit_path})
+}
 {{- end}}
 
 if type hermit_on_activate >/dev/null 2>&1; then hermit_on_activate; fi
