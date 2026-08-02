@@ -4,7 +4,6 @@ import (
 	_ "embed"
 	"fmt"
 	"io"
-	"path/filepath"
 	"text/template"
 
 	"github.com/cashapp/hermit/envars"
@@ -34,7 +33,7 @@ func (sh *Fish) Name() string { return "fish" }
 func (sh *Fish) ActivationScript(w io.Writer, config ActivationConfig) error {
 	err := fishActivationScriptTmpl.Execute(w, &fishActivationContext{
 		ActivationConfig: config,
-		EnvName:          filepath.Base(config.Root),
+		EnvName:          envName(config.Root),
 		Shell:            "fish",
 	})
 	return errors.WithStack(err)

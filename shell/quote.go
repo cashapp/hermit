@@ -2,8 +2,31 @@ package shell
 
 import (
 	"bytes"
+	"path/filepath"
 	"strings"
+	"unicode"
 )
+
+const envNameSafePunctuation = " -_.,+=:@~"
+
+// envName sanitises the environment basename for use in the shell prompt.
+//
+// Quoting into a variable is not enough: zsh expands "%" after substitution,
+// and renders the reference literally unless PROMPT_SUBST is set.
+func envName(root string) string {
+	base := filepath.Base(root)
+	var name strings.Builder
+	name.Grow(len(base))
+	for _, r := range base {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) || unicode.IsMark(r) ||
+			strings.ContainsRune(envNameSafePunctuation, r) {
+			name.WriteRune(r)
+		} else {
+			name.WriteRune('_')
+		}
+	}
+	return name.String()
+}
 
 // Quote returns a word quoted with single-quotes for consumption by shells.
 //

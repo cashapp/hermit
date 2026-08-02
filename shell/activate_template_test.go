@@ -60,6 +60,45 @@ func TestActivateHermitRejectsMaliciousEnvKey(t *testing.T) {
 	}
 }
 
+func TestActivationScriptNeutralisesMaliciousEnvBasename(t *testing.T) {
+	// Regression test for VULN-78225: command injection via the environment basename.
+	payload := `$(id>RCE_ID.txt;whoami>RCE_WHOAMI.txt;printf PWNED>RCE_WRITE.txt)`
+	for _, sh := range []Shell{&Bash{}, &Zsh{}, &Fish{}} {
+		t.Run(sh.Name(), func(t *testing.T) {
+			var out bytes.Buffer
+			err := ActivateHermit(&out, sh, ActivationConfig{
+				Root:   "/tmp/" + payload,
+				Prompt: "env",
+				Env:    envars.Envars{"HERMIT_BIN": "/tmp/" + payload + "/bin"},
+			})
+			assert.NoError(t, err)
+
+			script := out.String()
+			checked := 0
+			for line := range strings.SplitSeq(script, "\n") {
+				_, assignment, ok := strings.Cut(line, `PS1="`)
+				if !ok {
+					continue
+				}
+				name, _, ok := strings.Cut(assignment, "🐚")
+				if !ok {
+					continue
+				}
+				for _, metachar := range []string{"$", "`", `"`, `\`, "%", "!", ";", ">"} {
+					assert.NotContains(t, name, metachar, "%s", line)
+				}
+				checked++
+			}
+			// Fish does not interpolate the environment name into its prompt.
+			if sh.Name() != "fish" {
+				assert.True(t, checked > 0, "no prompt assignment found in:\n%s", script)
+			}
+			assert.NotContains(t, script, `PS1="$(`)
+			assert.Contains(t, script, "'/tmp/"+payload+"'")
+		})
+	}
+}
+
 func TestFishActivationScriptQuotesPathsWithSpaces(t *testing.T) {
 	root := "/tmp/Application Support/hermit env"
 

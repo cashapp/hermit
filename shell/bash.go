@@ -2,7 +2,6 @@ package shell
 
 import (
 	"io"
-	"path/filepath"
 
 	"github.com/cashapp/hermit/errors"
 )
@@ -27,7 +26,7 @@ func (sh *Bash) Name() string { return "bash" }
 func (sh *Bash) ActivationScript(w io.Writer, config ActivationConfig) error {
 	err := posixActivationScriptTmpl.Execute(w, &posixActivationContext{
 		ActivationConfig: config,
-		EnvName:          filepath.Base(config.Root),
+		EnvName:          envName(config.Root),
 		Shell:            "bash",
 	})
 	return errors.WithStack(err)

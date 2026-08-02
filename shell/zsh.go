@@ -2,7 +2,6 @@ package shell
 
 import (
 	"io"
-	"path/filepath"
 
 	"github.com/cashapp/hermit/errors"
 )
@@ -41,7 +40,7 @@ func (sh *Zsh) Name() string { return "zsh" }
 
 func (sh *Zsh) ActivationScript(w io.Writer, config ActivationConfig) error {
 	err := posixActivationScriptTmpl.Execute(w, &posixActivationContext{
-		EnvName:          filepath.Base(config.Root),
+		EnvName:          envName(config.Root),
 		ActivationConfig: config,
 		Shell:            "zsh",
 	})
