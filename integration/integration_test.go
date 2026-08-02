@@ -101,6 +101,26 @@ func TestIntegration(t *testing.T) {
 			},
 		},
 		{
+			// Regression test for VULN-78225: command injection via the environment basename.
+			name: "MaliciousEnvBasenameDoesNotExecute",
+			script: `
+				cat > "$HERMIT_USER_CONFIG" <<EOF
+prompt = "env"
+EOF
+				EVIL='$(printf PWNED>RCE.txt)'
+				mkdir -p "$EVIL"
+				hermit init --no-git "$EVIL"
+				# Non-interactive bash unsets PS1.
+				PS1=baseline
+				. "$EVIL/bin/activate-hermit"
+				# zsh defers the prompt update to precmd.
+				if [ -n "${ZSH_VERSION-}" ]; then update_hermit_ps1; fi
+				assert test ! -e RCE.txt
+				echo "prompt is: $PS1"
+			`,
+			expectations: exp{outputContains("__printf PWNED_RCE.txt_🐚")},
+		},
+		{
 			name: "InitBasicDefaultsToTrue",
 			script: `
 				# Remove the user config file created by test framework to test "no config" path
