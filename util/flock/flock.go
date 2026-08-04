@@ -72,6 +72,19 @@ func Acquire(ctx context.Context, path, message string) (release func() error, e
 	}
 }
 
+// acquire takes the flock itself, then records our PID in the lock file's
+// contents for the benefit of Acquire's own-PID re-entrancy check above.
+//
+// There is a small window between the LOCK_EX succeeding and the PID payload
+// being written below: a concurrent Acquire call in another process that
+// reads the file's contents during that window sees either an empty file
+// (first-ever acquisition) or a stale PID from whoever held the lock
+// previously -- never our own PID, so its own-PID check simply falls
+// through to the normal wait/retry path rather than misbehaving. This is
+// pre-existing and has always been benign, but it is now load-bearing:
+// sources/lock.go's cross-process source lock depends on Acquire's
+// re-entrancy check to avoid a second sync within the same process
+// deadlocking against itself.
 func acquire(path, message string) (release func() error, err error) {
 	pid := getPID()
 	fd, err := unix.Open(path, unix.O_CREAT|unix.O_RDWR|unix.O_CLOEXEC|unix.O_SYNC, 0600)
