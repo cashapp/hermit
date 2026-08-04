@@ -17,7 +17,12 @@ func NewBuiltInSource(dir fs.FS) *BuiltInSource {
 }
 
 func (s *BuiltInSource) Sync(_ *ui.UI, _ bool) (bool, error) {
-	return true, nil
+	// This source performs no actual synchronisation, so "false" is the
+	// correct answer to "did I actually update anything?" -- returning
+	// "true" here poisons Sources.isSynchronised (sources.go), which is set
+	// if *any* source reports it synced, and since BuiltInSource is always
+	// prepended, that made every other source's "sync and retry" a no-op.
+	return false, nil
 }
 
 func (s *BuiltInSource) URI() string {
@@ -25,5 +30,8 @@ func (s *BuiltInSource) URI() string {
 }
 
 func (s *BuiltInSource) Bundle() fs.FS {
-	return &uriFS{s.URI(), s.fs}
+	// dir is deliberately left empty: this source is backed by an in-memory
+	// FS with no directory on disk that could vanish out from under it (see
+	// the comment on uriFS.dir).
+	return &uriFS{uri: s.URI(), FS: s.fs}
 }
