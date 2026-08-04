@@ -262,6 +262,13 @@ func (s *State) ReadPackageState(pkg *manifest.Package) {
 }
 
 // WritePackageState updates the fields and usage time stamp of the given package
+//
+// A zero UpdateCheckedAt (when p.UpdateInterval <= 0, ie. this package never
+// checks for updates) is stored as "now" by dao.UpdatePackage rather than as
+// a literal zero time -- see its docs. That's harmless here specifically:
+// EnsureChannelIsUpToDate short-circuits on UpdateInterval == 0 before ever
+// consulting UpdatedAt, so the substituted value is never read back for a
+// package in this state.
 func (s *State) WritePackageState(p *manifest.Package) error {
 	updatedAt := time.Time{}
 	if p.UpdateInterval > 0 {
@@ -304,7 +311,7 @@ func (s *State) removeRecursive(b *ui.Task, dest string) error {
 		return errors.WithStack(err)
 	})
 	task.Debugf("rm -rf %s", dest)
-	return errors.WithStack(os.RemoveAll(dest))
+	return errors.WithStack(util.RemoveAllAtomic(dest))
 }
 
 // CacheAndUnpack downloads a package and extracts it if it is not present.
@@ -383,34 +390,43 @@ func (s *State) CacheAndDigest(b *ui.Task, p *manifest.Package) (string, error) 
 	return actualDigest, nil
 }
 
+// linkBinaries creates symlinks in s.binaryDir/<ref> for each of the
+// package's binaries, replacing any existing set.
+//
+// The new set of links is built in a temporary sibling directory and swapped
+// into place with util.SwapDir, rather than removing the existing directory
+// and recreating it in place. This method runs under s.acquireLock, but its
+// readers don't: CacheAndUnpack's pre-lock fast path (areBinariesLinked)
+// checks this directory without taking any lock, and by the time it returns
+// "linked", the caller may go on to actually exec a binary through it. A
+// destructive remove-then-recreate would leave a window during which the
+// directory is missing or only partially populated, visible to either of
+// those.
 func (s *State) linkBinaries(p *manifest.Package) error {
 	dir := filepath.Join(s.binaryDir, p.Reference.String())
-	// clean up the binaryDir before
-	if err := os.RemoveAll(dir); err != nil {
-		return errors.WithStack(err)
-	}
-
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return errors.WithStack(err)
-	}
 
 	bins, err := p.ResolveBinaries()
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
+	if err := os.MkdirAll(s.binaryDir, 0o700); err != nil {
+		return errors.WithStack(err)
+	}
+	tmp, err := os.MkdirTemp(s.binaryDir, filepath.Base(dir)+".tmp-*")
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer os.RemoveAll(tmp) // harmless once swapped into place
+
 	for _, bin := range bins {
-		to := filepath.Join(dir, filepath.Base(bin))
-
-		if dest, err := os.Readlink(to); err == nil && dest == bin {
-			continue
-		}
-
+		to := filepath.Join(tmp, filepath.Base(bin))
 		if err := os.Symlink(bin, to); err != nil {
 			return errors.WithStack(err)
 		}
 	}
-	return nil
+
+	return errors.WithStack(util.SwapDir(tmp, dir))
 }
 
 func (s *State) extract(b *ui.Task, p *manifest.Package) error {
@@ -438,15 +454,25 @@ func (s *State) extract(b *ui.Task, p *manifest.Package) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	// Copy manifest referred files
+	// From here on, p.Dest is already published: archive.Extract renames it
+	// into place before returning, not after finalise() runs. That means an
+	// unlocked reader could be looking at it, so any failure below must clean
+	// it up the same reader-safe way as everywhere else in this package. For
+	// the common case where the manifest doesn't override "root" (so it
+	// defaults to p.Dest, see manifest.Package), leaving p.Dest behind on
+	// failure is worse than "wedged": CacheAndUnpack's isExtracted check
+	// would see p.Root already present and skip re-extraction on retry
+	// entirely, silently leaving the package installed without these files
+	// forever. Copy manifest referred files.
 	for _, file := range p.Files {
 		err = vfs.CopyFile(file.FS, file.FromPath, file.ToPath)
 		if err != nil {
+			_ = util.RemoveAllAtomic(p.Dest)
 			return errors.WithStack(err)
 		}
 	}
 	if _, err = p.Trigger(b, manifest.EventUnpack); err != nil {
-		_ = os.RemoveAll(p.Dest)
+		_ = util.RemoveAllAtomic(p.Dest)
 		return errors.WithStack(err)
 	}
 	return errors.WithStack(finalise())

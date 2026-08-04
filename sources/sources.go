@@ -17,6 +17,15 @@ import (
 // SyncFrequency determines how frequently sources will be synced.
 const SyncFrequency = time.Hour * 24
 
+// ErrSourceUnavailable indicates that a source's backing directory could not
+// be found at all -- as opposed to the directory existing but simply not
+// containing the requested manifest. Distinguishing the two matters because
+// a git source's directory can be transiently absent while another Hermit
+// process is mid-sync (see GitSource.Sync), which is not the same thing as
+// "genuinely unknown package": callers should retry rather than treat it as
+// authoritative.
+var ErrSourceUnavailable = errors.New("source unavailable")
+
 // Source is a single source for manifest files
 type Source interface {
 	// Sync synchronises these sources from the possibly remote origin.
@@ -184,6 +193,15 @@ func (s *Sources) Bundles() []fs.FS {
 // This exists to provide useful debugging information back to the user.
 type uriFS struct {
 	uri string
+	// dir, if set, is the backing directory on disk for this source. It is
+	// used to distinguish "this manifest doesn't exist in this bundle" from
+	// "this bundle's backing directory itself is currently missing" (eg.
+	// because another process is mid-sync, or the source configuration or
+	// permissions are wrong). Only set for sources actually backed by a
+	// directory that can meaningfully vanish (GitSource): leaving it empty
+	// for in-memory sources avoids misreporting them as unavailable, since
+	// some (eg. vfs.InMemoryFS) return fs.ErrNotExist unconditionally.
+	dir string
 	fs.FS
 }
 
@@ -191,3 +209,25 @@ func (u *uriFS) Stat(name string) (fs.FileInfo, error)      { return fs.Stat(u.F
 func (u *uriFS) ReadDir(name string) ([]fs.DirEntry, error) { return fs.ReadDir(u.FS, name) }
 func (u *uriFS) Glob(pattern string) ([]string, error)      { return fs.Glob(u.FS, pattern) }
 func (u *uriFS) String() string                             { return u.uri }
+
+// Open wraps the underlying FS's Open, reporting ErrSourceUnavailable
+// instead of the usual fs.ErrNotExist when the failure is because this
+// source's entire backing directory is missing, rather than just the
+// requested file within it.
+//
+// The os.Stat below is necessarily retrospective and best-effort: it checks
+// whether the directory is missing *now*, not whether it was missing at the
+// moment FS.Open failed above. A directory that vanishes and reappears
+// between those two calls (eg. a fast concurrent resync) can still be
+// misreported either way. That's fine for our purposes -- callers only use
+// ErrSourceUnavailable as a signal to retry, never as an authoritative
+// answer -- but it means this is a heuristic, not a guarantee.
+func (u *uriFS) Open(name string) (fs.File, error) {
+	f, err := u.FS.Open(name)
+	if err != nil && u.dir != "" && errors.Is(err, fs.ErrNotExist) {
+		if _, statErr := os.Stat(u.dir); os.IsNotExist(statErr) {
+			return nil, errors.Wrap(ErrSourceUnavailable, u.uri)
+		}
+	}
+	return f, err
+}
