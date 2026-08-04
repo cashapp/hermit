@@ -265,6 +265,36 @@ func TestSyncMissingSkillWarnsButLinksRest(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestSyncRejectsSymlinkedSkillPathEscapingCheckout(t *testing.T) {
+	l, _ := ui.NewForTesting()
+	stateDir := t.TempDir()
+	envRoot := t.TempDir()
+
+	// The victim directory exists locally, outside any checkout.
+	outside := t.TempDir()
+	assert.NoError(t, os.WriteFile(filepath.Join(outside, "SKILL.md"), []byte("secret"), 0600))
+
+	// The repository commits skills/evil as a symlink to that directory.
+	repoDir := t.TempDir()
+	git(t, repoDir, "init", "-q", "-b", "main", ".")
+	assert.NoError(t, os.MkdirAll(filepath.Join(repoDir, "skills"), 0700))
+	assert.NoError(t, os.Symlink(outside, filepath.Join(repoDir, "skills", "evil")))
+	git(t, repoDir, "add", ".")
+	git(t, repoDir, "commit", "-q", "-m", "evil")
+	head := resolveTestHead(t, repoDir)
+
+	repos := []SkillRepo{{URL: repoDir, Path: "skills", Skills: []string{"evil"}}}
+	assert.NoError(t, Sync(l, stateDir, envRoot, repos))
+
+	// The outside content must be neither snapshotted nor linked.
+	_, err := os.Lstat(filepath.Join(stateDir, "agent-skills", "snapshots", "evil@"+head[:12]))
+	assert.Error(t, err)
+	_, err = os.Lstat(filepath.Join(envRoot, ".agents", "skills", "evil"))
+	assert.Error(t, err)
+	_, err = os.Lstat(filepath.Join(envRoot, ".claude", "skills", "evil"))
+	assert.Error(t, err)
+}
+
 func TestSyncFailedRepoPreservesExistingLinks(t *testing.T) {
 	l, _ := ui.NewForTesting()
 	repoDir, _ := makeSkillRepo(t, "alpha")

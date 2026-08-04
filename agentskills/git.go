@@ -78,8 +78,25 @@ func ensureSnapshots(l *ui.UI, root string, repo SkillRepo) (map[string]string, 
 	}
 	defer cleanup()
 
+	// The checkout path itself may traverse symlinks (e.g. macOS /var), so
+	// resolve it once as the containment root for the skill paths below.
+	resolvedCheckout, err := filepath.EvalSymlinks(checkout)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
 	for _, name := range missing {
-		src := filepath.Join(checkout, filepath.FromSlash(repo.Path), name)
+		// Resolve symlinks in the repository-controlled skill path and
+		// require the result to remain within the checkout: a committed
+		// symlink could otherwise select local content outside it for the
+		// snapshot.
+		src, err := filepath.EvalSymlinks(filepath.Join(checkout, filepath.FromSlash(repo.Path), name))
+		if err != nil {
+			return nil, errors.Errorf("skill %q not found at %s in %s@%s", name, filepath.Join(repo.Path, name), repo.URL, sha[:12])
+		}
+		if rel, err := filepath.Rel(resolvedCheckout, src); err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			return nil, errors.Errorf("skill %q at %s in %s@%s resolves outside the repository checkout", name, filepath.Join(repo.Path, name), repo.URL, sha[:12])
+		}
 		if fi, err := os.Stat(src); err != nil || !fi.IsDir() {
 			return nil, errors.Errorf("skill %q not found at %s in %s@%s", name, filepath.Join(repo.Path, name), repo.URL, sha[:12])
 		}
