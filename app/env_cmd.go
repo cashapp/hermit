@@ -65,6 +65,10 @@ func (e *envCmd) Run(l *ui.UI, env *hermit.Env) error {
 
 		switch {
 		case e.Activate:
+			if err := env.EnsureSkills(l); err != nil {
+				// Skills are advisory content; never block activation on them.
+				l.Warnf("skills: %s", err)
+			}
 			environ := envars.Parse(os.Environ()).Apply(env.Root(), ops).Changed(true)
 			return errors.WithStack(sh.ApplyEnvars(os.Stdout, environ))
 

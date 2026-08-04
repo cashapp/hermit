@@ -38,6 +38,10 @@ func (a *activateCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, global
 	if err := env.EnsureInstalled(l); err != nil {
 		return errors.WithStack(err)
 	}
+	if err := env.EnsureSkills(l); err != nil {
+		// Skills are advisory content; never block activation on them.
+		l.Warnf("skills: %s", err)
+	}
 	messages, err := env.Trigger(l, manifest.EventEnvActivate)
 	if err != nil {
 		return errors.WithStack(err)

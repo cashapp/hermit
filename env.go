@@ -23,6 +23,7 @@ import (
 	"github.com/alecthomas/hcl"
 	"github.com/kballard/go-shellquote"
 
+	"github.com/cashapp/hermit/agentskills"
 	"github.com/cashapp/hermit/cache"
 	"github.com/cashapp/hermit/envars"
 	"github.com/cashapp/hermit/errors"
@@ -98,6 +99,8 @@ type Config struct {
 	AddIJPlugin       bool          `hcl:"idea,optional" default:"false" help:"Whether Hermit should automatically add the IntelliJ IDEA plugin."`
 
 	GitHubTokenAuth GitHubTokenAuthConfig `hcl:"github-token-auth,block" help:"When to use GitHub token authentication."`
+
+	SkillRepos []agentskills.SkillRepo `hcl:"skill-repo,block,optional" help:"Git repositories providing agent skills to link into the environment on activation."`
 }
 
 // GitHubTokenAuthConfig configures under what conditions
@@ -469,6 +472,14 @@ func (e *Env) EnsureInstalled(l *ui.UI) error {
 		}
 	}
 	return nil
+}
+
+// EnsureSkills materialises the agent skills declared in the environment
+// configuration and links them into the environment's skill directories.
+func (e *Env) EnsureSkills(l *ui.UI) error {
+	// Called even with no skills declared so that links created by a
+	// previous configuration are cleaned up.
+	return errors.WithStack(agentskills.Sync(l, e.state.Root(), e.envDir, e.config.SkillRepos))
 }
 
 // Trigger an event for all installed packages.
