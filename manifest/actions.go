@@ -203,5 +203,19 @@ func (s *SymlinkAction) String() string {
 	return fmt.Sprintf("ln -sf %s %s", shell.Quote(s.From), shell.Quote(s.To))
 }
 func (s *SymlinkAction) Apply(*Package) error {
-	return os.Symlink(s.From, s.To)
+	// Match the advertised "ln -sf" semantics: replace an existing symlink or
+	// file at the destination, but never remove a directory.
+	if info, err := os.Lstat(s.To); err == nil {
+		if info.Mode()&os.ModeSymlink != 0 {
+			if target, err := os.Readlink(s.To); err == nil && target == s.From {
+				return nil
+			}
+		} else if info.IsDir() {
+			return errors.Errorf("cannot symlink %s to %s: destination exists and is a directory", s.From, s.To)
+		}
+		if err := os.Remove(s.To); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+	return errors.WithStack(os.Symlink(s.From, s.To))
 }
