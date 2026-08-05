@@ -353,6 +353,74 @@ func TestResolver_Resolve(t *testing.T) {
 		},
 		reference: "test@edge",
 		wantErr:   "failed to expand ${version} (hint: make sure all channels set a version range)",
+	}, {
+		name: "Content-only package with triggers resolves",
+		files: map[string]string{
+			"content.hcl": `
+				description = ""
+				on "unpack" {
+					copy { from = "foo/bar" to = "${root}/fizz" }
+				}
+				version "1.0.0" {
+				  source = "www.example.com"
+				}
+			`,
+		},
+		reference: "content",
+		wantPkg: manifesttest.NewPkgBuilder(config.State+"/pkg/content-1.0.0").
+			WithName("content").
+			WithBinaries().
+			WithVersion("1.0.0").
+			WithSource("www.example.com").
+			WithTrigger(EventUnpack,
+				&CopyAction{From: "foo/bar", To: config.State + "/pkg/content-1.0.0/fizz"},
+			).
+			Result(),
+	}, {
+		name: "Env-only package resolves",
+		files: map[string]string{
+			"envonly.hcl": `
+				description = ""
+				env = {
+					GOPATH: "${env}/go",
+				}
+				version "1.0.0" {
+				  source = "www.example.com"
+				}
+			`,
+		},
+		reference: "envonly",
+		wantPkg: manifesttest.NewPkgBuilder(config.State + "/pkg/envonly-1.0.0").
+			WithName("envonly").
+			WithBinaries().
+			WithVersion("1.0.0").
+			WithEnvOps(&envars.Set{Name: "GOPATH", Value: config.Env + "/go"}).
+			WithSource("www.example.com").
+			Result(),
+	}, {
+		name: "Package with no binaries, apps, triggers or env is rejected",
+		files: map[string]string{
+			"empty.hcl": `
+				description = ""
+				version "1.0.0" {
+				  source = "www.example.com"
+				}
+			`,
+		},
+		reference: "empty",
+		wantErr:   "memory:///empty.hcl: empty-1.0.0: no binaries or apps provided",
+		// Resolve returns the partially resolved package alongside
+		// ErrNoBinaries so that Search can still surface it.
+		wantPkg: func() *Package {
+			p := manifesttest.NewPkgBuilder(config.State + "/pkg/empty-1.0.0").
+				WithName("empty").
+				WithBinaries().
+				WithVersion("1.0.0").
+				WithSource("www.example.com").
+				Result()
+			p.Root = "${dest}"
+			return p
+		}(),
 	},
 	}
 	for _, tt := range tests {
