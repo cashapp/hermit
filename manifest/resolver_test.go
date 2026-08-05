@@ -398,6 +398,31 @@ func TestResolver_Resolve(t *testing.T) {
 			WithSource("www.example.com").
 			Result(),
 	}, {
+		name: "Package with only an empty trigger block is rejected",
+		files: map[string]string{
+			"emptytrigger.hcl": `
+				description = ""
+				on "unpack" {
+				}
+				version "1.0.0" {
+				  source = "www.example.com"
+				}
+			`,
+		},
+		reference: "emptytrigger",
+		wantErr:   "memory:///emptytrigger.hcl: emptytrigger-1.0.0: no binaries or apps provided",
+		wantPkg: func() *Package {
+			p := manifesttest.NewPkgBuilder(config.State + "/pkg/emptytrigger-1.0.0").
+				WithName("emptytrigger").
+				WithBinaries().
+				WithVersion("1.0.0").
+				WithSource("www.example.com").
+				WithTrigger(EventUnpack).
+				Result()
+			p.Root = "${dest}"
+			return p
+		}(),
+	}, {
 		name: "Package with no binaries, apps, triggers or env is rejected",
 		files: map[string]string{
 			"empty.hcl": `
