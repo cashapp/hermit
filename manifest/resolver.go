@@ -519,8 +519,16 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 			files[k] = v
 		}
 	}
-	// Verify.
-	if len(p.Binaries) == 0 && len(p.Apps) == 0 {
+	// Verify. Packages without binaries or apps are permitted as long as they
+	// contribute something else to the environment: lifecycle trigger actions
+	// or environment variables. This supports content-only packages whose
+	// payload is materialised via "on unpack"/"on activate" actions. Empty
+	// trigger blocks do not count.
+	triggerActions := 0
+	for _, actions := range p.Triggers {
+		triggerActions += len(actions)
+	}
+	if len(p.Binaries) == 0 && len(p.Apps) == 0 && triggerActions == 0 && len(layerEnvars) == 0 {
 		return p, errors.Wrapf(ErrNoBinaries, "%s: %s", manifest.Path, found)
 	}
 	if p.Source == "" {
