@@ -4,9 +4,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
+
+	"github.com/cashapp/hermit/ui"
 )
 
 func TestGitParseRepo(t *testing.T) {
@@ -88,6 +91,100 @@ func TestGitSourceRCEAttempt(t *testing.T) {
 	if !os.IsNotExist(fileErr) {
 		t.Fatal("SECURITY FAILURE: RCE was NOT prevented!")
 	}
+}
+
+func TestIsFullGitSHA(t *testing.T) {
+	tests := []struct {
+		ref  string
+		want bool
+	}{
+		{"6bccbcae2934bdd10ede93d493ee1eeeef5f24e2", true},
+		{strings.Repeat("a", 64), true},
+		{"", false},
+		{"main", false},
+		{"v1.2.3", false},
+		// Abbreviated SHAs are indistinguishable from branch names.
+		{"6bccbca", false},
+		{strings.Repeat("a", 39), false},
+		{strings.Repeat("a", 41), false},
+		// Git prints SHAs in lowercase.
+		{strings.Repeat("A", 40), false},
+		{strings.Repeat("g", 40), false},
+	}
+	for _, tt := range tests {
+		assert.Equal(t, tt.want, isFullGitSHA(tt.ref), tt.ref)
+	}
+}
+
+// TestGitSourceCommitSHAPinning verifies that a git source can be pinned to a
+// full commit SHA rather than a branch or tag.
+func TestGitSourceCommitSHAPinning(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git command not found")
+	}
+
+	tmpDir := t.TempDir()
+	repoDir := filepath.Join(tmpDir, "repo")
+	assert.NoError(t, os.MkdirAll(repoDir, 0750))
+	mustGit := func(args ...string) string {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = repoDir
+		out, err := cmd.CombinedOutput()
+		assert.NoError(t, err, string(out))
+		return strings.TrimSpace(string(out))
+	}
+	mustGit("init")
+	mustGit("config", "user.email", "test@example.com")
+	mustGit("config", "user.name", "Test")
+	// Fetching an unadvertised commit from a local repository requires this;
+	// hosting services such as GitHub and GitLab allow it by default.
+	mustGit("config", "uploadpack.allowReachableSHA1InWant", "true")
+	assert.NoError(t, os.WriteFile(filepath.Join(repoDir, "file.txt"), []byte("first"), 0600))
+	mustGit("add", "file.txt")
+	mustGit("commit", "-m", "first")
+	pinned := mustGit("rev-parse", "HEAD")
+	assert.NoError(t, os.WriteFile(filepath.Join(repoDir, "file.txt"), []byte("second"), 0600))
+	mustGit("add", "file.txt")
+	mustGit("commit", "-m", "second")
+
+	src := &gitSource{URL: "file://" + repoDir + "#" + pinned}
+	log, _ := ui.NewForTesting()
+
+	// The remote advertises no branch or tag by this name, so it is treated
+	// as a pinned commit and is its own ETag.
+	etag, err := src.ETag(log.Task("test"))
+	assert.NoError(t, err)
+	assert.Equal(t, pinned, etag)
+
+	assert.NoError(t, src.Validate())
+
+	cacheRoot := filepath.Join(tmpDir, "cache")
+	assert.NoError(t, os.MkdirAll(cacheRoot, 0750))
+	cache := &Cache{root: cacheRoot}
+	dir, etag, _, err := src.Download(log.Task("test"), cache, "checksum")
+	assert.NoError(t, err)
+	assert.Equal(t, pinned, etag)
+	content, err := os.ReadFile(filepath.Join(dir, "file.txt"))
+	assert.NoError(t, err)
+	assert.Equal(t, "first", string(content))
+
+	// A branch whose name is exactly a full-hex string must still resolve as
+	// a branch, not be reinterpreted as a commit object ID.
+	hexBranch := strings.Repeat("a", 40)
+	mustGit("branch", hexBranch, "HEAD")
+	branchSrc := &gitSource{URL: "file://" + repoDir + "#" + hexBranch}
+
+	etag, err = branchSrc.ETag(log.Task("test"))
+	assert.NoError(t, err)
+	assert.Equal(t, mustGit("rev-parse", "HEAD"), etag)
+
+	dir, etag, _, err = branchSrc.Download(log.Task("test"), cache, "checksum2")
+	assert.NoError(t, err)
+	assert.Equal(t, mustGit("rev-parse", "HEAD"), etag)
+	content, err = os.ReadFile(filepath.Join(dir, "file.txt"))
+	assert.NoError(t, err)
+	assert.Equal(t, "second", string(content))
 }
 
 func TestGitURLParsing(t *testing.T) {
