@@ -18,6 +18,8 @@ import (
 	"github.com/cashapp/hermit/hermittest"
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/manifest/manifesttest"
+	"github.com/cashapp/hermit/sources"
+	"github.com/cashapp/hermit/ui"
 )
 
 // Test that when installing a package that has binaries conflicting
@@ -150,6 +152,82 @@ func TestEnsureUpToDate(t *testing.T) {
 	dbPkg, err = dao.GetPackage(pkg.Reference.String())
 	assert.NoError(t, err)
 	assert.Equal(t, etag, dbPkg.Etag)
+}
+
+// Tests that EnsureInstalled checks channel packages for updates, as
+// install-on-activate packages may never be executed via a binary stub.
+func TestEnsureInstalledChecksChannelFreshness(t *testing.T) {
+	etag := "first"
+	data := "data"
+	headCalls := 0
+	getCalls := 0
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("ETag", etag)
+		if r.Method == "HEAD" {
+			headCalls++
+		} else if r.Method == "GET" {
+			getCalls++
+			tar := TestTarGz{map[string]string{"bin": data}}
+			tar.Write(t, w)
+		}
+	})
+	fixture := hermittest.NewEnvTestFixture(t, handler)
+
+	// Create an environment with install-on-activate configured.
+	envDir := t.TempDir()
+	log, _ := ui.NewForTesting()
+	err := hermit.Init(log, envDir, "", fixture.State.Root(), hermit.Config{
+		InstallOnActivate: []string{"test"},
+	}, "BYPASS")
+	assert.NoError(t, err)
+	info, err := hermit.LoadEnvInfo(envDir)
+	assert.NoError(t, err)
+	env, err := hermit.OpenEnv(info, fixture.State, fixture.Cache.GetSource, envars.Envars{}, fixture.Server.Client(), nil)
+	assert.NoError(t, err)
+	err = env.AddSource(fixture.P, sources.NewMemSource("test.hcl", `
+		description = ""
+		binaries = ["bin"]
+		channel "chan" {
+			update = "1h"
+			source = "`+fixture.Server.URL+`"
+		}
+	`))
+	assert.NoError(t, err)
+
+	pkg := manifesttest.NewPkgBuilder(filepath.Join(fixture.RootDir(), "test@chan")).
+		WithName("test").
+		WithBinaries("bin").
+		WithChannel("chan").
+		WithUpdateInterval(1 * time.Hour).
+		WithSource(fixture.Server.URL).
+		Result()
+
+	_, err = env.Install(fixture.P, pkg)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, getCalls)
+	assert.Equal(t, 0, headCalls)
+
+	// The package was just installed, so no update check is due yet.
+	err = env.EnsureInstalled(fixture.P)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, getCalls)
+	assert.Equal(t, 0, headCalls)
+
+	// Age the last update check and change the upstream content. EnsureInstalled
+	// should now check for updates and fetch the new version.
+	stale := time.Now().Add(-2 * time.Hour)
+	etagFile := filepath.Join(fixture.State.Root(), "metadata", "test@chan.etag")
+	assert.NoError(t, os.Chtimes(etagFile, stale, stale))
+	etag = "changed"
+	data = "newdata"
+
+	err = env.EnsureInstalled(fixture.P)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, headCalls)
+	assert.Equal(t, 2, getCalls)
+	file, err := os.ReadFile(filepath.Join(pkg.Dest, "bin"))
+	assert.NoError(t, err)
+	assert.Equal(t, data, string(file))
 }
 
 // Test that files referred in the Files map are copied correctly
