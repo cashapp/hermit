@@ -149,9 +149,11 @@ func TestGitSourceCommitSHAPinning(t *testing.T) {
 	mustGit("commit", "-m", "second")
 
 	src := &gitSource{URL: "file://" + repoDir + "#" + pinned}
+	log, _ := ui.NewForTesting()
 
-	// The ETag of a pinned commit is the commit itself, with no remote call.
-	etag, err := src.ETag(nil)
+	// The remote advertises no branch or tag by this name, so it is treated
+	// as a pinned commit and is its own ETag.
+	etag, err := src.ETag(log.Task("test"))
 	assert.NoError(t, err)
 	assert.Equal(t, pinned, etag)
 
@@ -160,13 +162,29 @@ func TestGitSourceCommitSHAPinning(t *testing.T) {
 	cacheRoot := filepath.Join(tmpDir, "cache")
 	assert.NoError(t, os.MkdirAll(cacheRoot, 0750))
 	cache := &Cache{root: cacheRoot}
-	log, _ := ui.NewForTesting()
 	dir, etag, _, err := src.Download(log.Task("test"), cache, "checksum")
 	assert.NoError(t, err)
 	assert.Equal(t, pinned, etag)
 	content, err := os.ReadFile(filepath.Join(dir, "file.txt"))
 	assert.NoError(t, err)
 	assert.Equal(t, "first", string(content))
+
+	// A branch whose name is exactly a full-hex string must still resolve as
+	// a branch, not be reinterpreted as a commit object ID.
+	hexBranch := strings.Repeat("a", 40)
+	mustGit("branch", hexBranch, "HEAD")
+	branchSrc := &gitSource{URL: "file://" + repoDir + "#" + hexBranch}
+
+	etag, err = branchSrc.ETag(log.Task("test"))
+	assert.NoError(t, err)
+	assert.Equal(t, mustGit("rev-parse", "HEAD"), etag)
+
+	dir, etag, _, err = branchSrc.Download(log.Task("test"), cache, "checksum2")
+	assert.NoError(t, err)
+	assert.Equal(t, mustGit("rev-parse", "HEAD"), etag)
+	content, err = os.ReadFile(filepath.Join(dir, "file.txt"))
+	assert.NoError(t, err)
+	assert.Equal(t, "second", string(content))
 }
 
 func TestGitURLParsing(t *testing.T) {
