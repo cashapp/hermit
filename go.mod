@@ -22,8 +22,8 @@ require (
 	github.com/gobwas/glob v0.2.3
 	github.com/itchyny/gojq v0.12.19
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
-	github.com/klauspost/compress v1.19.1
-	github.com/mattn/go-isatty v0.0.22
+	github.com/klauspost/compress v1.19.2
+	github.com/mattn/go-isatty v0.0.24
 	github.com/mitchellh/go-ps v1.0.0
 	github.com/otiai10/copy v1.14.1
 	github.com/posener/complete v1.2.3
