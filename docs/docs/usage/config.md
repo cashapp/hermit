@@ -34,9 +34,16 @@ manage-git = false
 // Whether this Hermit environment should inherit an environment from a parent directory.
 inherit-parent = false
 
-// Configures when to use GitHub token authentication from $GITHUB_TOKEN.
+// Configures when to use GitHub token authentication.
 github-token-auth {
   // A list of globs to match against GitHub repositories.
+  match = ["ORG/REPO", "ORG/*"]
+}
+
+// Configure a GitHub Enterprise Cloud data residency host.
+github-token-auth {
+  host = "mycompany.ghe.com"
+  token-env = "HERMIT_GITHUB_TOKEN_MYCOMPANY_GHE_COM"
   match = ["ORG/REPO", "ORG/*"]
 }
 ```
@@ -49,14 +56,16 @@ github-token-auth {
 | `sources`        | `[string]?`        | Package manifest sources in order of preference.                                                     |
 | `manage-git`     | `bool?`            | Whether Hermit should manage Git.                                                                    |
 | `inherit-parent` | `bool?`            | Whether this Hermit environment should inherit an environment from a parent directory.             |
-| `github-token-auth` | `GitHubTokenAuthConfig?` | When to use GitHub token authentication. |
+| `github-token-auth` | `[GitHubTokenAuthConfig]?` | When to use GitHub token authentication. |
 | `idea`           | `bool?`            | Whether Hermit should automatically add the IntelliJ IDEA plugin. |
 
 ### GitHubTokenAuthConfig
 
 | Attribute | Type     | Description                                                                                                           |
 |-----------|----------|-----------------------------------------------------------------------------------------------------------------------|
-| match     | `[string]?` | One or more glob patterns. If any of these match the 'owner/repo' pair of a GitHub repository, the GitHub token from the current environment will be used to fetch their artifacts. |
+| `host` | `string?` | GitHub web host for matched repositories. Defaults to `github.com`. For GitHub Enterprise Cloud with data residency this is typically `<subdomain>.ghe.com`. |
+| `token-env` | `string?` | Environment variable containing the token for this host. Defaults to `HERMIT_GITHUB_TOKEN`/`GITHUB_TOKEN` for `github.com`. Non-`github.com` hosts use `gh auth token -h <host>` if this is unset or empty. |
+| `match` | `[string]?` | One or more glob patterns. If any of these match the 'owner/repo' pair of a GitHub repository on the configured host, that host's GitHub token from the current environment will be used to fetch their artifacts. |
 
 ## Per-environment Sources
 

@@ -39,14 +39,18 @@ func InferFromArtefact(p *ui.UI, packageSource cache.PackageSourceSelector, http
 	// Pull description from GH API if possible.
 	description := ""
 	homepage := ""
-	repoName := ghClient.ProjectForURL(url)
+	githubRelease := ""
+	githubHost, repoName := ghClient.ProjectForURLWithHost(url)
 	if repoName != "" {
-		repo, err := ghClient.Repo(repoName)
+		repo, err := ghClient.RepoForHost(githubHost, repoName)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
 		description = repo.Description
 		homepage = repo.Homepage
+		if githubHost == "github.com" {
+			githubRelease = repoName
+		}
 	}
 
 	// Check if sources for all valid platforms are available.
@@ -92,7 +96,7 @@ func InferFromArtefact(p *ui.UI, packageSource cache.PackageSourceSelector, http
 		Versions: []VersionBlock{{
 			Version: []string{version},
 			AutoVersion: &AutoVersionBlock{
-				GitHubRelease:  repoName,
+				GitHubRelease:  githubRelease,
 				VersionPattern: "v?(.*)", // This is the default, which prevents the attribute being serialised.
 			},
 		}},

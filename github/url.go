@@ -7,9 +7,9 @@ import (
 	"github.com/cashapp/hermit/errors"
 )
 
-// isGitHubHTTPSURL checks if a URL is a GitHub HTTPS URL and returns owner/repo if it is
-func isGitHubHTTPSURL(u *url.URL) (owner, repo string, ok bool) {
-	if u.Scheme != "https" || u.Host != gitHubHost {
+// isGitHubHTTPSURL checks if a URL is an HTTPS URL for a configured GitHub host and returns owner/repo if it is.
+func isGitHubHTTPSURL(u *url.URL, host string) (owner, repo string, ok bool) {
+	if u.Scheme != "https" || u.Host != NormalizeHost(host) {
 		return "", "", false
 	}
 
@@ -21,15 +21,22 @@ func isGitHubHTTPSURL(u *url.URL) (owner, repo string, ok bool) {
 	return parts[1], parts[2], true
 }
 
-// isGitHubSSHURL checks if a URL is a GitHub SSH URL (git@github.com:owner/repo.git)
+// isGitHubSSHURL checks if a URL is a GitHub SSH URL (git@github.com:owner/repo.git).
 func isGitHubSSHURL(uri string) bool {
 	return strings.HasPrefix(uri, "git@github.com:")
 }
 
-// AuthenticatedURLRewriter rewrites GitHub URLs to include an auth token if they match the provided pattern
+// AuthenticatedURLRewriter rewrites GitHub.com URLs to include an auth token if they match the provided pattern.
 func AuthenticatedURLRewriter(token string, matcher RepoMatcher) func(uri string) (string, error) {
+	return AuthenticatedURLRewriterForHost(gitHubHost, token, matcher)
+}
+
+// AuthenticatedURLRewriterForHost rewrites HTTPS URLs for a configured GitHub
+// host to include an auth token if they match the provided pattern.
+func AuthenticatedURLRewriterForHost(host string, token string, matcher RepoMatcher) func(uri string) (string, error) {
+	host = NormalizeHost(host)
 	return func(repo string) (string, error) {
-		// Pass through SSH URLs unchanged
+		// Pass through SSH URLs unchanged. Users should configure SSH authentication separately.
 		if isGitHubSSHURL(repo) {
 			return repo, nil
 		}
@@ -39,7 +46,7 @@ func AuthenticatedURLRewriter(token string, matcher RepoMatcher) func(uri string
 			return "", errors.WithStack(err)
 		}
 
-		owner, repoName, ok := isGitHubHTTPSURL(u)
+		owner, repoName, ok := isGitHubHTTPSURL(u, host)
 		if !ok || token == "" {
 			return repo, nil
 		}

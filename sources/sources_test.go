@@ -31,6 +31,14 @@ func TestGitHubTokenRewriter(t *testing.T) {
 			pattern: "owner/*",
 			want:    "https://github.com/other/repo.git",
 		},
+
+		{
+			name:    "matching enterprise github repo",
+			uri:     "https://mycompany.ghe.com/owner/repo.git",
+			token:   "secret-token",
+			pattern: "owner/*",
+			want:    "https://x-access-token:secret-token@mycompany.ghe.com/owner/repo.git",
+		},
 		{
 			name:    "non-github url",
 			uri:     "https://example.com/repo.git",
@@ -60,6 +68,9 @@ func TestGitHubTokenRewriter(t *testing.T) {
 			assert.NoError(t, err)
 
 			rewriter := github.AuthenticatedURLRewriter(tt.token, matcher)
+			if tt.name == "matching enterprise github repo" {
+				rewriter = github.AuthenticatedURLRewriterForHost("mycompany.ghe.com", tt.token, matcher)
+			}
 			result, err := rewriter(tt.uri)
 
 			assert.NoError(t, err)

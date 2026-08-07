@@ -97,13 +97,15 @@ type Config struct {
 	InstallOnActivate []string      `hcl:"install-on-activate,optional" help:"List of packages to eagerly download and unpack when the environment is activated."`
 	AddIJPlugin       bool          `hcl:"idea,optional" default:"false" help:"Whether Hermit should automatically add the IntelliJ IDEA plugin."`
 
-	GitHubTokenAuth GitHubTokenAuthConfig `hcl:"github-token-auth,block" help:"When to use GitHub token authentication."`
+	GitHubTokenAuth []GitHubTokenAuthConfig `hcl:"github-token-auth,block" help:"When to use GitHub token authentication."`
 }
 
 // GitHubTokenAuthConfig configures under what conditions
 // GitHub token authentication should be used.
 type GitHubTokenAuthConfig struct {
-	Match []string `hcl:"match,optional" help:"One or more glob patterns. If any of these match the 'owner/repo' pair of a GitHub repository, the GitHub token from the current environment will be used to fetch their artifacts."`
+	Host     string   `hcl:"host,optional" default:"github.com" help:"GitHub web host for matched repositories. Defaults to github.com. For GitHub Enterprise Cloud with data residency this is typically <subdomain>.ghe.com."`
+	TokenEnv string   `hcl:"token-env,optional" help:"Environment variable containing the token for this host. Defaults to HERMIT_GITHUB_TOKEN/GITHUB_TOKEN for github.com. Non-github.com hosts use gh auth token -h <host> if this is unset or empty."`
+	Match    []string `hcl:"match,optional" help:"One or more glob patterns. If any of these match the 'owner/repo' pair of a GitHub repository on the configured host, that host's GitHub token from the current environment will be used to fetch their artifacts."`
 }
 
 // Env is a Hermit environment.

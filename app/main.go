@@ -172,12 +172,9 @@ func Main(config Config) {
 		cli = &unactivated{cliBase: common}
 	}
 
-	githubToken := os.Getenv("HERMIT_GITHUB_TOKEN")
-	if githubToken == "" {
-		githubToken = os.Getenv("GITHUB_TOKEN")
-		p.Tracef("GitHub token set from GITHUB_TOKEN")
-	} else {
-		p.Tracef("GitHub token set from HERMIT_GITHUB_TOKEN")
+	githubToken, githubTokenSource := githubTokenForHost(hermit.GitHubTokenAuthConfig{Host: "github.com"})
+	if githubTokenSource != "" {
+		p.Tracef("GitHub token for github.com set from %s", githubTokenSource)
 	}
 
 	kongOptions := []kong.Option{
@@ -227,24 +224,22 @@ func Main(config Config) {
 		getSource = cache.GetSource
 	}
 	defaultHTTPClient := config.defaultHTTPClient(p)
-	ghClient := github.New(defaultHTTPClient, githubToken)
-
-	var matcher github.RepoMatcher
-	if envInfo != nil {
-		// If the environment has been configured to use GitHub token
-		// authentication for any patterns, wrap the
-		// PackageSourceSelector to use the GitHub client for those
-		// patterns.
-		ghTokenAuth := envInfo.Config.GitHubTokenAuth
-		if len(ghTokenAuth.Match) > 0 {
-			matcher, err = github.GlobRepoMatcher(ghTokenAuth.Match)
-			if err != nil {
-				log.Fatalf("Environment configuration has a bad github-auth-token.match: %v", err)
-			}
-
-			getSource = cache.GitHubSourceSelector(getSource, ghClient, matcher)
-		}
+	githubAuths, err := configuredGitHubAuths(p, envInfo)
+	if err != nil {
+		log.Fatalf("Environment configuration has a bad github-auth-token.match: %v", err)
 	}
+	githubHosts := make([]github.HostConfig, 0, len(githubAuths)+1)
+	githubHosts = append(githubHosts, github.HostConfig{WebHost: "github.com", Token: githubToken})
+	for _, auth := range githubAuths {
+		githubHosts = append(githubHosts, auth.host)
+	}
+	ghClient := github.NewWithHosts(defaultHTTPClient, githubHosts)
+
+	var githubHostMatchers []cache.GitHubHostMatcher
+	for _, auth := range githubAuths {
+		githubHostMatchers = append(githubHostMatchers, cache.GitHubHostMatcher{Host: auth.host.WebHost, Match: auth.matcher})
+	}
+	getSource = cache.GitHubSourceSelectorForHosts(getSource, ghClient, githubHostMatchers)
 
 	// Add Cachew source selector if configured
 	if config.CachewURL != "" {
@@ -281,8 +276,8 @@ func Main(config Config) {
 
 	var sourceRewriters []sources.URLRewriter
 	if isActivated {
-		if matcher != nil {
-			sourceRewriters = append(sourceRewriters, github.AuthenticatedURLRewriter(githubToken, matcher))
+		for _, auth := range githubAuths {
+			sourceRewriters = append(sourceRewriters, github.AuthenticatedURLRewriterForHost(auth.host.WebHost, auth.host.Token, auth.matcher))
 		}
 
 		env, err = hermit.OpenEnv(envInfo, sta, cache.GetSource, cli.getGlobalState().Env, defaultHTTPClient, config.SHA256Sums, sourceRewriters...)
@@ -351,4 +346,58 @@ func fatalIfError(logger *ui.UI, ctx *kong.Context, err error) {
 		logger.Task("hermit").Fatalf("%s", err)
 		ctx.Exit(exit.FromError(err))
 	}
+}
+
+type gitHubAuth struct {
+	host    github.HostConfig
+	matcher github.RepoMatcher
+}
+
+func configuredGitHubAuths(p *ui.UI, envInfo *hermit.EnvInfo) ([]gitHubAuth, error) {
+	if envInfo == nil {
+		return nil, nil
+	}
+
+	var auths []gitHubAuth
+	for _, ghTokenAuth := range envInfo.Config.GitHubTokenAuth {
+		if len(ghTokenAuth.Match) == 0 {
+			continue
+		}
+
+		matcher, err := github.GlobRepoMatcher(ghTokenAuth.Match)
+		if err != nil {
+			return nil, err
+		}
+
+		token, source := githubTokenForHost(ghTokenAuth)
+		host := github.HostConfig{
+			WebHost: ghTokenAuth.Host,
+			Token:   token,
+		}
+		host.WebHost = github.NormalizeHost(host.WebHost)
+		if source != "" {
+			p.Tracef("GitHub token for %s set from %s", host.WebHost, source)
+		}
+		auths = append(auths, gitHubAuth{host: host, matcher: matcher})
+	}
+	return auths, nil
+}
+
+func githubTokenForHost(config hermit.GitHubTokenAuthConfig) (token, source string) {
+	if config.TokenEnv != "" {
+		token := os.Getenv(config.TokenEnv)
+		if token != "" {
+			return token, config.TokenEnv
+		}
+	}
+
+	if github.NormalizeHost(config.Host) != "github.com" {
+		return "", ""
+	}
+	for _, candidate := range []string{"HERMIT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
+		if token := os.Getenv(candidate); token != "" {
+			return token, candidate
+		}
+	}
+	return "", ""
 }

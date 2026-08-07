@@ -29,7 +29,12 @@ defaults {
 
   # When to use GitHub token authentication.
   github-token-auth {
-    # One or more glob patterns. If any of these match the 'owner/repo' pair of a GitHub repository, the GitHub token from the current environment will be used to fetch their artifacts.
+    # GitHub web host for matched repositories. Defaults to github.com. For GitHub Enterprise Cloud with data residency this is typically <subdomain>.ghe.com.
+    # default: github.com
+    host = string # (optional)
+    # Environment variable containing the token for this host. Defaults to HERMIT_GITHUB_TOKEN/GITHUB_TOKEN for github.com. Non-github.com hosts use gh auth token -h <host> if this is unset or empty.
+    token-env = string # (optional)
+    # One or more glob patterns. If any of these match the 'owner/repo' pair of a GitHub repository on the configured host, that host's GitHub token from the current environment will be used to fetch their artifacts.
     match = [string] # (optional)
   }
 }
