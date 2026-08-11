@@ -63,7 +63,7 @@ function user_install() {
   TMP_FILE="${HERMIT_EXE}.download.${RANDOM}"
   echo "Downloading ${URL} to ${HERMIT_EXE}"
   chmod -f u+w "${HERMIT_EXE}" 2> /dev/null || true
-  curl -fsSL "${URL}" | gzip -dc > "${TMP_FILE}"
+  curl -qfsSL "${URL}" | gzip -dc > "${TMP_FILE}"
   chown "$ID_USER:$ID_GROUP" "${TMP_FILE}"
   chmod u+wx "${TMP_FILE}"
   mv "${TMP_FILE}" "${HERMIT_EXE}"
