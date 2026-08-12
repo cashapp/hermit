@@ -18,6 +18,8 @@ import (
 // followed by any number of letters, digits, or underscores.
 var validEnvKey = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
+var reservedEnvKey = regexp.MustCompile(`^_?HERMIT_`)
+
 // ValidateKey returns an error if key is not a valid POSIX environment
 // variable name. Hermit emits keys verbatim into shell scripts, so anything
 // outside this pattern is rejected to prevent shell command injection.
@@ -28,11 +30,30 @@ func ValidateKey(key string) error {
 	return nil
 }
 
+func ValidateManifestKey(key string) error {
+	if err := ValidateKey(key); err != nil {
+		return err
+	}
+	if reservedEnvKey.MatchString(key) {
+		return errors.Errorf("environment variable name %q is reserved by Hermit (names prefixed with HERMIT_ or _HERMIT_ cannot be set from a manifest)", key)
+	}
+	return nil
+}
+
 // Validate returns an error if any key in e is not a valid POSIX environment
 // variable name. See [ValidateKey].
 func (e Envars) Validate() error {
 	for key := range e {
 		if err := ValidateKey(key); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (e Envars) ValidateManifest() error {
+	for key := range e {
+		if err := ValidateManifestKey(key); err != nil {
 			return err
 		}
 	}
