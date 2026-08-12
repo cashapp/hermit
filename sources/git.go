@@ -82,7 +82,7 @@ func syncGit(b *ui.Task, dir, source, finalDest string, runner util.CommandRunne
 	// First, if a git repo exists, just pull.
 	info, _ := os.Stat(filepath.Join(finalDest, ".git"))
 	if info != nil {
-		err = runner.RunInDir(b, finalDest, "git", "pull")
+		err = runner.RunInDir(b, finalDest, util.GitArgs("pull")...)
 		if err == nil {
 			return nil
 		}
@@ -94,7 +94,7 @@ func syncGit(b *ui.Task, dir, source, finalDest string, runner util.CommandRunne
 		return errors.WithStack(err)
 	}
 	defer os.RemoveAll(dest)
-	if err = runner.RunInDir(b, dest, "git", "clone", "--depth=1", source, dest); err != nil {
+	if err = runner.RunInDir(b, dest, util.GitArgs("clone", "--depth=1", "--", source, dest)...); err != nil {
 		return errors.WithStack(err)
 	}
 	_ = os.RemoveAll(finalDest)

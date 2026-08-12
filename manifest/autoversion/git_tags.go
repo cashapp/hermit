@@ -9,6 +9,7 @@ import (
 
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/manifest"
+	"github.com/cashapp/hermit/util"
 )
 
 func gitTagsAutoVersion(autoVersion *manifest.AutoVersionBlock) (string, error) {
@@ -21,13 +22,17 @@ func gitTagsAutoVersion(autoVersion *manifest.AutoVersionBlock) (string, error) 
 	}
 
 	remoteURL := autoVersion.GitTags
+	if err := util.ValidateGitURL(remoteURL); err != nil {
+		return "", errors.WithStack(err)
+	}
 
 	// --tags return all refs/tags/*
 	// using --refs to remove duplicated tag lines ended with ^{}
 	// output format of refs is
 	// <oid> TAB <ref> LF
 	// source: https://git-scm.com/docs/git-ls-remote
-	out, err := exec.Command("git", "ls-remote", "--tags", "--refs", "--", remoteURL).Output() //nolint:noctx
+	args := util.GitArgs("ls-remote", "--tags", "--refs", "--", remoteURL)
+	out, err := exec.Command(args[0], args[1:]...).Output() //nolint:noctx,gosec
 	if err != nil {
 		return "", errors.Wrapf(err, "error listing tags for %s", remoteURL)
 	}
