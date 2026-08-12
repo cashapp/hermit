@@ -121,6 +121,9 @@ func getSource(b *ui.UI, source, dir, env string) (Source, error) {
 	defer task.Done()
 
 	if strings.HasSuffix(source, ".git") {
+		if err := util.ValidateGitURL(source); err != nil {
+			return nil, errors.WithStack(err)
+		}
 		return NewGitSource(source, dir, &util.RealCommandRunner{}), nil
 	}
 

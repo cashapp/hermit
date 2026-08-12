@@ -106,6 +106,13 @@ func TestForURIsIntegration(t *testing.T) {
 		assert.Contains(t, err.Error(), "rewriter error")
 	})
 
+	t.Run("git remote helper uri", func(t *testing.T) {
+		_, err := ForURIs(l, "testdir", "testenv", []string{"zzq::x.git"})
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "remote helpers are not supported")
+	})
+
 	t.Run("invalid rewritten uri", func(t *testing.T) {
 		invalidRewriter := func(uri string) (string, error) {
 			return "invalid://not-a-valid-source", nil

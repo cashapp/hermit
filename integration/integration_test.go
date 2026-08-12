@@ -135,6 +135,25 @@ EOF
 			`,
 		},
 		{
+			// Regression test for VULN-78247: RCE via an unvalidated git transport scheme.
+			name: "MaliciousGitSourceSchemeDoesNotExecute",
+			script: `
+				hermit init --no-git .
+				printf 'env = {}\nsources = ["zzq::x.git"]\n' > bin/hermit.hcl
+				cat > bin/git-remote-zzq <<'EOF'
+#!/bin/sh
+touch "$(dirname "$0")/../RCE.txt"
+exit 1
+EOF
+				chmod +x bin/git-remote-zzq
+				: > bin/.zzq-1.0.pkg
+				. bin/activate-hermit
+				hermit search || true
+				assert test ! -e RCE.txt
+			`,
+			expectations: exp{outputContains("remote helpers are not supported")},
+		},
+		{
 			name: "InitBasicDefaultsToTrue",
 			script: `
 				# Remove the user config file created by test framework to test "no config" path
