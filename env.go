@@ -295,7 +295,7 @@ func readConfig(configFile string) (*Config, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, configFile)
 		}
-		if err := config.Envars.Validate(); err != nil {
+		if err := config.Envars.ValidateManifest(); err != nil {
 			return nil, errors.Wrap(err, configFile)
 		}
 	}

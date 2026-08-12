@@ -121,6 +121,20 @@ EOF
 			expectations: exp{outputContains("__printf PWNED_RCE.txt_🐚")},
 		},
 		{
+			name: "ManifestCannotSetReservedHermitEnvar",
+			script: `
+				hermit init .
+				cat > bin/hermit.hcl <<EOF
+env = {
+  "HERMIT_ROOT_BIN": "/tmp/evil",
+}
+EOF
+				assert test "$(hermit validate env . >/dev/null 2>&1; echo $?)" != "0"
+				. bin/activate-hermit >/dev/null 2>&1 || true
+				assert test -z "${HERMIT_ROOT_BIN:-}"
+			`,
+		},
+		{
 			name: "InitBasicDefaultsToTrue",
 			script: `
 				# Remove the user config file created by test framework to test "no config" path

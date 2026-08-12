@@ -587,7 +587,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	}
 
 	for _, env := range layerEnvars {
-		if err := env.Validate(); err != nil {
+		if err := env.ValidateManifest(); err != nil {
 			return nil, errors.Wrapf(err, "%s: %s", manifest.Path, found)
 		}
 		for k, v := range env {
