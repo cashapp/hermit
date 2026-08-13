@@ -82,7 +82,7 @@ jobs:
           mkdir build testenv
           ./bin/go build -o ./build/hermit ./cmd/hermit
       - name: Install shells
-        run: sudo apt-get install zsh
+        run: sudo apt-get install fish zsh
       - name: Run Go Integration Tests
         run: ./bin/go test -tags integration -v ./integration
       - name: Run Shellspec Integration Tests

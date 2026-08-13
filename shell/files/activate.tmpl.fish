@@ -1,6 +1,6 @@
 # Hermit {{.Shell}} activation script
 
-set -gx HERMIT_ENV {{ .Root | Quote }}
+set -gx HERMIT_ENV {{ .Root | FishQuote }}
 
 if set -q ACTIVE_HERMIT
     if test "$ACTIVE_HERMIT" = "$HERMIT_ENV"
@@ -18,7 +18,7 @@ if set -q ACTIVE_HERMIT
 end
 
 {{ range $ENV_NAME, $ENV_VALUE := .Env }}
-set -gx {{ $ENV_NAME }} {{ $ENV_VALUE | Quote }}
+set -gx {{ $ENV_NAME }} {{ $ENV_VALUE | FishQuote }}
 {{- end }}
 
 function _hermit_deactivate
