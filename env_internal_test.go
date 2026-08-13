@@ -1,7 +1,6 @@
 package hermit
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
@@ -14,18 +13,9 @@ func TestHermitLauncherUsesTrustedSystemHelpers(t *testing.T) {
 	script, err := files.ReadFile("files/hermit")
 	assert.NoError(t, err)
 
-	calls := 0
-	for line := range strings.SplitSeq(string(script), "\n") {
-		if strings.Contains(line, "uname -s") {
-			assert.Contains(t, line, "/usr/bin/uname -s")
-			calls++
-		}
-		if strings.Contains(line, "basename ") {
-			assert.Contains(t, line, "/usr/bin/basename ")
-			calls++
-		}
-	}
-	assert.Equal(t, 2, calls)
+	assert.Contains(t, string(script), `case "${OSTYPE}" in`)
+	assert.NotContains(t, string(script), "uname")
+	assert.Contains(t, string(script), `/usr/bin/basename `)
 }
 
 func TestActivationCommand(t *testing.T) {
