@@ -1,11 +1,32 @@
 package hermit
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/cashapp/hermit/shell"
 )
+
+func TestHermitLauncherUsesTrustedSystemHelpers(t *testing.T) {
+	// Regression test for DX-27: the launcher can run after the environment's
+	// bin directory has been prepended to PATH.
+	script, err := files.ReadFile("files/hermit")
+	assert.NoError(t, err)
+
+	calls := 0
+	for line := range strings.SplitSeq(string(script), "\n") {
+		if strings.Contains(line, "uname -s") {
+			assert.Contains(t, line, "/usr/bin/uname -s")
+			calls++
+		}
+		if strings.Contains(line, "basename ") {
+			assert.Contains(t, line, "/usr/bin/basename ")
+			calls++
+		}
+	}
+	assert.Equal(t, 2, calls)
+}
 
 func TestActivationCommand(t *testing.T) {
 	const env = "/path/to/env"

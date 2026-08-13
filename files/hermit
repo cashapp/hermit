@@ -7,7 +7,7 @@ set -eo pipefail
 export HERMIT_USER_HOME=~
 
 if [ -z "${HERMIT_STATE_DIR}" ]; then
-  case "$(uname -s)" in
+  case "$(/usr/bin/uname -s)" in
   Darwin)
     export HERMIT_STATE_DIR="${HERMIT_USER_HOME}/Library/Caches/hermit"
     ;;
@@ -18,7 +18,7 @@ if [ -z "${HERMIT_STATE_DIR}" ]; then
 fi
 
 export HERMIT_DIST_URL="${HERMIT_DIST_URL:-HERMIT_DEFAULT_DIST_URL}"
-HERMIT_CHANNEL="$(basename "${HERMIT_DIST_URL}")"
+HERMIT_CHANNEL="$(/usr/bin/basename "${HERMIT_DIST_URL}")"
 export HERMIT_CHANNEL
 export HERMIT_EXE=${HERMIT_EXE:-${HERMIT_STATE_DIR}/pkg/hermit@${HERMIT_CHANNEL}/hermit}
 
