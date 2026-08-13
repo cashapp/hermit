@@ -20,6 +20,13 @@ var validEnvKey = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
 var reservedEnvKey = regexp.MustCompile(`^_?HERMIT_`)
 
+var reservedManifestEnvKeys = map[string]bool{
+	// These variables do not use Hermit's prefix, but Hermit's shell scripts
+	// and bootstrap consume them to select the binary to execute.
+	"ACTIVE_HERMIT":  true,
+	"XDG_CACHE_HOME": true,
+}
+
 // ValidateKey returns an error if key is not a valid POSIX environment
 // variable name. Hermit emits keys verbatim into shell scripts, so anything
 // outside this pattern is rejected to prevent shell command injection.
@@ -34,8 +41,8 @@ func ValidateManifestKey(key string) error {
 	if err := ValidateKey(key); err != nil {
 		return err
 	}
-	if reservedEnvKey.MatchString(key) {
-		return errors.Errorf("environment variable name %q is reserved by Hermit (names prefixed with HERMIT_ or _HERMIT_ cannot be set from a manifest)", key)
+	if reservedEnvKey.MatchString(key) || reservedManifestEnvKeys[key] {
+		return errors.Errorf("environment variable name %q is reserved by Hermit and cannot be set from a manifest", key)
 	}
 	return nil
 }
