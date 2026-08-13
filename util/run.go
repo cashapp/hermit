@@ -10,6 +10,7 @@ import (
 
 	"github.com/kballard/go-shellquote"
 
+	"github.com/cashapp/hermit/envars"
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/ui"
 )
@@ -27,16 +28,10 @@ func (g *RealCommandRunner) RunInDir(task *ui.Task, dir string, commands ...stri
 	return errors.WithStack(RunSystemInDir(task, dir, commands...))
 }
 
-// systemPath is the trusted path used for Hermit's own helper processes. In
-// particular, it excludes Hermit environment bin directories, which may be
-// controlled by the repository being operated on.
-func systemPath() string {
-	return "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-}
-
-// SystemCommand constructs a command for one of Hermit's own system helpers.
-// The executable is resolved only from the system path, and the same path is
-// inherited by the helper's child processes.
+// SystemCommand constructs a command for an external tool used internally by
+// Hermit. The executable is resolved from PATH with the active Hermit
+// environment's changes reverted, and that same PATH is inherited by its
+// child processes.
 func SystemCommand(args ...string) (*exec.Cmd, error) {
 	if len(args) == 0 {
 		return nil, errors.New("missing system command")
@@ -45,8 +40,12 @@ func SystemCommand(args ...string) (*exec.Cmd, error) {
 	if filepath.Base(name) != name {
 		return nil, errors.Errorf("system command must be a bare name: %q", name)
 	}
+	environ, err := systemEnviron()
+	if err != nil {
+		return nil, err
+	}
 	var path string
-	for _, dir := range filepath.SplitList(systemPath()) {
+	for _, dir := range filepath.SplitList(environ["PATH"]) {
 		candidate := filepath.Join(dir, name)
 		info, err := os.Stat(candidate)
 		if err == nil && !info.IsDir() && info.Mode().Perm()&0111 != 0 {
@@ -58,21 +57,31 @@ func SystemCommand(args ...string) (*exec.Cmd, error) {
 		return nil, &exec.Error{Name: name, Err: exec.ErrNotFound}
 	}
 	cmd := exec.Command(path, args[1:]...) //nolint:noctx
-	cmd.Env = systemEnviron()
+	cmd.Env = environ.System()
 	return cmd, nil
 }
 
-func systemEnviron() []string {
-	environ := os.Environ()
-	out := make([]string, 0, len(environ)+1)
-	for _, entry := range environ {
-		key, _, _ := strings.Cut(entry, "=")
-		if strings.EqualFold(key, "PATH") {
-			continue
-		}
-		out = append(out, entry)
+// systemEnviron returns the current environment with PATH restored to its
+// state before Hermit activation. All other environment variables are left
+// unchanged.
+func systemEnviron() (envars.Envars, error) {
+	environ := envars.Parse(os.Environ())
+	data := os.Getenv("HERMIT_ENV_OPS")
+	if data == "" {
+		return environ, nil
 	}
-	return append(out, "PATH="+systemPath())
+	ops, err := envars.UnmarshalOps([]byte(data))
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to restore PATH before Hermit activation")
+	}
+	reverted := environ.Revert(os.Getenv("HERMIT_ENV"), ops).Combined()
+	path, ok := reverted["PATH"]
+	if !ok {
+		delete(environ, "PATH")
+	} else {
+		environ["PATH"] = path
+	}
+	return environ, nil
 }
 
 // Run a command, outputting to stdout and stderr.
@@ -80,7 +89,7 @@ func Run(log *ui.Task, args ...string) error {
 	return RunInDir(log, "", args...)
 }
 
-// RunSystem runs one of Hermit's own system helpers.
+// RunSystem runs an external tool used internally by Hermit.
 func RunSystem(log *ui.Task, args ...string) error {
 	return RunSystemInDir(log, "", args...)
 }
@@ -92,12 +101,12 @@ func Capture(log ui.Logger, args ...string) ([]byte, error) {
 	return captureOutput(log, cmd)
 }
 
-// CaptureSystem runs one of Hermit's own system helpers and returns its output.
+// CaptureSystem runs an external tool used internally by Hermit and returns its output.
 func CaptureSystem(log ui.Logger, args ...string) ([]byte, error) {
 	return CaptureSystemInDir(log, "", args...)
 }
 
-// CaptureSystemInDir runs one of Hermit's own system helpers in the given dir
+// CaptureSystemInDir runs an external tool used internally by Hermit in the given dir
 // and returns its output.
 func CaptureSystemInDir(log ui.Logger, dir string, args ...string) ([]byte, error) {
 	log.Debugf("%s", shellquote.Join(args...))
@@ -141,7 +150,7 @@ func RunInDir(log *ui.Task, dir string, args ...string) error {
 	return nil
 }
 
-// RunSystemInDir runs one of Hermit's own system helpers in the given dir.
+// RunSystemInDir runs an external tool used internally by Hermit in the given dir.
 func RunSystemInDir(log *ui.Task, dir string, args ...string) error {
 	log = log.SubTask("exec")
 	log.Debugf("%s", shellquote.Join(args...))

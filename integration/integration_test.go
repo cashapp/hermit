@@ -25,6 +25,8 @@ import (
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
+	"github.com/kballard/go-shellquote"
+
 	"github.com/cashapp/hermit/envars"
 	"github.com/cashapp/hermit/errors"
 	"github.com/creack/pty"
@@ -172,26 +174,31 @@ EOF
 			expectations: exp{outputContains("remote helpers are not supported")},
 		},
 		{
-			// Regression test for DX-29: Hermit's own helpers must not resolve from
-			// the environment bin directory that Hermit prepends to PATH.
-			name: "SystemHelpersIgnoreHermitBin",
+			// Regression test for DX-29: internal tools must still resolve from a
+			// user's custom PATH before a Hermit environment is activated.
+			name:         "InternalToolsUseCurrentPathBeforeActivation",
+			preparations: prep{gitSourceWithHostGit()},
 			script: `
-				SYSTEM_GIT=$(command -v git)
-				mkdir source.git
-				"$SYSTEM_GIT" init -q source.git
-				cat > source.git/safehelper.hcl <<'EOF'
-description = "Package from a safely cloned source"
-source = "https://example.com/safehelper-${version}"
-version "1.0.0" {}
-EOF
-				"$SYSTEM_GIT" -C source.git add safehelper.hcl
-				"$SYSTEM_GIT" -C source.git \
-					-c user.name=Hermit \
-					-c user.email=hermit@example.com \
-					commit -qm initial
-
+				assert test "$(command -v git)" = "$HOST_GIT"
 				hermit init --no-git .
-				. bin/activate-hermit
+				cat > bin/hermit.hcl <<EOF
+env = {}
+sources = ["$PWD/source.git"]
+EOF
+				rm -f HOST_GIT_USED.txt
+
+				./bin/hermit search safehelper
+				assert test -e HOST_GIT_USED.txt
+			`,
+			expectations: exp{outputContains("safehelper")},
+		},
+		{
+			// Regression test for DX-29: after activation, internal tools must
+			// ignore the repository bin directory and use the pre-activation PATH.
+			name:         "InternalToolsRestorePathAfterActivation",
+			preparations: prep{gitSourceWithHostGit()},
+			script: `
+				hermit init --no-git .
 				cat > bin/hermit.hcl <<EOF
 env = {}
 sources = ["$PWD/source.git"]
@@ -202,12 +209,15 @@ touch "$(dirname "$0")/../RCE.txt"
 exit 1
 EOF
 				chmod +x bin/git
+				. bin/activate-hermit
 				hash -r 2>/dev/null || true
 				rehash 2>/dev/null || true
 				assert test "$(command -v git)" = "$PWD/bin/git"
 
+				rm -f HOST_GIT_USED.txt
 				hermit search safehelper
 				assert test ! -e RCE.txt
+				assert test -e HOST_GIT_USED.txt
 			`,
 			expectations: exp{outputContains("safehelper")},
 		},
@@ -1050,6 +1060,44 @@ func addFile(name, content string) preparation {
 		err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0600)
 		assert.NoError(t, err)
 		return ""
+	}
+}
+
+// gitSourceWithHostGit creates a local Git manifest source and a recording Git
+// wrapper in a custom directory on the user's PATH.
+func gitSourceWithHostGit() preparation {
+	return func(t *testing.T, dir string) string {
+		t.Helper()
+		git, err := exec.LookPath("git")
+		assert.NoError(t, err)
+
+		sourceDir := filepath.Join(dir, "source.git")
+		assert.NoError(t, os.Mkdir(sourceDir, 0700))
+		runGit := func(args ...string) {
+			cmd := exec.Command(git, args...) //nolint:noctx
+			output, err := cmd.CombinedOutput()
+			assert.NoError(t, err, "%s", output)
+		}
+		runGit("init", "-q", sourceDir)
+		assert.NoError(t, os.WriteFile(filepath.Join(sourceDir, "safehelper.hcl"), []byte(`
+description = "Package from a safely cloned source"
+source = "https://example.com/safehelper-${version}"
+version "1.0.0" {}
+`), 0600))
+		runGit("-C", sourceDir, "add", "safehelper.hcl")
+		runGit("-C", sourceDir,
+			"-c", "user.name=Hermit",
+			"-c", "user.email=hermit@example.com",
+			"-c", "commit.gpgsign=false",
+			"commit", "-qm", "initial")
+
+		hostBin := t.TempDir()
+		hostGit := filepath.Join(hostBin, "git")
+		wrapper := fmt.Sprintf("#!/bin/sh\ntouch %s\nexec %s \"$@\"\n",
+			shellquote.Join(filepath.Join(dir, "HOST_GIT_USED.txt")), shellquote.Join(git))
+		assert.NoError(t, os.WriteFile(hostGit, []byte(wrapper), 0700))
+		return fmt.Sprintf("export HOST_GIT=%s\nexport PATH=%s:\"$PATH\"",
+			shellquote.Join(hostGit), shellquote.Join(hostBin))
 	}
 }
 
