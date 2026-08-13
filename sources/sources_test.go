@@ -1,6 +1,8 @@
 package sources
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
@@ -8,6 +10,25 @@ import (
 	"github.com/cashapp/hermit/github"
 	"github.com/cashapp/hermit/ui"
 )
+
+func TestEnvSourceRejectsPathTraversal(t *testing.T) {
+	root := t.TempDir()
+	env := filepath.Join(root, "env")
+	outside := filepath.Join(root, "outside")
+	assert.NoError(t, os.MkdirAll(env, 0750))
+	assert.NoError(t, os.MkdirAll(outside, 0750))
+
+	for _, uri := range []string{
+		"env:///../outside",
+		"env:///%2e%2e/outside",
+	} {
+		t.Run(uri, func(t *testing.T) {
+			ui, _ := ui.NewForTesting()
+			_, err := ForURIs(ui, filepath.Join(root, "state"), env, []string{uri})
+			assert.Error(t, err)
+		})
+	}
+}
 
 func TestGitHubTokenRewriter(t *testing.T) {
 	tests := []struct {

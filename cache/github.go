@@ -14,7 +14,7 @@ import (
 )
 
 // matches: https://github.com/{OWNER}/{REPO}/releases/download/{TAG}/{ASSET}
-var githubRe = regexp.MustCompile(`^https\://github.com/([^/]+)/([^/]+)/releases/download/([^/]+)/([^/]+)$`)
+var githubRe = regexp.MustCompile(`^https\://github\.com/([^/]+)/([^/]+)/releases/download/([^/]+)/([^/]+)$`)
 
 // GitHubSourceSelector can download private release assets from GitHub using an authenticated GitHub client.
 func GitHubSourceSelector(getSource PackageSourceSelector, ghclient *github.Client, match github.RepoMatcher) PackageSourceSelector {

@@ -142,7 +142,11 @@ func getSource(b *ui.UI, source, dir, env string) (Source, error) {
 			task.Warnf("%s does not contain a path", uri)
 			return nil, nil
 		}
-		checkDir = filepath.Join(env, uri.Path)
+		cleanPath := filepath.Clean(strings.TrimLeft(uri.Path, "/\\"))
+		if cleanPath == ".." || strings.HasPrefix(cleanPath, ".."+string(filepath.Separator)) {
+			return nil, errors.Errorf("env source %q escapes the environment root", source)
+		}
+		checkDir = filepath.Join(env, cleanPath)
 		candidate = os.DirFS(checkDir)
 
 	case "file":

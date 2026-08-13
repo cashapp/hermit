@@ -503,7 +503,7 @@ func extractPackageTarball(b *ui.Task, r io.Reader, dest string, strip int) erro
 				return err
 			}
 
-		case hdr.Typeflag&(tar.TypeLink|tar.TypeGNULongLink) != 0 && hdr.Linkname != "":
+		case (hdr.Typeflag == tar.TypeLink || hdr.Typeflag == tar.TypeGNULongLink) && hdr.Linkname != "":
 			// Convert hard links into symlinks so we don't have to track inodes later on during relocation.
 			src := filepath.Join(dest, hdr.Linkname) //nolint: gosec
 			rp, err := filepath.Rel(filepath.Dir(destFile), src)
