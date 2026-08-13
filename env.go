@@ -173,7 +173,7 @@ func Init(l *ui.UI, env string, distURL string, stateDir string, config Config, 
 			}
 
 			if useGit {
-				if err = util.RunInDir(b, env, "git", "add", "-f", extDepPath); err != nil {
+				if err = util.RunSystemInDir(b, env, "git", "add", "-f", extDepPath); err != nil {
 					return errors.WithStack(err)
 				}
 			}
@@ -196,7 +196,7 @@ func Init(l *ui.UI, env string, distURL string, stateDir string, config Config, 
 			return errors.WithStack(err)
 		}
 		if useGit {
-			if err = util.RunInDir(b, env, "git", "add", "-f", filepath.Join(bin, "hermit.hcl")); err != nil {
+			if err = util.RunSystemInDir(b, env, "git", "add", "-f", filepath.Join(bin, "hermit.hcl")); err != nil {
 				return errors.WithStack(err)
 			}
 		}
@@ -587,7 +587,7 @@ func (e *Env) unlinkPackage(l *ui.Task, pkg *manifest.Package) error {
 
 func (e *Env) unlink(l *ui.Task, path string) error {
 	if e.useGit {
-		err := util.RunInDir(l, e.envDir, "git", "rm", "-f", path)
+		err := util.RunSystemInDir(l, e.envDir, "git", "rm", "-f", path)
 		if err != nil {
 			l.Errorf("non-fatal: %s", err)
 		}
@@ -1423,7 +1423,7 @@ func (e *Env) linkIntoEnv(l *ui.Task, oldname, newname string) error {
 		return errors.WithStack(err)
 	}
 	if e.useGit {
-		return util.RunInDir(l, e.envDir, "git", "add", "-f", newname)
+		return util.RunSystemInDir(l, e.envDir, "git", "add", "-f", newname)
 	}
 	return nil
 }
@@ -1657,7 +1657,7 @@ func writeFileToEnvBin(l *ui.Task, useGit bool, src, envDir string, vars map[str
 		return errors.WithStack(err)
 	}
 	if useGit {
-		if err = util.RunInDir(l, envDir, "git", "add", "-f", dest); err != nil {
+		if err = util.RunSystemInDir(l, envDir, "git", "add", "-f", dest); err != nil {
 			return errors.WithStack(err)
 		}
 	}
