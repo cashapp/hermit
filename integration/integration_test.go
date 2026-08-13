@@ -172,6 +172,46 @@ EOF
 			expectations: exp{outputContains("remote helpers are not supported")},
 		},
 		{
+			// Regression test for DX-29: Hermit's own helpers must not resolve from
+			// the environment bin directory that Hermit prepends to PATH.
+			name: "SystemHelpersIgnoreHermitBin",
+			script: `
+				SYSTEM_GIT=$(command -v git)
+				mkdir source.git
+				"$SYSTEM_GIT" init -q source.git
+				cat > source.git/safehelper.hcl <<'EOF'
+description = "Package from a safely cloned source"
+source = "https://example.com/safehelper-${version}"
+version "1.0.0" {}
+EOF
+				"$SYSTEM_GIT" -C source.git add safehelper.hcl
+				"$SYSTEM_GIT" -C source.git \
+					-c user.name=Hermit \
+					-c user.email=hermit@example.com \
+					commit -qm initial
+
+				hermit init --no-git .
+				. bin/activate-hermit
+				cat > bin/hermit.hcl <<EOF
+env = {}
+sources = ["$PWD/source.git"]
+EOF
+				cat > bin/git <<'EOF'
+#!/bin/sh
+touch "$(dirname "$0")/../RCE.txt"
+exit 1
+EOF
+				chmod +x bin/git
+				hash -r 2>/dev/null || true
+				rehash 2>/dev/null || true
+				assert test "$(command -v git)" = "$PWD/bin/git"
+
+				hermit search safehelper
+				assert test ! -e RCE.txt
+			`,
+			expectations: exp{outputContains("safehelper")},
+		},
+		{
 			name: "InitBasicDefaultsToTrue",
 			script: `
 				# Remove the user config file created by test framework to test "no config" path

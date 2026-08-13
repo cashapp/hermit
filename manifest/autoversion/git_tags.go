@@ -2,7 +2,6 @@ package autoversion
 
 import (
 	"bufio"
-	"os/exec"
 	"regexp"
 	"sort"
 	"strings"
@@ -32,7 +31,11 @@ func gitTagsAutoVersion(autoVersion *manifest.AutoVersionBlock) (string, error) 
 	// <oid> TAB <ref> LF
 	// source: https://git-scm.com/docs/git-ls-remote
 	args := util.GitArgs("ls-remote", "--tags", "--refs", "--", remoteURL)
-	out, err := exec.Command(args[0], args[1:]...).Output() //nolint:noctx,gosec
+	cmd, err := util.SystemCommand(args...)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	out, err := cmd.Output()
 	if err != nil {
 		return "", errors.Wrapf(err, "error listing tags for %s", remoteURL)
 	}

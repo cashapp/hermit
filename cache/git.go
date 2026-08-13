@@ -2,7 +2,6 @@ package cache
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -32,12 +31,12 @@ func (s *gitSource) Download(b *ui.Task, cache *Cache, checksum string) (string,
 		args = append(args, "--branch="+tag)
 	}
 	args = append(args, "--", repo, checkoutDir)
-	err = util.RunInDir(b, cache.root, args...)
+	err = util.RunSystemInDir(b, cache.root, args...)
 	if err != nil {
 		return "", "", "", errors.WithStack(err)
 	}
 
-	bts, err := util.CaptureInDir(b, checkoutDir, "git", "rev-parse", "HEAD")
+	bts, err := util.CaptureSystemInDir(b, checkoutDir, "git", "rev-parse", "HEAD")
 	if err != nil {
 		return "", "", "", errors.WithStack(err)
 	}
@@ -54,7 +53,7 @@ func (s *gitSource) ETag(b *ui.Task) (etag string, err error) {
 	if tag == "" {
 		tag = "HEAD"
 	}
-	bts, err := util.Capture(b, util.GitArgs("ls-remote", "--", repo, tag)...)
+	bts, err := util.CaptureSystem(b, util.GitArgs("ls-remote", "--", repo, tag)...)
 	if err != nil {
 		return "", errors.Wrap(err, s.URL)
 	}
@@ -76,7 +75,10 @@ func (s *gitSource) Validate() error {
 		tag = "HEAD"
 	}
 	args := util.GitArgs("ls-remote", "--", repo, tag)
-	cmd := exec.Command(args[0], args[1:]...) //nolint
+	cmd, err := util.SystemCommand(args...)
+	if err != nil {
+		return errors.WithStack(err)
+	}
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return errors.Wrapf(err, "error getting remote HEAD: %s", string(out))

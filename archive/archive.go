@@ -209,7 +209,7 @@ func installMacDMG(b *ui.Task, source string, pkg *manifest.Package) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	output, err := util.Capture(b, "hdiutil", "attach", "-plist", source)
+	output, err := util.CaptureSystem(b, "hdiutil", "attach", "-plist", source)
 	if err != nil {
 		return errors.Wrap(err, "could not mount DMG")
 	}
@@ -228,14 +228,14 @@ func installMacDMG(b *ui.Task, source string, pkg *manifest.Package) error {
 	if entry == nil {
 		return errors.New("couldn't determine volume information from hdiutil attach, volume may still be mounted :(")
 	}
-	defer util.Run(b, "hdiutil", "detach", entry.DevEntry) //nolint: errcheck
+	defer util.RunSystem(b, "hdiutil", "detach", entry.DevEntry) //nolint: errcheck
 	switch {
 	case len(pkg.Apps) != 0:
 		for _, app := range pkg.Apps {
 			base := filepath.Base(app)
 			// Use rsync because reliably syncing all filesystem attributes is non-trivial.
 			appDest := filepath.Join(dest, base)
-			err = util.Run(b, "rsync", "-av",
+			err = util.RunSystem(b, "rsync", "-av",
 				filepath.Join(entry.MountPoint, app)+"/",
 				appDest+"/")
 			if err != nil {
@@ -377,7 +377,7 @@ func extractMacPKG(b *ui.Task, path, dest string, strip int) error {
 	fmt.Fprint(changesf, os.Expand(extractMacPkgChangesXML, func(s string) string { return dest }))
 	_ = changesf.Close()
 	task.Add(1)
-	return util.Run(b, "installer", "-verbose",
+	return util.RunSystem(b, "installer", "-verbose",
 		"-pkg", path,
 		"-target", "CurrentUserHomeDirectory",
 		"-applyChoiceChangesXML", changesf.Name())
