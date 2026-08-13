@@ -7,18 +7,18 @@ set -eo pipefail
 export HERMIT_USER_HOME=~
 
 if [ -z "${HERMIT_STATE_DIR}" ]; then
-  case "$(uname -s)" in
-  Darwin)
+  case "${OSTYPE}" in
+  darwin*)
     export HERMIT_STATE_DIR="${HERMIT_USER_HOME}/Library/Caches/hermit"
     ;;
-  Linux)
+  linux*)
     export HERMIT_STATE_DIR="${XDG_CACHE_HOME:-${HERMIT_USER_HOME}/.cache}/hermit"
     ;;
   esac
 fi
 
 export HERMIT_DIST_URL="${HERMIT_DIST_URL:-HERMIT_DEFAULT_DIST_URL}"
-HERMIT_CHANNEL="$(basename "${HERMIT_DIST_URL}")"
+HERMIT_CHANNEL="$(/usr/bin/basename "${HERMIT_DIST_URL}")"
 export HERMIT_CHANNEL
 export HERMIT_EXE=${HERMIT_EXE:-${HERMIT_STATE_DIR}/pkg/hermit@${HERMIT_CHANNEL}/hermit}
 

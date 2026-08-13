@@ -29,11 +29,37 @@ func TestPosixActivationScriptQuotesPathsWithSpaces(t *testing.T) {
 	assert.Contains(t, script, `eval "$("${ACTIVE_HERMIT}/bin/hermit" env --deactivate-from-ops="${HERMIT_ENV_OPS}")"`)
 	assert.Contains(t, script, `echo "Hermit environment $("${HERMIT_ENV}/bin/hermit" env HERMIT_ENV) deactivated"`)
 	assert.Contains(t, script, `export HERMIT_ENV_OPS="$("${HERMIT_ENV}/bin/hermit" env --ops)"`)
-	assert.Contains(t, script, `export HERMIT_BIN_CHANGE="$(date -r "${HERMIT_ENV}/bin" +"%s")"`)
+	assert.Contains(t, script, `export HERMIT_BIN_CHANGE="$(/bin/date -r "${HERMIT_ENV}/bin" +"%s")"`)
 	assert.Contains(t, script, `local CUR_HERMIT="${HERMIT_ENV}/bin/hermit"`)
 
 	if strings.Contains(script, "export HERMIT_ENV=/tmp/Application Support/hermit env") {
 		t.Fatalf("generated script still contains unquoted HERMIT_ENV assignment:\n%s", script)
+	}
+}
+
+func TestActivationScriptsUseTrustedDate(t *testing.T) {
+	// Regression test for DX-27: PATH already contains the environment's bin
+	// directory when these commands run, so a bare date would execute repo code.
+	for _, sh := range []Shell{&Bash{}, &Zsh{}, &Fish{}} {
+		t.Run(sh.Name(), func(t *testing.T) {
+			var out bytes.Buffer
+			err := sh.ActivationScript(&out, ActivationConfig{
+				Root:   "/tmp/env",
+				Prompt: "none",
+				Env:    envars.Envars{"PATH": "/tmp/env/bin:/usr/bin:/bin"},
+			})
+			assert.NoError(t, err)
+
+			calls := 0
+			for line := range strings.SplitSeq(out.String(), "\n") {
+				if !strings.Contains(line, "date -r") {
+					continue
+				}
+				assert.Contains(t, line, "/bin/date -r")
+				calls++
+			}
+			assert.Equal(t, 2, calls)
+		})
 	}
 }
 
