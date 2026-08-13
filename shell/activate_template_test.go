@@ -122,3 +122,28 @@ func TestFishActivationScriptQuotesPathsWithSpaces(t *testing.T) {
 		t.Fatalf("generated fish script still contains unquoted HERMIT_ENV assignment:\n%s", script)
 	}
 }
+
+func TestFishEscapesBackslashesInValues(t *testing.T) {
+	config := ActivationConfig{
+		Root:   `/tmp/hermit\`,
+		Prompt: "none",
+		Env: envars.Envars{
+			"AAA": `\`,
+			"AAB": `;touch /tmp/pwned; #`,
+		},
+	}
+
+	var out bytes.Buffer
+	err := (&Fish{}).ActivationScript(&out, config)
+	assert.NoError(t, err)
+	assert.Contains(t, out.String(), `set -gx HERMIT_ENV '/tmp/hermit\\'`)
+	assert.Contains(t, out.String(), `set -gx AAA '\\'`)
+	assert.Contains(t, out.String(), `set -gx AAB ';touch /tmp/pwned; #'`)
+	assert.NotContains(t, out.String(), `set -gx AAA '\'`)
+
+	out.Reset()
+	err = (&Fish{}).ApplyEnvars(&out, config.Env)
+	assert.NoError(t, err)
+	assert.Contains(t, out.String(), `set -gx AAA '\\'`)
+	assert.NotContains(t, out.String(), `set -gx AAA '\'`)
+}

@@ -24,6 +24,22 @@ func TestShellQuote(t *testing.T) {
 	}
 }
 
+func TestFishQuote(t *testing.T) {
+	tests := []struct {
+		original string
+		quoted   string
+	}{
+		{``, `''`},
+		{`=test`, `'=test'`},
+		{`back\slash`, `'back\\slash'`},
+		{`trailing\`, `'trailing\\'`},
+		{`single'quote`, `'single\'quote'`},
+	}
+	for _, test := range tests {
+		assert.Equal(t, test.quoted, FishQuote(test.original))
+	}
+}
+
 func TestEnvName(t *testing.T) {
 	tests := []struct {
 		name     string
