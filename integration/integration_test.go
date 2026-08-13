@@ -135,6 +135,24 @@ EOF
 			`,
 		},
 		{
+			// Regression test for DX-28: unprefixed variables consumed by
+			// Hermit's shell scripts and bootstrap must be reserved too.
+			name: "ManifestCannotSetHermitExecutionEnvars",
+			script: `
+				hermit init .
+				for name in ACTIVE_HERMIT XDG_CACHE_HOME; do
+				cat > bin/hermit.hcl <<EOF
+env = {
+  "$name": "/tmp/evil",
+}
+EOF
+					assert test "$(hermit validate env . >/dev/null 2>&1; echo $?)" != "0"
+				done
+				. bin/activate-hermit >/dev/null 2>&1 || true
+				assert test "${XDG_CACHE_HOME:-}" != "/tmp/evil"
+			`,
+		},
+		{
 			// Regression test for VULN-78247: RCE via an unvalidated git transport scheme.
 			name: "MaliciousGitSourceSchemeDoesNotExecute",
 			script: `

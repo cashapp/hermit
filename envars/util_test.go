@@ -131,7 +131,11 @@ func TestValidateKey(t *testing.T) {
 func TestEnvarsValidate(t *testing.T) {
 	assert.NoError(t, Envars{"FOO": "1", "BAR_2": "2"}.Validate())
 	assert.Error(t, Envars{"FOO": "1", "EVIL; touch /tmp/x; X": "v"}.Validate())
-	assert.NoError(t, Envars{"HERMIT_EXE": "/tmp/evil"}.Validate())
+	assert.NoError(t, Envars{
+		"HERMIT_EXE":     "/tmp/evil",
+		"ACTIVE_HERMIT":  "/tmp/evil",
+		"XDG_CACHE_HOME": "/tmp/evil",
+	}.Validate())
 }
 
 func TestValidateManifestKey(t *testing.T) {
@@ -142,7 +146,8 @@ func TestValidateManifestKey(t *testing.T) {
 	}{
 		{name: "Simple", key: "FOO", wantErr: false},
 		{name: "MentionsHermit", key: "MY_HERMIT_THING", wantErr: false},
-		{name: "ActiveHermit", key: "ACTIVE_HERMIT", wantErr: false},
+		{name: "ReservedActiveHermit", key: "ACTIVE_HERMIT", wantErr: true},
+		{name: "ReservedXDGCacheHome", key: "XDG_CACHE_HOME", wantErr: true},
 		{name: "ReservedExe", key: "HERMIT_EXE", wantErr: true},
 		{name: "ReservedDistURL", key: "HERMIT_DIST_URL", wantErr: true},
 		{name: "ReservedStateDir", key: "HERMIT_STATE_DIR", wantErr: true},
@@ -167,6 +172,8 @@ func TestEnvarsValidateManifest(t *testing.T) {
 	assert.NoError(t, Envars{"FOO": "1", "BAR_2": "2"}.ValidateManifest())
 	assert.Error(t, Envars{"FOO": "1", "HERMIT_EXE": "/tmp/evil"}.ValidateManifest())
 	assert.Error(t, Envars{"_HERMIT_OLD_PATH": "x"}.ValidateManifest())
+	assert.Error(t, Envars{"ACTIVE_HERMIT": "/tmp/evil"}.ValidateManifest())
+	assert.Error(t, Envars{"XDG_CACHE_HOME": "/tmp/evil"}.ValidateManifest())
 }
 
 func TestExpandDateTime(t *testing.T) {
