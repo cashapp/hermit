@@ -789,6 +789,29 @@ EOF
 			`,
 		},
 		{
+			name:         "CleanPackagesDoesNotChmodSymlinkTargets",
+			preparations: prep{fixture("testenv1"), activate(".")},
+			script: `
+				target="$PWD/outside-target"
+				printf 'unchanged' > "$target"
+				chmod 600 "$target"
+
+				package_dir="$HERMIT_STATE_DIR/pkg/malicious-package"
+				mkdir -p "$package_dir"
+				ln -s "$target" "$package_dir/link"
+
+				hermit clean --packages
+
+				assert test ! -e "$package_dir"
+				assert test -e "$target"
+				case "$(uname -s)" in
+					Darwin) mode=$(stat -f '%Lp' "$target") ;;
+					*) mode=$(stat -c '%a' "$target") ;;
+				esac
+				assert test "$mode" = "600"
+			`,
+		},
+		{
 			name:         "InstallOnActivateEnsuresPackagesAreUnpacked",
 			preparations: prep{fixture("testenv-install-on-activate"), activate(".")},
 			script: `

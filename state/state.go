@@ -295,6 +295,11 @@ func (s *State) removeRecursive(b *ui.Task, dest string) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
+		// Never chmod through symlinks: os.Chmod follows them, which would
+		// let a symlink alter the permissions of a file outside dest.
+		if info.Mode()&os.ModeSymlink != 0 {
+			return nil
+		}
 		err = os.Chmod(path, info.Mode()|0o200) //nolint:gosec // TODO: Switch to use os.Root()
 
 		if errors.Is(err, os.ErrNotExist) {
