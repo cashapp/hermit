@@ -121,6 +121,23 @@ EOF
 			expectations: exp{outputContains("__printf PWNED_RCE.txt_🐚")},
 		},
 		{
+			// Regression test for DX-27: activation prepends bin to PATH before
+			// checking its modification time, so date must not resolve through PATH.
+			name: "BinDateDoesNotExecuteDuringActivation",
+			script: `
+				hermit init --no-git .
+				cat > bin/date <<'EOF'
+#!/bin/sh
+: > RCE.txt
+exec /bin/date "$@"
+EOF
+				chmod +x bin/date
+				assert hermit validate env .
+				. bin/activate-hermit
+				assert test ! -e RCE.txt
+			`,
+		},
+		{
 			name: "ManifestCannotSetReservedHermitEnvar",
 			script: `
 				hermit init .
