@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"regexp"
 	"slices"
 	"strings"
@@ -22,6 +23,21 @@ func GitArgs(args ...string) []string {
 		out = append(out, "-c", "protocol."+scheme+".allow=always")
 	}
 	return append(out, args...)
+}
+
+// GitConfigEnv passes git config via the environment (git >= 2.31), keeping
+// secrets out of process arguments and out of the repository's .git/config.
+func GitConfigEnv(pairs ...string) []string {
+	if len(pairs)%2 != 0 {
+		panic("GitConfigEnv requires an even number of arguments")
+	}
+	env := []string{fmt.Sprintf("GIT_CONFIG_COUNT=%d", len(pairs)/2)}
+	for i := 0; i < len(pairs); i += 2 {
+		env = append(env,
+			fmt.Sprintf("GIT_CONFIG_KEY_%d=%s", i/2, pairs[i]),
+			fmt.Sprintf("GIT_CONFIG_VALUE_%d=%s", i/2, pairs[i+1]))
+	}
+	return env
 }
 
 // ValidateGitURL rejects URLs selecting a transport Hermit does not support, and

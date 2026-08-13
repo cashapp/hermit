@@ -85,24 +85,15 @@ func (s *Sources) Sync(p *ui.UI, force bool) error {
 	return nil
 }
 
-// URLRewriter is a function that can transform a source URI
-type URLRewriter func(uri string) (string, error)
+// GitCredentials returns environment variables authenticating git operations
+// against uri, or nil if no credentials apply to it.
+type GitCredentials func(uri string) []string
 
 // ForURIs returns Source instances for given uri strings
-func ForURIs(b *ui.UI, dir, env string, uris []string, rewriters ...URLRewriter) (*Sources, error) {
+func ForURIs(b *ui.UI, dir, env string, uris []string, credentials ...GitCredentials) (*Sources, error) {
 	sources := make([]Source, 0, len(uris))
 	for _, uri := range uris {
-		// Apply each rewriter in sequence
-		transformedURI := uri
-		for _, rewrite := range rewriters {
-			rewritten, err := rewrite(transformedURI)
-			if err != nil {
-				return nil, errors.WithStack(err)
-			}
-			transformedURI = rewritten
-		}
-
-		s, err := getSource(b, transformedURI, dir, env)
+		s, err := getSource(b, uri, dir, env, credentials)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -116,15 +107,21 @@ func ForURIs(b *ui.UI, dir, env string, uris []string, rewriters ...URLRewriter)
 	}, nil
 }
 
-func getSource(b *ui.UI, source, dir, env string) (Source, error) {
-	task := b.Task(source)
+func getSource(b *ui.UI, source, dir, env string, credentials []GitCredentials) (Source, error) {
+	task := b.Task(util.RedactCredentials(source))
 	defer task.Done()
 
 	if strings.HasSuffix(source, ".git") {
 		if err := util.ValidateGitURL(source); err != nil {
 			return nil, errors.WithStack(err)
 		}
-		return NewGitSource(source, dir, &util.RealCommandRunner{}), nil
+		var gitEnv []string
+		for _, creds := range credentials {
+			if gitEnv = creds(source); len(gitEnv) > 0 {
+				break
+			}
+		}
+		return NewGitSource(source, dir, &util.RealCommandRunner{}, gitEnv), nil
 	}
 
 	uri, err := url.Parse(source)

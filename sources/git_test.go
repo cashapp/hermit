@@ -14,14 +14,14 @@ type FailingGit struct {
 	err error
 }
 
-func (f *FailingGit) RunInDir(_ *ui.Task, _ string, _ ...string) error {
+func (f *FailingGit) RunInDir(_ *ui.Task, _ string, _ []string, _ ...string) error {
 	return f.err
 }
 
 func TestGitDoesNotRemoveSourceAfterSyncFailure(t *testing.T) {
 	git := &FailingGit{}
 	sourceDir := t.TempDir()
-	source := sources.NewGitSource("git://test", sourceDir, git)
+	source := sources.NewGitSource("git://test", sourceDir, git, nil)
 
 	// Create the initial directory for sources by successfully syncing
 	u, _ := ui.NewForTesting()

@@ -6,6 +6,7 @@ import (
 	"github.com/cashapp/hermit"
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/ui"
+	"github.com/cashapp/hermit/util"
 )
 
 type statusCmd struct{}
@@ -25,7 +26,7 @@ func (s *statusCmd) Run(l *ui.UI, env *hermit.Env) error {
 		return errors.WithStack(err)
 	}
 	for _, source := range sources {
-		fmt.Printf("  %s\n", source)
+		fmt.Printf("  %s\n", util.RedactCredentials(source))
 	}
 	fmt.Println("Packages:")
 	for _, pkg := range pkgs {

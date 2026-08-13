@@ -1,10 +1,11 @@
 package github
 
 import (
+	"encoding/base64"
 	"net/url"
 	"strings"
 
-	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/util"
 )
 
 // isGitHubHTTPSURL checks if a URL is a GitHub HTTPS URL and returns owner/repo if it is
@@ -26,27 +27,23 @@ func isGitHubSSHURL(uri string) bool {
 	return strings.HasPrefix(uri, "git@github.com:")
 }
 
-// AuthenticatedURLRewriter rewrites GitHub URLs to include an auth token if they match the provided pattern
-func AuthenticatedURLRewriter(token string, matcher RepoMatcher) func(uri string) (string, error) {
-	return func(repo string) (string, error) {
-		// Pass through SSH URLs unchanged
-		if isGitHubSSHURL(repo) {
-			return repo, nil
+// GitCredentialEnv authenticates matching GitHub repositories out of band: a token
+// embedded in the URL leaks into logs, the source directory name and .git/config.
+func GitCredentialEnv(token string, matcher RepoMatcher) func(uri string) []string {
+	return func(uri string) []string {
+		if token == "" || isGitHubSSHURL(uri) {
+			return nil
 		}
-
-		u, err := url.Parse(repo)
+		u, err := url.Parse(uri)
 		if err != nil {
-			return "", errors.WithStack(err)
+			return nil
 		}
-
 		owner, repoName, ok := isGitHubHTTPSURL(u)
-		if !ok || token == "" {
-			return repo, nil
+		if !ok || !matcher(owner, repoName) {
+			return nil
 		}
-		if matcher(owner, repoName) {
-			u.User = url.UserPassword("x-access-token", token)
-			return u.String(), nil
-		}
-		return repo, nil
+		auth := base64.StdEncoding.EncodeToString([]byte("x-access-token:" + token))
+		return util.GitConfigEnv(
+			"http.https://"+gitHubHost+"/.extraheader", "Authorization: Basic "+auth)
 	}
 }

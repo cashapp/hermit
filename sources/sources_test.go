@@ -1,127 +1,75 @@
 package sources
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
-	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/github"
 	"github.com/cashapp/hermit/ui"
 )
 
-func TestGitHubTokenRewriter(t *testing.T) {
-	tests := []struct {
-		name    string
-		uri     string
-		token   string
-		pattern string
-		want    string
-	}{
-		{
-			name:    "matching github repo",
-			uri:     "https://github.com/owner/repo.git",
-			token:   "secret-token",
-			pattern: "owner/*",
-			want:    "https://x-access-token:secret-token@github.com/owner/repo.git",
-		},
-		{
-			name:    "non-matching github repo",
-			uri:     "https://github.com/other/repo.git",
-			token:   "secret-token",
-			pattern: "owner/*",
-			want:    "https://github.com/other/repo.git",
-		},
-		{
-			name:    "non-github url",
-			uri:     "https://example.com/repo.git",
-			token:   "secret-token",
-			pattern: "*/*",
-			want:    "https://example.com/repo.git",
-		},
-		{
-			name:    "git protocol url",
-			uri:     "git@github.com:owner/repo.git",
-			token:   "secret-token",
-			pattern: "owner/*",
-			want:    "git@github.com:owner/repo.git",
-		},
-		{
-			name:    "git protocol url with matching pattern",
-			uri:     "git@github.com:owner/repo.git",
-			token:   "secret-token",
-			pattern: "*/*",
-			want:    "git@github.com:owner/repo.git",
-		},
+func TestForURIsAttachesCredentialsWithoutRewritingURIs(t *testing.T) {
+	l, _ := ui.NewForTesting()
+
+	matcher, err := github.GlobRepoMatcher([]string{"owner/*"})
+	assert.NoError(t, err)
+	credentials := github.GitCredentialEnv("secret-token", matcher)
+
+	uris := []string{
+		"https://github.com/owner/repo1.git",
+		"https://github.com/other/repo2.git",
+		"git@github.com:owner/repo3.git",
+	}
+	sources, err := ForURIs(l, "testdir", "testenv", uris, credentials)
+	assert.NoError(t, err)
+	assert.Equal(t, len(uris), len(sources.sources))
+
+	for i, uri := range uris {
+		assert.Equal(t, uri, sources.sources[i].URI(),
+			"source URI must be left untouched so the token cannot leak through it")
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			matcher, err := github.GlobRepoMatcher([]string{tt.pattern})
-			assert.NoError(t, err)
+	matched, ok := sources.sources[0].(*GitSource)
+	assert.True(t, ok)
+	assert.NotZero(t, matched.env, "matching repo should carry credentials out of band")
 
-			rewriter := github.AuthenticatedURLRewriter(tt.token, matcher)
-			result, err := rewriter(tt.uri)
+	unmatched, ok := sources.sources[1].(*GitSource)
+	assert.True(t, ok)
+	assert.Zero(t, unmatched.env, "non-matching repo should carry no credentials")
+}
 
-			assert.NoError(t, err)
-			assert.Equal(t, tt.want, result)
-		})
+func TestForURIsNeverPlacesTokenInSourceURI(t *testing.T) {
+	l, _ := ui.NewForTesting()
+
+	matcher, err := github.GlobRepoMatcher([]string{"*/*"})
+	assert.NoError(t, err)
+
+	sources, err := ForURIs(l, "testdir", "testenv",
+		[]string{"https://github.com/owner/repo.git"},
+		github.GitCredentialEnv("ghp_supersecret", matcher))
+	assert.NoError(t, err)
+
+	for _, source := range sources.Sources() {
+		assert.False(t, strings.Contains(source, "ghp_supersecret"),
+			"token leaked into source URI: %s", source)
 	}
 }
 
-// TestForURIsIntegration tests the integration of ForURIs with rewriters
-func TestForURIsIntegration(t *testing.T) {
+func TestForURIsRejectsGitRemoteHelperURI(t *testing.T) {
 	l, _ := ui.NewForTesting()
 
-	t.Run("successful rewriting", func(t *testing.T) {
-		matcher, err := github.GlobRepoMatcher([]string{"owner/*"})
-		assert.NoError(t, err)
-		rewriter := github.AuthenticatedURLRewriter("test-token", matcher)
+	_, err := ForURIs(l, "testdir", "testenv", []string{"zzq::x.git"})
 
-		uris := []string{
-			"https://github.com/owner/repo1.git",
-			"https://github.com/other/repo2.git",
-			"git@github.com:owner/repo3.git",
-		}
-		sources, err := ForURIs(l, "testdir", "testenv", uris, rewriter)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "remote helpers are not supported")
+}
 
-		assert.NoError(t, err)
-		assert.Equal(t, len(uris), len(sources.sources))
+func TestForURIsRejectsUnsupportedScheme(t *testing.T) {
+	l, _ := ui.NewForTesting()
 
-		// Verify the sources were created with appropriate URIs
-		// First URI should be rewritten with token, others should remain unchanged
-		assert.Contains(t, sources.sources[0].URI(), "x-access-token:test-token@github.com")
-		assert.Equal(t, uris[1], sources.sources[1].URI())
-		assert.Equal(t, uris[2], sources.sources[2].URI())
-	})
+	_, err := ForURIs(l, "testdir", "testenv", []string{"invalid://not-a-valid-source"})
 
-	t.Run("rewriter error", func(t *testing.T) {
-		errorRewriter := func(uri string) (string, error) {
-			return "", errors.New("rewriter error")
-		}
-
-		uris := []string{"https://github.com/owner/repo.git"}
-		_, err := ForURIs(l, "testdir", "testenv", uris, errorRewriter)
-
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "rewriter error")
-	})
-
-	t.Run("git remote helper uri", func(t *testing.T) {
-		_, err := ForURIs(l, "testdir", "testenv", []string{"zzq::x.git"})
-
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "remote helpers are not supported")
-	})
-
-	t.Run("invalid rewritten uri", func(t *testing.T) {
-		invalidRewriter := func(uri string) (string, error) {
-			return "invalid://not-a-valid-source", nil
-		}
-
-		uris := []string{"https://github.com/owner/repo.git"}
-		_, err := ForURIs(l, "testdir", "testenv", uris, invalidRewriter)
-
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "unsupported source")
-	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unsupported source")
 }

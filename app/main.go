@@ -279,13 +279,13 @@ func Main(config Config) {
 		log.Fatalf("failed to open state: %s", err)
 	}
 
-	var sourceRewriters []sources.URLRewriter
+	var gitCredentials []sources.GitCredentials
 	if isActivated {
 		if matcher != nil {
-			sourceRewriters = append(sourceRewriters, github.AuthenticatedURLRewriter(githubToken, matcher))
+			gitCredentials = append(gitCredentials, github.GitCredentialEnv(githubToken, matcher))
 		}
 
-		env, err = hermit.OpenEnv(envInfo, sta, cache.GetSource, cli.getGlobalState().Env, defaultHTTPClient, config.SHA256Sums, sourceRewriters...)
+		env, err = hermit.OpenEnv(envInfo, sta, cache.GetSource, cli.getGlobalState().Env, defaultHTTPClient, config.SHA256Sums, gitCredentials...)
 		if err != nil {
 			log.Fatalf("failed to open environment: %s", err)
 		}
@@ -320,7 +320,7 @@ func Main(config Config) {
 			fatalIfError(p, ctx, err)
 		}()
 	}
-	err = ctx.Run(env, p, sta, config, cli.getGlobalState(), ghClient, defaultHTTPClient, cache, userConfig, sourceRewriters)
+	err = ctx.Run(env, p, sta, config, cli.getGlobalState(), ghClient, defaultHTTPClient, cache, userConfig, gitCredentials)
 	fatalIfError(p, ctx, err)
 }
 

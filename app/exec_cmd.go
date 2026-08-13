@@ -32,7 +32,7 @@ func (e *execCmd) Run(
 	globalState GlobalState,
 	config Config,
 	defaultHTTPClient *http.Client,
-	sourceRewriters []sources.URLRewriter,
+	gitCredentials []sources.GitCredentials,
 ) error {
 	envDir, err := hermit.FindEnvDir(e.Binary)
 	if err != nil {
@@ -44,7 +44,7 @@ func (e *execCmd) Run(
 	}
 
 	// Pass config.SHA256Sums because OpenEnv uses the defaults cashapp/hermit; internal builds inject additional SHA256Sums.
-	env, err := hermit.OpenEnv(envInfo, sta, cache.GetSource, globalState.Env, defaultHTTPClient, config.SHA256Sums, sourceRewriters...)
+	env, err := hermit.OpenEnv(envInfo, sta, cache.GetSource, globalState.Env, defaultHTTPClient, config.SHA256Sums, gitCredentials...)
 	if err != nil {
 		return errors.WithStack(err)
 	}
