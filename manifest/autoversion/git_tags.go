@@ -13,7 +13,7 @@ import (
 )
 
 func gitTagsAutoVersion(autoVersion *manifest.AutoVersionBlock) (string, error) {
-	remoteURL := sources.NewSource(autoVersion.GitTags)
+	remoteURL := sources.NewSourceURI(autoVersion.GitTags)
 	versionRe, err := regexp.Compile(autoVersion.VersionPattern)
 	if err != nil {
 		return "", errors.WithStack(err)

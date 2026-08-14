@@ -17,11 +17,11 @@ import (
 
 type httpSource struct {
 	client *http.Client
-	url    sources.Source
+	url    sources.SourceURI
 }
 
 // HTTPSource is a PackageSource for a HTTP URL.
-func HTTPSource(client *http.Client, url sources.Source) PackageSource {
+func HTTPSource(client *http.Client, url sources.SourceURI) PackageSource {
 	return &httpSource{client, url}
 }
 
@@ -83,7 +83,7 @@ func (s *httpSource) Validate() error {
 	return nil
 }
 
-func downloadHTTP(b *ui.Task, response *http.Response, checksum string, uri sources.Source, cachePath string) (path string, etag string, returnChecksum string, err error) {
+func downloadHTTP(b *ui.Task, response *http.Response, checksum string, uri sources.SourceURI, cachePath string) (path string, etag string, returnChecksum string, err error) {
 	if response.StatusCode < 200 || response.StatusCode > 299 {
 		return "", "", "", errors.Errorf("download failed: %s (%d), source url: %s", response.Status, response.StatusCode, uri)
 	}

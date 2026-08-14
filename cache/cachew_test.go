@@ -9,7 +9,7 @@ import (
 
 func TestCachewSourceSelector(t *testing.T) {
 	// Mock base selector that always returns a file source
-	baseSelector := func(client *http.Client, uri sources.Source) (PackageSource, error) {
+	baseSelector := func(client *http.Client, uri sources.SourceURI) (PackageSource, error) {
 		return &fileSource{path: "/tmp/test"}, nil
 	}
 
@@ -56,7 +56,7 @@ func TestCachewSourceSelector(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			source, err := selector(nil, sources.NewSource(tt.inputURI))
+			source, err := selector(nil, sources.NewSourceURI(tt.inputURI))
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -84,14 +84,14 @@ func TestCachewSourceSelector(t *testing.T) {
 }
 
 func TestCachewSourceSelectorInvalidURL(t *testing.T) {
-	baseSelector := func(client *http.Client, uri sources.Source) (PackageSource, error) {
+	baseSelector := func(client *http.Client, uri sources.SourceURI) (PackageSource, error) {
 		return &fileSource{path: "/tmp/fallback"}, nil
 	}
 
 	selector := CachewSourceSelector(baseSelector, "https://cachew.example.com")
 
 	// Test invalid URL - should fall back to base selector
-	source, err := selector(nil, sources.NewSource("://invalid-url"))
+	source, err := selector(nil, sources.NewSourceURI("://invalid-url"))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

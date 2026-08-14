@@ -6,7 +6,7 @@ import (
 	"github.com/alecthomas/assert/v2"
 )
 
-func TestSource(t *testing.T) {
+func TestSourceURI(t *testing.T) {
 	for _, test := range []struct {
 		name     string
 		input    string
@@ -24,7 +24,7 @@ func TestSource(t *testing.T) {
 		{"AtInPath", "https://github.com/o/r@v1.git", "https://github.com/o/r@v1.git"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			source := NewSource(test.input)
+			source := NewSourceURI(test.input)
 			assert.Equal(t, test.input, source.Get())
 			assert.Equal(t, test.expected, source.String())
 		})

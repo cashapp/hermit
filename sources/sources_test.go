@@ -93,7 +93,7 @@ func TestGitHubTokenRewriter(t *testing.T) {
 			assert.NoError(t, err)
 
 			rewriter := github.AuthenticatedURLRewriter(tt.token, matcher)
-			result, err := rewriter(sources.NewSource(tt.uri))
+			result, err := rewriter(sources.NewSourceURI(tt.uri))
 
 			assert.NoError(t, err)
 			assert.Equal(t, tt.want, result.Get())
@@ -106,7 +106,7 @@ func TestGitHubTokenRewriterErrorDoesNotLeakCredentials(t *testing.T) {
 	assert.NoError(t, err)
 	rewriter := github.AuthenticatedURLRewriter("unused", matcher)
 
-	_, err = rewriter(sources.NewSource("https://x-access-token:secret-token@github.com/owner/%zz"))
+	_, err = rewriter(sources.NewSourceURI("https://x-access-token:secret-token@github.com/owner/%zz"))
 	assert.Error(t, err)
 	assert.NotContains(t, err.Error(), "secret-token")
 	assert.Contains(t, err.Error(), "https://x-access-token:****@github.com/owner/%zz")
@@ -140,8 +140,8 @@ func TestForURIsIntegration(t *testing.T) {
 	})
 
 	t.Run("rewriter error", func(t *testing.T) {
-		errorRewriter := func(_ sources.Source) (sources.Source, error) {
-			return sources.Source{}, errors.New("rewriter error")
+		errorRewriter := func(_ sources.SourceURI) (sources.SourceURI, error) {
+			return sources.SourceURI{}, errors.New("rewriter error")
 		}
 
 		uris := []string{"https://github.com/owner/repo.git"}
@@ -159,8 +159,8 @@ func TestForURIsIntegration(t *testing.T) {
 	})
 
 	t.Run("invalid rewritten uri", func(t *testing.T) {
-		invalidRewriter := func(_ sources.Source) (sources.Source, error) {
-			return sources.NewSource("invalid://not-a-valid-source"), nil
+		invalidRewriter := func(_ sources.SourceURI) (sources.SourceURI, error) {
+			return sources.NewSourceURI("invalid://not-a-valid-source"), nil
 		}
 
 		uris := []string{"https://github.com/owner/repo.git"}

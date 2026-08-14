@@ -77,7 +77,7 @@ func TestCaptureSystemWithSourceKeepsRawURLAtExecutionBoundary(t *testing.T) {
 		rawURL = "https://x-access-token:" + secret + "@github.com/owner/repo.git"
 	)
 	l, output := ui.NewForTesting()
-	source := sources.NewSource(rawURL)
+	source := sources.NewSourceURI(rawURL)
 
 	_, err := util.CaptureSystemWithSource(
 		l,

@@ -26,10 +26,10 @@ type Cache struct {
 
 // BasePath returns the subfolder in the cache path for the given file
 func BasePath(checksum, uri string) string {
-	return basePath(checksum, sources.NewSource(uri))
+	return basePath(checksum, sources.NewSourceURI(uri))
 }
 
-func basePath(checksum string, uri sources.Source) string {
+func basePath(checksum string, uri sources.SourceURI) string {
 	hash := util.Hash(uri.Get(), checksum)
 	return filepath.Join(hash[:2], hash+"-"+filepath.Base(uri.Get()))
 }
@@ -70,13 +70,13 @@ func (c *Cache) Root() string {
 
 // Mkdir makes a directory for the given URI.
 func (c *Cache) Mkdir(uri string) (string, error) {
-	path := c.path("", sources.NewSource(uri))
+	path := c.path("", sources.NewSourceURI(uri))
 	return path, os.MkdirAll(path, os.ModePerm) //nolint:gosec
 }
 
 // Create a new, empty, cache entry.
 func (c *Cache) Create(checksum, uri string) (*os.File, error) {
-	path := c.path(checksum, sources.NewSource(uri))
+	path := c.path(checksum, sources.NewSourceURI(uri))
 	dir := filepath.Dir(path)
 	err := os.MkdirAll(dir, os.ModePerm) //nolint:gosec
 	if err != nil {
@@ -87,7 +87,7 @@ func (c *Cache) Create(checksum, uri string) (*os.File, error) {
 
 // OpenLocal opens a local cached copy of "uri", or errors.
 func (c *Cache) OpenLocal(checksum, uri string) (*os.File, error) {
-	source, err := c.GetSource(c.httpClient, sources.NewSource(uri))
+	source, err := c.GetSource(c.httpClient, sources.NewSourceURI(uri))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -98,7 +98,7 @@ func (c *Cache) OpenLocal(checksum, uri string) (*os.File, error) {
 //
 // If checksum is present it must be the SHA256 hash of the downloaded artifact.
 func (c *Cache) Open(b *ui.Task, checksum, uri string, mirrors ...string) (*os.File, error) {
-	source := sources.NewSource(uri)
+	source := sources.NewSourceURI(uri)
 	cachePath := c.path(checksum, source)
 	_, err := os.Stat(cachePath)
 	if err == nil {
@@ -121,11 +121,11 @@ func (c *Cache) Open(b *ui.Task, checksum, uri string, mirrors ...string) (*os.F
 //
 // If checksum is present it must be the SHA256 hash of the downloaded artifact.
 func (c *Cache) Download(b *ui.Task, checksum, uri string, mirrors ...string) (path string, etag string, actualChecksum string, err error) {
-	return c.download(b, checksum, sources.NewSource(uri), wrapSources(mirrors))
+	return c.download(b, checksum, sources.NewSourceURI(uri), wrapSources(mirrors))
 }
 
-func (c *Cache) download(b *ui.Task, checksum string, uri sources.Source, mirrors []sources.Source) (path string, etag string, actualChecksum string, err error) {
-	uris := append([]sources.Source{uri}, mirrors...)
+func (c *Cache) download(b *ui.Task, checksum string, uri sources.SourceURI, mirrors []sources.SourceURI) (path string, etag string, actualChecksum string, err error) {
+	uris := append([]sources.SourceURI{uri}, mirrors...)
 	var lastError error
 	attempts := 3
 	for attempt := 1; attempt <= attempts; attempt++ {
@@ -163,11 +163,11 @@ func (c *Cache) download(b *ui.Task, checksum string, uri sources.Source, mirror
 // ETag fetches the etag from given URI if available.
 // Otherwise an empty string is returned
 func (c *Cache) ETag(b *ui.Task, uri string, mirrors ...string) (etag string, err error) {
-	return c.etag(b, sources.NewSource(uri), wrapSources(mirrors))
+	return c.etag(b, sources.NewSourceURI(uri), wrapSources(mirrors))
 }
 
-func (c *Cache) etag(b *ui.Task, uri sources.Source, mirrors []sources.Source) (etag string, err error) {
-	for _, sourceURI := range append([]sources.Source{uri}, mirrors...) {
+func (c *Cache) etag(b *ui.Task, uri sources.SourceURI, mirrors []sources.SourceURI) (etag string, err error) {
+	for _, sourceURI := range append([]sources.SourceURI{uri}, mirrors...) {
 		source, err := c.GetSource(c.fastFailHTTPClient, sourceURI)
 		if err != nil {
 			return "", errors.WithStack(err)
@@ -184,13 +184,13 @@ func (c *Cache) etag(b *ui.Task, uri sources.Source, mirrors []sources.Source) (
 
 // IsCached returns true if the URI is cached.
 func (c *Cache) IsCached(checksum, uri string) bool {
-	_, err := os.Stat(c.path(checksum, sources.NewSource(uri)))
+	_, err := os.Stat(c.path(checksum, sources.NewSourceURI(uri)))
 	return err == nil
 }
 
 // Evict a file from the cache.
 func (c *Cache) Evict(b *ui.Task, checksum, uri string) error {
-	path := c.path(checksum, sources.NewSource(uri))
+	path := c.path(checksum, sources.NewSourceURI(uri))
 	b.SubTask("remove").Debugf("rm -rf %s", path)
 	err := os.RemoveAll(path)
 	if err != nil && !os.IsNotExist(err) {
@@ -206,23 +206,23 @@ func (c *Cache) Clean() error {
 
 // Path to cached object.
 func (c *Cache) Path(checksum, uri string) string {
-	return c.path(checksum, sources.NewSource(uri))
+	return c.path(checksum, sources.NewSourceURI(uri))
 }
 
-func (c *Cache) path(checksum string, uri sources.Source) string {
+func (c *Cache) path(checksum string, uri sources.SourceURI) string {
 	base := basePath(checksum, uri)
 	return filepath.Join(c.root, base)
 }
 
-func wrapSources(raw []string) []sources.Source {
-	wrapped := make([]sources.Source, len(raw))
+func wrapSources(raw []string) []sources.SourceURI {
+	wrapped := make([]sources.SourceURI, len(raw))
 	for i, uri := range raw {
-		wrapped[i] = sources.NewSource(uri)
+		wrapped[i] = sources.NewSourceURI(uri)
 	}
 	return wrapped
 }
 
-func joinSources(uris []sources.Source) string {
+func joinSources(uris []sources.SourceURI) string {
 	redacted := make([]string, len(uris))
 	for i, uri := range uris {
 		redacted[i] = uri.String()
@@ -232,7 +232,7 @@ func joinSources(uris []sources.Source) string {
 
 // UnavailableError returns 101 for the exit code.
 type UnavailableError struct {
-	URI sources.Source
+	URI sources.SourceURI
 	Err error
 }
 

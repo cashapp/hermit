@@ -275,7 +275,7 @@ func TestManifest(t *testing.T) {
 				}
 			}
 			logger := ui.New(ui.LevelInfo, os.Stdout, os.Stderr, true, true)
-			resolver, err := New(sources.New("", []sources.ManifestSource{
+			resolver, err := New(sources.New("", []sources.Source{
 				sources.NewMemSource("go.hcl", test.manifest),
 			}), Config{
 				Env:   "/project",

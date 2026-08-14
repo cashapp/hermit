@@ -10,7 +10,7 @@ import (
 
 // ValidatePackageSource checks that a package source is accessible.
 func ValidatePackageSource(packageSource cache.PackageSourceSelector, httpClient *http.Client, url string) error {
-	urlSource := sources.NewSource(url)
+	urlSource := sources.NewSourceURI(url)
 	source, err := packageSource(httpClient, urlSource)
 	if err != nil {
 		return errors.Wrap(err, urlSource.String())

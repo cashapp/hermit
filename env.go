@@ -1300,7 +1300,7 @@ func (e *Env) EnsureChannelIsUpToDate(l *ui.UI, pkg *manifest.Package) error {
 }
 
 // AddSource adds a new source bundle and refreshes the packages from it
-func (e *Env) AddSource(l *ui.UI, s sources.ManifestSource) error {
+func (e *Env) AddSource(l *ui.UI, s sources.Source) error {
 	sources, err := e.sources(l)
 	if err != nil {
 		return errors.WithStack(err)
@@ -1539,7 +1539,7 @@ func (e *Env) Update(l *ui.UI, force bool) error {
 }
 
 // Sources enabled in this environment.
-func (e *Env) Sources(l *ui.UI) ([]sources.Source, error) {
+func (e *Env) Sources(l *ui.UI) ([]sources.SourceURI, error) {
 	sources, err := e.sources(l)
 	if err != nil {
 		return nil, errors.WithStack(err)

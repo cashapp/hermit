@@ -13,7 +13,7 @@ import (
 )
 
 type gitSource struct {
-	URL sources.Source
+	URL sources.SourceURI
 }
 
 func (s *gitSource) OpenLocal(c *Cache, checksum string) (*os.File, error) {
@@ -88,12 +88,12 @@ func (s *gitSource) Validate() error {
 	return nil
 }
 
-func parseGitURL(source sources.Source) (repo sources.Source, tag string, err error) {
+func parseGitURL(source sources.SourceURI) (repo sources.SourceURI, tag string, err error) {
 	parts := strings.SplitN(source.Get(), "#", 2)
-	repo = sources.NewSource(parts[0])
+	repo = sources.NewSourceURI(parts[0])
 
 	if err := util.ValidateGitURL(repo); err != nil {
-		return sources.Source{}, "", errors.WithStack(err)
+		return sources.SourceURI{}, "", errors.WithStack(err)
 	}
 
 	if len(parts) > 1 {

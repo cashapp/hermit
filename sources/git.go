@@ -14,7 +14,7 @@ import (
 // CommandRunner abstracts the git operations used to synchronise a source.
 type CommandRunner interface {
 	RunInDir(log *ui.Task, dir string, args ...string) error
-	CloneInDir(log *ui.Task, dir string, source Source, dest string) error
+	CloneInDir(log *ui.Task, dir string, source SourceURI, dest string) error
 }
 
 // RealCommandRunner runs git operations through Hermit's system command path.
@@ -24,7 +24,7 @@ func (r *RealCommandRunner) RunInDir(log *ui.Task, dir string, args ...string) e
 	return errors.WithStack(util.RunSystemInDir(log, dir, args...))
 }
 
-func (r *RealCommandRunner) CloneInDir(log *ui.Task, dir string, source Source, dest string) error {
+func (r *RealCommandRunner) CloneInDir(log *ui.Task, dir string, source SourceURI, dest string) error {
 	args := util.GitArgs("clone", "--depth=1", "--")
 	return errors.WithStack(util.RunSystemInDirWithSource(log, dir, args, source, dest))
 }
@@ -38,7 +38,7 @@ type GitSource struct {
 }
 
 // NewGitSource returns a new GitSource
-func NewGitSource(uri Source, sourceDir string, runner CommandRunner) *GitSource {
+func NewGitSource(uri SourceURI, sourceDir string, runner CommandRunner) *GitSource {
 	key := util.Hash(uri.Get())
 	path := filepath.Join(sourceDir, key)
 	return &GitSource{&uriFS{
@@ -72,7 +72,7 @@ func (s *GitSource) Sync(p *ui.UI, force bool) (bool, error) {
 	return false, nil
 }
 
-func (s *GitSource) URI() Source {
+func (s *GitSource) URI() SourceURI {
 	return s.fs.uri
 }
 
@@ -88,7 +88,7 @@ func (s *GitSource) ensureSourcesDirExists() error {
 }
 
 // Atomically clone git repo.
-func syncGit(b *ui.Task, dir string, source Source, finalDest string, runner CommandRunner) (err error) {
+func syncGit(b *ui.Task, dir string, source SourceURI, finalDest string, runner CommandRunner) (err error) {
 	task := b.SubProgress("sync", 1)
 	defer func() {
 		task.Done()

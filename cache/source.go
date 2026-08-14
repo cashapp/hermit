@@ -16,7 +16,7 @@ import (
 // PackageSourceSelector selects a PackageSource for a URI.
 //
 // If not provided to the Cache, GetSource() will be used.
-type PackageSourceSelector func(client *http.Client, uri sources.Source) (PackageSource, error)
+type PackageSourceSelector func(client *http.Client, uri sources.SourceURI) (PackageSource, error)
 
 // PackageSource for a specific version / system of a package
 type PackageSource interface {
@@ -28,7 +28,7 @@ type PackageSource interface {
 }
 
 // GetSource for the given uri, or an error if the uri can not be parsed as a source
-func GetSource(client *http.Client, uri sources.Source) (PackageSource, error) {
+func GetSource(client *http.Client, uri sources.SourceURI) (PackageSource, error) {
 	rawURI := uri.Get()
 	if strings.HasSuffix(rawURI, ".git") || strings.Contains(rawURI, ".git#") {
 		return &gitSource{URL: uri}, nil

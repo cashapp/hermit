@@ -12,7 +12,7 @@ type LocalSource struct {
 }
 
 // NewLocalSource returns a new LocalSource
-func NewLocalSource(uri Source, f fs.FS) *LocalSource {
+func NewLocalSource(uri SourceURI, f fs.FS) *LocalSource {
 	return &LocalSource{&uriFS{
 		uri: uri,
 		FS:  f,
@@ -23,7 +23,7 @@ func (s *LocalSource) Sync(_ *ui.UI, _ bool) (bool, error) {
 	return true, nil
 }
 
-func (s *LocalSource) URI() Source {
+func (s *LocalSource) URI() SourceURI {
 	return s.fs.uri
 }
 

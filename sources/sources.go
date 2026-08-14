@@ -17,26 +17,26 @@ import (
 // SyncFrequency determines how frequently sources will be synced.
 const SyncFrequency = time.Hour * 24
 
-// ManifestSource provides manifest files from one source.
-type ManifestSource interface {
+// Source provides manifest files from one source.
+type Source interface {
 	// Sync synchronises these sources from the possibly remote origin.
 	// Returns true if the source was actually updated.
 	Sync(p *ui.UI, force bool) (bool, error)
 	// URI returns a URI for the source
-	URI() Source
+	URI() SourceURI
 	// Bundle returns a fs.FS for the manifests from this source
 	Bundle() fs.FS
 }
 
 // Sources knows how to sync manifests from various sources such as git repositories.
 type Sources struct {
-	sources        []ManifestSource
+	sources        []Source
 	dir            string
 	isSynchronised bool // Keep track if the sources have been synchronised to avoid double synchronisation
 }
 
 // New returns a new set of sources
-func New(stateDir string, sources []ManifestSource) *Sources {
+func New(stateDir string, sources []Source) *Sources {
 	return &Sources{
 		dir:     stateDir,
 		sources: sources,
@@ -55,12 +55,12 @@ func (s *Sources) LocalDirs() []string {
 }
 
 // Prepend a new source
-func (s *Sources) Prepend(source ManifestSource) {
-	s.sources = append([]ManifestSource{source}, s.sources...)
+func (s *Sources) Prepend(source Source) {
+	s.sources = append([]Source{source}, s.sources...)
 }
 
 // Add a new source
-func (s *Sources) Add(source ManifestSource) {
+func (s *Sources) Add(source Source) {
 	s.sources = append(s.sources, source)
 }
 
@@ -86,14 +86,14 @@ func (s *Sources) Sync(p *ui.UI, force bool) error {
 }
 
 // URLRewriter is a function that can transform a source URI
-type URLRewriter func(source Source) (Source, error)
+type URLRewriter func(source SourceURI) (SourceURI, error)
 
 // ForURIs constructs manifest sources for the given raw URI strings.
 func ForURIs(b *ui.UI, dir, env string, uris []string, rewriters ...URLRewriter) (*Sources, error) {
-	sources := make([]ManifestSource, 0, len(uris))
+	sources := make([]Source, 0, len(uris))
 	for _, uri := range uris {
 		// Apply each rewriter in sequence
-		transformedSource := NewSource(uri)
+		transformedSource := NewSourceURI(uri)
 		for _, rewrite := range rewriters {
 			rewritten, err := rewrite(transformedSource)
 			if err != nil {
@@ -116,7 +116,7 @@ func ForURIs(b *ui.UI, dir, env string, uris []string, rewriters ...URLRewriter)
 	}, nil
 }
 
-func getSource(b *ui.UI, source Source, dir, env string) (ManifestSource, error) {
+func getSource(b *ui.UI, source SourceURI, dir, env string) (Source, error) {
 	task := b.Task(source.String())
 	defer task.Done()
 
@@ -171,8 +171,8 @@ func getSource(b *ui.UI, source Source, dir, env string) (ManifestSource, error)
 }
 
 // Sources returns the source URIs
-func (s *Sources) Sources() []Source {
-	combined := []Source{}
+func (s *Sources) Sources() []SourceURI {
+	combined := []SourceURI{}
 	for _, s := range s.sources {
 		combined = append(combined, s.URI())
 	}
@@ -190,7 +190,7 @@ func (s *Sources) Bundles() []fs.FS {
 
 // This exists to provide useful debugging information back to the user.
 type uriFS struct {
-	uri Source
+	uri SourceURI
 	fs.FS
 }
 

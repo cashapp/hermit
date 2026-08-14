@@ -9,20 +9,20 @@ import (
 
 // MemSource is a new Source based on a name and content kept in memory
 type MemSource struct {
-	name    Source
+	name    SourceURI
 	content string
 }
 
 // NewMemSource returns a new MemSource
 func NewMemSource(name, content string) *MemSource {
-	return &MemSource{NewSource(name), content}
+	return &MemSource{NewSourceURI(name), content}
 }
 
 func (s *MemSource) Sync(_ *ui.UI, _ bool) (bool, error) {
 	return true, nil
 }
 
-func (s *MemSource) URI() Source {
+func (s *MemSource) URI() SourceURI {
 	return s.name
 }
 
