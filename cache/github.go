@@ -10,6 +10,7 @@ import (
 
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/github"
+	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/ui"
 )
 
@@ -18,7 +19,7 @@ var githubRe = regexp.MustCompile(`^https\://github\.com/([^/]+)/([^/]+)/release
 
 // GitHubSourceSelector can download private release assets from GitHub using an authenticated GitHub client.
 func GitHubSourceSelector(getSource PackageSourceSelector, ghclient *github.Client, match github.RepoMatcher) PackageSourceSelector {
-	return func(client *http.Client, uri string) (PackageSource, error) {
+	return func(client *http.Client, uri sources.Source) (PackageSource, error) {
 		info, ok := getGitHubReleaseInfo(uri)
 		if !ok || match == nil || !match(info.owner, info.repo) {
 			return getSource(client, uri)
@@ -30,11 +31,11 @@ func GitHubSourceSelector(getSource PackageSourceSelector, ghclient *github.Clie
 type githubReleaseSource struct {
 	info     *githubReleaseInfo
 	ghclient *github.Client
-	url      string
+	url      sources.Source
 }
 
 func (g *githubReleaseSource) OpenLocal(c *Cache, checksum string) (*os.File, error) {
-	f, err := os.Open(c.Path(checksum, g.url))
+	f, err := os.Open(c.path(checksum, g.url))
 	return f, errors.WithStack(err)
 }
 
@@ -44,7 +45,7 @@ func (g *githubReleaseSource) Download(b *ui.Task, c *Cache, checksum string) (p
 		return "", "", "", err
 	}
 	defer response.Body.Close()
-	cachePath := c.Path(checksum, g.url)
+	cachePath := c.path(checksum, g.url)
 	return downloadHTTP(b, response, checksum, g.url, cachePath)
 }
 
@@ -97,9 +98,9 @@ type githubReleaseInfo struct {
 	owner, repo, tag, asset string
 }
 
-func getGitHubReleaseInfo(uri string) (*githubReleaseInfo, bool) {
+func getGitHubReleaseInfo(uri sources.Source) (*githubReleaseInfo, bool) {
 	g := &githubReleaseInfo{}
-	m := githubRe.FindStringSubmatch(uri)
+	m := githubRe.FindStringSubmatch(uri.Get())
 	if len(m) != 5 {
 		return nil, false
 	}

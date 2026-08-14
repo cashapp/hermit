@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/ui"
 	"github.com/cashapp/hermit/util"
 )
@@ -25,8 +26,12 @@ type Cache struct {
 
 // BasePath returns the subfolder in the cache path for the given file
 func BasePath(checksum, uri string) string {
-	hash := util.Hash(uri, checksum)
-	return filepath.Join(hash[:2], hash+"-"+filepath.Base(uri))
+	return basePath(checksum, sources.NewSource(uri))
+}
+
+func basePath(checksum string, uri sources.Source) string {
+	hash := util.Hash(uri.Get(), checksum)
+	return filepath.Join(hash[:2], hash+"-"+filepath.Base(uri.Get()))
 }
 
 // Open or create a Cache at the given directory, using the given http client.
@@ -65,13 +70,13 @@ func (c *Cache) Root() string {
 
 // Mkdir makes a directory for the given URI.
 func (c *Cache) Mkdir(uri string) (string, error) {
-	path := c.Path("", uri)
+	path := c.path("", sources.NewSource(uri))
 	return path, os.MkdirAll(path, os.ModePerm) //nolint:gosec
 }
 
 // Create a new, empty, cache entry.
 func (c *Cache) Create(checksum, uri string) (*os.File, error) {
-	path := c.Path(checksum, uri)
+	path := c.path(checksum, sources.NewSource(uri))
 	dir := filepath.Dir(path)
 	err := os.MkdirAll(dir, os.ModePerm) //nolint:gosec
 	if err != nil {
@@ -82,7 +87,7 @@ func (c *Cache) Create(checksum, uri string) (*os.File, error) {
 
 // OpenLocal opens a local cached copy of "uri", or errors.
 func (c *Cache) OpenLocal(checksum, uri string) (*os.File, error) {
-	source, err := c.GetSource(c.httpClient, uri)
+	source, err := c.GetSource(c.httpClient, sources.NewSource(uri))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -93,10 +98,11 @@ func (c *Cache) OpenLocal(checksum, uri string) (*os.File, error) {
 //
 // If checksum is present it must be the SHA256 hash of the downloaded artifact.
 func (c *Cache) Open(b *ui.Task, checksum, uri string, mirrors ...string) (*os.File, error) {
-	cachePath := c.Path(checksum, uri)
+	source := sources.NewSource(uri)
+	cachePath := c.path(checksum, source)
 	_, err := os.Stat(cachePath)
 	if err == nil {
-		b.Tracef("returning cached path %s for %s", cachePath, uri)
+		b.Tracef("returning cached path %s for %s", cachePath, source)
 		// TODO: Checksum it again?
 		return os.Open(cachePath)
 	} else if !os.IsNotExist(err) {
@@ -104,7 +110,7 @@ func (c *Cache) Open(b *ui.Task, checksum, uri string, mirrors ...string) (*os.F
 	}
 
 	// No local cached copy, download it.
-	path, _, _, err := c.Download(b, checksum, uri, mirrors...)
+	path, _, _, err := c.download(b, checksum, source, wrapSources(mirrors))
 	if err != nil {
 		return nil, err
 	}
@@ -115,13 +121,17 @@ func (c *Cache) Open(b *ui.Task, checksum, uri string, mirrors ...string) (*os.F
 //
 // If checksum is present it must be the SHA256 hash of the downloaded artifact.
 func (c *Cache) Download(b *ui.Task, checksum, uri string, mirrors ...string) (path string, etag string, actualChecksum string, err error) {
-	uris := append([]string{uri}, mirrors...)
+	return c.download(b, checksum, sources.NewSource(uri), wrapSources(mirrors))
+}
+
+func (c *Cache) download(b *ui.Task, checksum string, uri sources.Source, mirrors []sources.Source) (path string, etag string, actualChecksum string, err error) {
+	uris := append([]sources.Source{uri}, mirrors...)
 	var lastError error
 	attempts := 3
 	for attempt := 1; attempt <= attempts; attempt++ {
-		for _, uri := range uris {
-			defer ui.LogElapsed(b, "Download %s", uri)()
-			source, err := c.GetSource(c.httpClient, uri)
+		for _, sourceURI := range uris {
+			defer ui.LogElapsed(b, "Download %s", sourceURI)()
+			source, err := c.GetSource(c.httpClient, sourceURI)
 			if err != nil {
 				return "", "", "", errors.WithStack(err)
 			}
@@ -130,12 +140,12 @@ func (c *Cache) Download(b *ui.Task, checksum, uri string, mirrors ...string) (p
 				return path, etag, actualChecksum, nil
 			}
 			lastError = err
-			b.Debugf("%s: %s", uri, err)
+			b.Debugf("%s: %s", sourceURI, err)
 		}
 		if lastError == nil {
-			return "", "", "", errors.Errorf("failed to download from any of %s", strings.Join(uris, ", "))
+			return "", "", "", errors.Errorf("failed to download from any of %s", joinSources(uris))
 		}
-		msg := fmt.Sprintf("Failed to download any of %s on attempt %d/%d: %s", strings.Join(uris, ", "), attempt, attempts, lastError)
+		msg := fmt.Sprintf("Failed to download any of %s on attempt %d/%d: %s", joinSources(uris), attempt, attempts, lastError)
 		if attempt < attempts {
 			msg = "Retrying. " + msg
 		}
@@ -153,14 +163,18 @@ func (c *Cache) Download(b *ui.Task, checksum, uri string, mirrors ...string) (p
 // ETag fetches the etag from given URI if available.
 // Otherwise an empty string is returned
 func (c *Cache) ETag(b *ui.Task, uri string, mirrors ...string) (etag string, err error) {
-	for _, uri := range append([]string{uri}, mirrors...) {
-		source, err := c.GetSource(c.fastFailHTTPClient, uri)
+	return c.etag(b, sources.NewSource(uri), wrapSources(mirrors))
+}
+
+func (c *Cache) etag(b *ui.Task, uri sources.Source, mirrors []sources.Source) (etag string, err error) {
+	for _, sourceURI := range append([]sources.Source{uri}, mirrors...) {
+		source, err := c.GetSource(c.fastFailHTTPClient, sourceURI)
 		if err != nil {
 			return "", errors.WithStack(err)
 		}
 		result, err := source.ETag(b)
 		if err != nil {
-			b.Debugf("%s failed: %s", uri, err)
+			b.Debugf("%s failed: %s", sourceURI, err)
 			continue
 		}
 		return result, nil
@@ -170,14 +184,15 @@ func (c *Cache) ETag(b *ui.Task, uri string, mirrors ...string) (etag string, er
 
 // IsCached returns true if the URI is cached.
 func (c *Cache) IsCached(checksum, uri string) bool {
-	_, err := os.Stat(c.Path(checksum, uri))
+	_, err := os.Stat(c.path(checksum, sources.NewSource(uri)))
 	return err == nil
 }
 
 // Evict a file from the cache.
 func (c *Cache) Evict(b *ui.Task, checksum, uri string) error {
-	b.SubTask("remove").Debugf("rm -rf %s", c.Path(checksum, uri))
-	err := os.RemoveAll(c.Path(checksum, uri))
+	path := c.path(checksum, sources.NewSource(uri))
+	b.SubTask("remove").Debugf("rm -rf %s", path)
+	err := os.RemoveAll(path)
 	if err != nil && !os.IsNotExist(err) {
 		return errors.WithStack(err)
 	}
@@ -191,19 +206,39 @@ func (c *Cache) Clean() error {
 
 // Path to cached object.
 func (c *Cache) Path(checksum, uri string) string {
-	base := BasePath(checksum, uri)
+	return c.path(checksum, sources.NewSource(uri))
+}
+
+func (c *Cache) path(checksum string, uri sources.Source) string {
+	base := basePath(checksum, uri)
 	return filepath.Join(c.root, base)
+}
+
+func wrapSources(raw []string) []sources.Source {
+	wrapped := make([]sources.Source, len(raw))
+	for i, uri := range raw {
+		wrapped[i] = sources.NewSource(uri)
+	}
+	return wrapped
+}
+
+func joinSources(uris []sources.Source) string {
+	redacted := make([]string, len(uris))
+	for i, uri := range uris {
+		redacted[i] = uri.String()
+	}
+	return strings.Join(redacted, ", ")
 }
 
 // UnavailableError returns 101 for the exit code.
 type UnavailableError struct {
-	URI string
+	URI sources.Source
 	Err error
 }
 
 // Error returns the error string for the unavailable error
 func (e *UnavailableError) Error() string {
-	msg := e.URI + " is unavailable"
+	msg := e.URI.String() + " is unavailable"
 	if e.Err != nil {
 		return fmt.Sprintf("%s: %v", msg, e.Err)
 	}

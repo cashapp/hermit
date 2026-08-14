@@ -10,6 +10,7 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/cashapp/hermit/envars"
+	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/ui"
 	"github.com/cashapp/hermit/util"
 )
@@ -67,5 +68,25 @@ func TestRunRedactsURLCredentialsFromLogsAndErrors(t *testing.T) {
 
 	combined := output.String() + err.Error()
 	assert.False(t, strings.Contains(combined, secret), "credential leaked in output: %s", combined)
+	assert.Contains(t, combined, "https://x-access-token:****@github.com/owner/repo.git")
+}
+
+func TestCaptureSystemWithSourceKeepsRawURLAtExecutionBoundary(t *testing.T) {
+	const (
+		secret = "dx26-super-secret"
+		rawURL = "https://x-access-token:" + secret + "@github.com/owner/repo.git"
+	)
+	l, output := ui.NewForTesting()
+	source := sources.NewSource(rawURL)
+
+	_, err := util.CaptureSystemWithSource(
+		l,
+		[]string{"sh", "-c", `printf '%s\n' "$1"; exit 1`, "sh"},
+		source,
+	)
+	assert.Error(t, err)
+
+	combined := output.String() + err.Error()
+	assert.NotContains(t, combined, secret)
 	assert.Contains(t, combined, "https://x-access-token:****@github.com/owner/repo.git")
 }

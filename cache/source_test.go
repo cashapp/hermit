@@ -7,16 +7,17 @@ import (
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
+	"github.com/cashapp/hermit/sources"
 )
 
 func TestGitParseRepo(t *testing.T) {
-	repo, tag, err := parseGitURL("org-49461806@github.com:squareup/orc.git")
+	repo, tag, err := parseGitURL(sources.NewSource("org-49461806@github.com:squareup/orc.git"))
 	assert.NoError(t, err)
-	assert.Equal(t, "org-49461806@github.com:squareup/orc.git", repo)
+	assert.Equal(t, "org-49461806@github.com:squareup/orc.git", repo.Get())
 	assert.Equal(t, "", tag)
-	repo, tag, err = parseGitURL("org-49461806@github.com:squareup/orc.git#v1.2.3")
+	repo, tag, err = parseGitURL(sources.NewSource("org-49461806@github.com:squareup/orc.git#v1.2.3"))
 	assert.NoError(t, err)
-	assert.Equal(t, "org-49461806@github.com:squareup/orc.git", repo)
+	assert.Equal(t, "org-49461806@github.com:squareup/orc.git", repo.Get())
 	assert.Equal(t, "v1.2.3", tag)
 }
 
@@ -37,7 +38,7 @@ func TestParseGitURLArgumentInjection(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		_, _, err := parseGitURL(tt.url)
+		_, _, err := parseGitURL(sources.NewSource(tt.url))
 		if tt.expectError {
 			assert.Error(t, err, "Should reject: "+tt.url)
 		} else {
@@ -52,7 +53,7 @@ func TestGitSourcePreventRCE(t *testing.T) {
 	pwnedFile := filepath.Join(tmpDir, "pwned")
 	maliciousURL := "--upload-pack=sh -c 'echo OWNED > " + pwnedFile + "' #file://" + tmpDir + "/.git"
 
-	src := &gitSource{URL: maliciousURL}
+	src := &gitSource{URL: sources.NewSource(maliciousURL)}
 	err := src.Validate()
 	assert.Error(t, err)
 
@@ -81,7 +82,7 @@ func TestGitSourceRCEAttempt(t *testing.T) {
 	pwnedFile := filepath.Join(tmpDir, "pwned")
 	payload := "--upload-pack=sh -c 'echo OWNED > " + pwnedFile + "' #file://" + repoDir + "/.git"
 
-	src := &gitSource{URL: payload}
+	src := &gitSource{URL: sources.NewSource(payload)}
 	err := src.Validate()
 
 	assert.Error(t, err)
@@ -106,9 +107,25 @@ func TestGitURLParsing(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		repo, tag, err := parseGitURL(tt.url)
+		repo, tag, err := parseGitURL(sources.NewSource(tt.url))
 		assert.NoError(t, err)
-		assert.Equal(t, tt.repo, repo)
+		assert.Equal(t, tt.repo, repo.Get())
 		assert.Equal(t, tt.tag, tag)
 	}
+}
+
+func TestParseGitURLPreservesCredentialRedaction(t *testing.T) {
+	repo, tag, err := parseGitURL(sources.NewSource("https://user:secret@host/repo.git#main"))
+	assert.NoError(t, err)
+	assert.Equal(t, "https://user:secret@host/repo.git", repo.Get())
+	assert.Equal(t, "https://user:****@host/repo.git", repo.String())
+	assert.Equal(t, "main", tag)
+}
+
+func TestUnavailableErrorRedactsSourceCredentials(t *testing.T) {
+	err := (&UnavailableError{
+		URI: sources.NewSource("https://user:secret@host/package.tar.gz"),
+	}).Error()
+	assert.NotContains(t, err, "secret")
+	assert.Contains(t, err, "https://user:****@host/package.tar.gz")
 }

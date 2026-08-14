@@ -23,15 +23,15 @@ func isGitHubHTTPSURL(u *url.URL) (owner, repo string, ok bool) {
 }
 
 // isGitHubSSHURL checks if a URL is a GitHub SSH URL (git@github.com:owner/repo.git)
-func isGitHubSSHURL(uri string) bool {
-	return strings.HasPrefix(uri, "git@github.com:")
+func isGitHubSSHURL(uri sources.Source) bool {
+	return strings.HasPrefix(uri.Get(), "git@github.com:")
 }
 
 // AuthenticatedURLRewriter rewrites GitHub URLs to include an auth token if they match the provided pattern
 func AuthenticatedURLRewriter(token string, matcher RepoMatcher) sources.URLRewriter {
 	return func(repo sources.Source) (sources.Source, error) {
 		// Pass through SSH URLs unchanged
-		if isGitHubSSHURL(repo.Get()) {
+		if isGitHubSSHURL(repo) {
 			return repo, nil
 		}
 

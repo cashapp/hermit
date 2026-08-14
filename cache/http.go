@@ -11,29 +11,30 @@ import (
 	"path/filepath"
 
 	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/ui"
 )
 
 type httpSource struct {
 	client *http.Client
-	url    string
+	url    sources.Source
 }
 
 // HTTPSource is a PackageSource for a HTTP URL.
-func HTTPSource(client *http.Client, url string) PackageSource {
+func HTTPSource(client *http.Client, url sources.Source) PackageSource {
 	return &httpSource{client, url}
 }
 
 func (s *httpSource) OpenLocal(c *Cache, checksum string) (*os.File, error) {
-	f, err := os.Open(c.Path(checksum, s.url))
+	f, err := os.Open(c.path(checksum, s.url))
 	return f, errors.WithStack(err)
 }
 
 func (s *httpSource) Download(b *ui.Task, cache *Cache, checksum string) (path string, etag string, actualChecksum string, err error) {
-	cachePath := cache.Path(checksum, s.url)
+	cachePath := cache.path(checksum, s.url)
 	b.Tracef("cachePath %v checksum %v url %v \n", cachePath, checksum, s.url)
 	ctx := context.Background()
-	req, err := http.NewRequestWithContext(ctx, "GET", s.url, &bytes.Reader{})
+	req, err := http.NewRequestWithContext(ctx, "GET", s.url.Get(), &bytes.Reader{})
 	if err != nil {
 		return "", "", "", errors.Wrap(err, "could not fetch")
 	}
@@ -47,13 +48,13 @@ func (s *httpSource) Download(b *ui.Task, cache *Cache, checksum string) (path s
 
 func (s *httpSource) ETag(b *ui.Task) (etag string, err error) {
 	uri := s.url
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodHead, uri, nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodHead, uri.Get(), nil)
 	if err != nil {
-		return "", errors.Wrap(err, uri)
+		return "", errors.Wrap(err, uri.String())
 	}
 	resp, err := s.client.Do(req)
 	if err != nil {
-		return "", errors.Wrap(err, uri)
+		return "", errors.Wrap(err, uri.String())
 	}
 	defer resp.Body.Close()
 	// Normal HTTP error, log and try the next mirror.
@@ -65,9 +66,9 @@ func (s *httpSource) ETag(b *ui.Task) (etag string, err error) {
 }
 
 func (s *httpSource) Validate() error {
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodHead, s.url, nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodHead, s.url.Get(), nil)
 	if err != nil {
-		return errors.Wrap(err, s.url)
+		return errors.Wrap(err, s.url.String())
 	}
 	resp, err := s.client.Do(req)
 	if err != nil {
@@ -82,7 +83,7 @@ func (s *httpSource) Validate() error {
 	return nil
 }
 
-func downloadHTTP(b *ui.Task, response *http.Response, checksum string, uri string, cachePath string) (path string, etag string, returnChecksum string, err error) {
+func downloadHTTP(b *ui.Task, response *http.Response, checksum string, uri sources.Source, cachePath string) (path string, etag string, returnChecksum string, err error) {
 	if response.StatusCode < 200 || response.StatusCode > 299 {
 		return "", "", "", errors.Errorf("download failed: %s (%d), source url: %s", response.Status, response.StatusCode, uri)
 	}

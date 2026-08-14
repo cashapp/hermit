@@ -49,6 +49,17 @@ func SystemCommand(args ...string) (*exec.Cmd, error) {
 	return cmd, nil
 }
 
+// SystemCommandWithSource constructs a system command whose arguments contain
+// a source URI. The source remains wrapped until the exec.Cmd boundary.
+func SystemCommandWithSource(
+	argsBeforeSource []string,
+	source sourceValue,
+	argsAfterSource ...string,
+) (*exec.Cmd, error) {
+	rawArgs, _ := argsWithSource(argsBeforeSource, source, argsAfterSource)
+	return SystemCommand(rawArgs...)
+}
+
 // systemEnviron returns the current environment with PATH restored to its
 // state before Hermit activation. All other environment variables are left
 // unchanged.
@@ -106,6 +117,24 @@ func CaptureSystemInDir(log ui.Logger, dir string, args ...string) ([]byte, erro
 	return captureOutput(log, cmd)
 }
 
+// CaptureSystemWithSource runs a system command whose arguments contain a
+// source URI and returns its output. The source remains wrapped until the
+// exec.Cmd boundary and its display form is used for logs and errors.
+func CaptureSystemWithSource(
+	log ui.Logger,
+	argsBeforeSource []string,
+	source sourceValue,
+	argsAfterSource ...string,
+) ([]byte, error) {
+	rawArgs, displayArgs := argsWithSource(argsBeforeSource, source, argsAfterSource)
+	log.Debugf("%s", shellquote.Join(displayArgs...))
+	cmd, err := SystemCommand(rawArgs...)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return captureOutputWithDisplay(log, cmd, displayArgs)
+}
+
 // CaptureInDir runs a command in the given dir, returning combined stdout and stderr.
 func CaptureInDir(log ui.Logger, dir string, args ...string) ([]byte, error) {
 	log.Debugf("%s", redact.Credentials(shellquote.Join(args...)))
@@ -115,10 +144,14 @@ func CaptureInDir(log ui.Logger, dir string, args ...string) ([]byte, error) {
 }
 
 func captureOutput(log ui.Logger, cmd *exec.Cmd) ([]byte, error) {
+	return captureOutputWithDisplay(log, cmd, cmd.Args)
+}
+
+func captureOutputWithDisplay(log ui.Logger, cmd *exec.Cmd, displayArgs []string) ([]byte, error) {
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return out, errors.Wrapf(err, "%s: %s",
-			redact.Credentials(shellquote.Join(cmd.Args...)),
+			redact.Credentials(shellquote.Join(displayArgs...)),
 			redact.Credentials(strings.TrimSpace(string(out))))
 	}
 	_, _ = log.Write([]byte(redact.Credentials(string(out))))
@@ -157,16 +190,21 @@ func RunSystemInDirWithSource(
 	},
 	argsAfterSource ...string,
 ) error {
-	rawArgs := make([]string, 0, len(argsBeforeSource)+1+len(argsAfterSource))
+	rawArgs, displayArgs := argsWithSource(argsBeforeSource, source, argsAfterSource)
+	return runSystemInDir(log, dir, rawArgs, displayArgs)
+}
+
+func argsWithSource(argsBeforeSource []string, source sourceValue, argsAfterSource []string) (rawArgs, displayArgs []string) {
+	rawArgs = make([]string, 0, len(argsBeforeSource)+1+len(argsAfterSource))
 	rawArgs = append(rawArgs, argsBeforeSource...)
 	rawArgs = append(rawArgs, source.Get())
 	rawArgs = append(rawArgs, argsAfterSource...)
 
-	displayArgs := make([]string, 0, len(rawArgs))
+	displayArgs = make([]string, 0, len(rawArgs))
 	displayArgs = append(displayArgs, argsBeforeSource...)
 	displayArgs = append(displayArgs, source.String())
 	displayArgs = append(displayArgs, argsAfterSource...)
-	return runSystemInDir(log, dir, rawArgs, displayArgs)
+	return rawArgs, displayArgs
 }
 
 func runSystemInDir(log *ui.Task, dir string, args, displayArgs []string) error {

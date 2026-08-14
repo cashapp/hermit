@@ -9,13 +9,14 @@ import (
 	"github.com/cashapp/hermit/util"
 
 	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/ui"
 )
 
 // PackageSourceSelector selects a PackageSource for a URI.
 //
 // If not provided to the Cache, GetSource() will be used.
-type PackageSourceSelector func(client *http.Client, uri string) (PackageSource, error)
+type PackageSourceSelector func(client *http.Client, uri sources.Source) (PackageSource, error)
 
 // PackageSource for a specific version / system of a package
 type PackageSource interface {
@@ -27,12 +28,13 @@ type PackageSource interface {
 }
 
 // GetSource for the given uri, or an error if the uri can not be parsed as a source
-func GetSource(client *http.Client, uri string) (PackageSource, error) {
-	if strings.HasSuffix(uri, ".git") || strings.Contains(uri, ".git#") {
+func GetSource(client *http.Client, uri sources.Source) (PackageSource, error) {
+	rawURI := uri.Get()
+	if strings.HasSuffix(rawURI, ".git") || strings.Contains(rawURI, ".git#") {
 		return &gitSource{URL: uri}, nil
 	}
 
-	u, err := url.Parse(uri)
+	u, err := url.Parse(rawURI)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

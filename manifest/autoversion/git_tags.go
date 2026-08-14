@@ -13,16 +13,16 @@ import (
 )
 
 func gitTagsAutoVersion(autoVersion *manifest.AutoVersionBlock) (string, error) {
+	remoteURL := sources.NewSource(autoVersion.GitTags)
 	versionRe, err := regexp.Compile(autoVersion.VersionPattern)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
 	if len(versionRe.SubexpNames()) != 2 {
-		return "", errors.Errorf("%s: version pattern %s must have exactly one named capture group", autoVersion.GitTags, autoVersion.VersionPattern)
+		return "", errors.Errorf("%s: version pattern %s must have exactly one named capture group", remoteURL, autoVersion.VersionPattern)
 	}
 
-	remoteURL := autoVersion.GitTags
-	if err := util.ValidateGitURL(sources.NewSource(remoteURL)); err != nil {
+	if err := util.ValidateGitURL(remoteURL); err != nil {
 		return "", errors.WithStack(err)
 	}
 
@@ -31,8 +31,8 @@ func gitTagsAutoVersion(autoVersion *manifest.AutoVersionBlock) (string, error) 
 	// output format of refs is
 	// <oid> TAB <ref> LF
 	// source: https://git-scm.com/docs/git-ls-remote
-	args := util.GitArgs("ls-remote", "--tags", "--refs", "--", remoteURL)
-	cmd, err := util.SystemCommand(args...)
+	args := util.GitArgs("ls-remote", "--tags", "--refs", "--")
+	cmd, err := util.SystemCommandWithSource(args, remoteURL)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
