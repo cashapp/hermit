@@ -12,21 +12,9 @@ import (
 
 	"github.com/cashapp/hermit/envars"
 	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/internal/redact"
 	"github.com/cashapp/hermit/ui"
 )
-
-// CommandRunner abstracts how we run command in a given directory
-type CommandRunner interface {
-	// RunInDir runs a command in the given directory.
-	RunInDir(log *ui.Task, dir string, args ...string) error
-}
-
-// RealCommandRunner actually calls command
-type RealCommandRunner struct{}
-
-func (g *RealCommandRunner) RunInDir(task *ui.Task, dir string, commands ...string) error {
-	return errors.WithStack(RunSystemInDir(task, dir, commands...))
-}
 
 // SystemCommand constructs a command for an external tool used internally by
 // Hermit. The executable is resolved from PATH with the active Hermit
@@ -96,7 +84,7 @@ func RunSystem(log *ui.Task, args ...string) error {
 
 // Capture runs a command, returning combined stdout and stderr.
 func Capture(log ui.Logger, args ...string) ([]byte, error) {
-	log.Debugf("%s", shellquote.Join(args...))
+	log.Debugf("%s", redact.Credentials(shellquote.Join(args...)))
 	cmd := exec.Command(args[0], args[1:]...) //nolint:gosec,noctx
 	return captureOutput(log, cmd)
 }
@@ -109,7 +97,7 @@ func CaptureSystem(log ui.Logger, args ...string) ([]byte, error) {
 // CaptureSystemInDir runs an external tool used internally by Hermit in the given dir
 // and returns its output.
 func CaptureSystemInDir(log ui.Logger, dir string, args ...string) ([]byte, error) {
-	log.Debugf("%s", shellquote.Join(args...))
+	log.Debugf("%s", redact.Credentials(shellquote.Join(args...)))
 	cmd, err := SystemCommand(args...)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -120,7 +108,7 @@ func CaptureSystemInDir(log ui.Logger, dir string, args ...string) ([]byte, erro
 
 // CaptureInDir runs a command in the given dir, returning combined stdout and stderr.
 func CaptureInDir(log ui.Logger, dir string, args ...string) ([]byte, error) {
-	log.Debugf("%s", shellquote.Join(args...))
+	log.Debugf("%s", redact.Credentials(shellquote.Join(args...)))
 	cmd := exec.Command(args[0], args[1:]...) //nolint:gosec,noctx
 	cmd.Dir = dir
 	return captureOutput(log, cmd)
@@ -129,9 +117,11 @@ func CaptureInDir(log ui.Logger, dir string, args ...string) ([]byte, error) {
 func captureOutput(log ui.Logger, cmd *exec.Cmd) ([]byte, error) {
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return out, errors.Wrapf(err, "%s: %s", shellquote.Join(cmd.Args...), strings.TrimSpace(string(out)))
+		return out, errors.Wrapf(err, "%s: %s",
+			redact.Credentials(shellquote.Join(cmd.Args...)),
+			redact.Credentials(strings.TrimSpace(string(out))))
 	}
-	_, _ = log.Write(out)
+	_, _ = log.Write([]byte(redact.Credentials(string(out))))
 	return out, nil
 }
 
@@ -143,17 +133,46 @@ func RunInDir(log *ui.Task, dir string, args ...string) error {
 	if err != nil {
 		// log.Write() goes to debug, so only dump the logs at error if we haven't already.
 		if !log.WillLog(ui.LevelDebug) {
-			log.Errorf("%s", out.String())
+			log.Errorf("%s", redact.Credentials(out.String()))
 		}
-		return errors.Wrapf(err, "%s failed", shellquote.Join(args...))
+		return errors.Wrapf(err, "%s failed", redact.Credentials(shellquote.Join(args...)))
 	}
 	return nil
 }
 
 // RunSystemInDir runs an external tool used internally by Hermit in the given dir.
 func RunSystemInDir(log *ui.Task, dir string, args ...string) error {
+	return runSystemInDir(log, dir, args, args)
+}
+
+// RunSystemInDirWithSource runs a command whose arguments contain a source URI.
+// The raw source is used only for execution; logging and errors use String().
+func RunSystemInDirWithSource(
+	log *ui.Task,
+	dir string,
+	argsBeforeSource []string,
+	source interface {
+		Get() string
+		String() string
+	},
+	argsAfterSource ...string,
+) error {
+	rawArgs := make([]string, 0, len(argsBeforeSource)+1+len(argsAfterSource))
+	rawArgs = append(rawArgs, argsBeforeSource...)
+	rawArgs = append(rawArgs, source.Get())
+	rawArgs = append(rawArgs, argsAfterSource...)
+
+	displayArgs := make([]string, 0, len(rawArgs))
+	displayArgs = append(displayArgs, argsBeforeSource...)
+	displayArgs = append(displayArgs, source.String())
+	displayArgs = append(displayArgs, argsAfterSource...)
+	return runSystemInDir(log, dir, rawArgs, displayArgs)
+}
+
+func runSystemInDir(log *ui.Task, dir string, args, displayArgs []string) error {
 	log = log.SubTask("exec")
-	log.Debugf("%s", shellquote.Join(args...))
+	display := redact.Credentials(shellquote.Join(displayArgs...))
+	log.Debugf("%s", display)
 	b := &bytes.Buffer{}
 	w := io.MultiWriter(b, log)
 	cmd, err := SystemCommand(args...)
@@ -165,9 +184,9 @@ func RunSystemInDir(log *ui.Task, dir string, args ...string) error {
 	cmd.Stderr = w
 	if err = cmd.Run(); err != nil {
 		if !log.WillLog(ui.LevelDebug) {
-			log.Errorf("%s", b.String())
+			log.Errorf("%s", redact.Credentials(b.String()))
 		}
-		return errors.Wrapf(err, "%s failed", shellquote.Join(args...))
+		return errors.Wrapf(err, "%s failed", display)
 	}
 	return nil
 }
@@ -178,7 +197,7 @@ func RunSystemInDir(log *ui.Task, dir string, args ...string) error {
 // of the execution
 func Command(log *ui.Task, args ...string) (*exec.Cmd, *bytes.Buffer) {
 	log = log.SubTask("exec")
-	log.Debugf("%s", shellquote.Join(args...))
+	log.Debugf("%s", redact.Credentials(shellquote.Join(args...)))
 	b := &bytes.Buffer{}
 	w := io.MultiWriter(b, log)
 	cmd := exec.Command(args[0], args[1:]...) //nolint:gosec,noctx

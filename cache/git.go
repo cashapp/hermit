@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/ui"
 	"github.com/cashapp/hermit/util"
 )
@@ -90,7 +91,7 @@ func parseGitURL(source string) (repo, tag string, err error) {
 	parts := strings.SplitN(source, "#", 2)
 	repo = parts[0]
 
-	if err := util.ValidateGitURL(repo); err != nil {
+	if err := util.ValidateGitURL(sources.NewSource(repo)); err != nil {
 		return "", "", errors.WithStack(err)
 	}
 

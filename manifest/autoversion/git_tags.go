@@ -8,6 +8,7 @@ import (
 
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/manifest"
+	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/util"
 )
 
@@ -21,7 +22,7 @@ func gitTagsAutoVersion(autoVersion *manifest.AutoVersionBlock) (string, error) 
 	}
 
 	remoteURL := autoVersion.GitTags
-	if err := util.ValidateGitURL(remoteURL); err != nil {
+	if err := util.ValidateGitURL(sources.NewSource(remoteURL)); err != nil {
 		return "", errors.WithStack(err)
 	}
 

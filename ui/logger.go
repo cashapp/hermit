@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/internal/redact"
 )
 
 //go:generate stringer -linecomment -type Level
@@ -110,7 +111,7 @@ func (l *logWriter) Sync() error {
 	if len(l.buf) > 0 {
 		line := string(l.buf)
 		l.buf = nil
-		l.logf(l.level, "%s", ansiStripRe.ReplaceAllString(line, ""))
+		l.logf(l.level, "%s", redact.Credentials(ansiStripRe.ReplaceAllString(line, "")))
 	}
 	l.lock.Unlock()
 	return nil
@@ -131,7 +132,7 @@ func (l *logWriter) Write(b []byte) (int, error) {
 	}
 	l.lock.Unlock()
 	for _, line := range lines {
-		l.logf(l.level, "%s", ansiStripRe.ReplaceAllString(line, ""))
+		l.logf(l.level, "%s", redact.Credentials(ansiStripRe.ReplaceAllString(line, "")))
 	}
 	return len(b), nil
 }

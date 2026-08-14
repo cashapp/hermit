@@ -191,6 +191,56 @@ EOF
 			expectations: exp{outputContains("remote helpers are not supported")},
 		},
 		{
+			// Regression test for DX-26: GitHub token authentication embeds the
+			// token in the internal git URL, but it must never reach user output.
+			name: "GitHubTokenIsRedactedFromOutput",
+			script: `
+				hermit init --no-git .
+				mkdir host-bin
+				cat > host-bin/git <<'EOF'
+#!/bin/sh
+printf 'git received: %s\n' "$*" >&2
+exit 1
+EOF
+				chmod +x host-bin/git
+				export PATH="$PWD/host-bin:$PATH"
+
+				cat > bin/hermit.hcl <<'EOF'
+env = {}
+sources = ["https://github.com/owner/repo.git"]
+github-token-auth {
+  match = ["*/*"]
+}
+EOF
+				export HERMIT_GITHUB_TOKEN=dx26-super-secret
+				. bin/activate-hermit
+
+				hermit status > status.out 2>&1
+				if hermit --debug search > search.out 2>&1; then
+					hermit-send "error: failing git source unexpectedly succeeded"
+					exit 1
+				fi
+
+				# Also cover errors raised before a git command is started.
+				sed 's/repo\.git/repo/' bin/hermit.hcl > bin/hermit.hcl.tmp
+				mv bin/hermit.hcl.tmp bin/hermit.hcl
+				if hermit status > unsupported.out 2>&1; then
+					hermit-send "error: unsupported source unexpectedly succeeded"
+					exit 1
+				fi
+
+				cat status.out search.out unsupported.out
+				for output in status.out search.out unsupported.out; do
+					if grep -F 'dx26-super-secret' "$output"; then
+						hermit-send "error: GitHub token leaked in $output"
+						exit 1
+					fi
+					assert grep -F 'https://x-access-token:****@github.com/owner/repo' "$output"
+				done
+			`,
+			expectations: exp{outputContains("https://x-access-token:****@github.com/owner/repo")},
+		},
+		{
 			// Regression test for DX-29: internal tools must still resolve from a
 			// user's custom PATH before a Hermit environment is activated.
 			name:         "InternalToolsUseCurrentPathBeforeActivation",

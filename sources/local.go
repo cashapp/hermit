@@ -6,13 +6,13 @@ import (
 	"github.com/cashapp/hermit/ui"
 )
 
-// LocalSource is a new Source based on a local filesystem
+// LocalSource is a manifest source backed by a local filesystem.
 type LocalSource struct {
 	fs *uriFS
 }
 
 // NewLocalSource returns a new LocalSource
-func NewLocalSource(uri string, f fs.FS) *LocalSource {
+func NewLocalSource(uri Source, f fs.FS) *LocalSource {
 	return &LocalSource{&uriFS{
 		uri: uri,
 		FS:  f,
@@ -23,7 +23,7 @@ func (s *LocalSource) Sync(_ *ui.UI, _ bool) (bool, error) {
 	return true, nil
 }
 
-func (s *LocalSource) URI() string {
+func (s *LocalSource) URI() Source {
 	return s.fs.uri
 }
 

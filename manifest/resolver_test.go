@@ -358,7 +358,7 @@ func TestResolver_Resolve(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			logger := ui.New(ui.LevelInfo, os.Stdout, os.Stderr, true, true)
-			ss := []sources.Source{}
+			ss := []sources.ManifestSource{}
 			for name, content := range tt.files {
 				ss = append(ss, sources.NewMemSource(name, content))
 			}
@@ -416,7 +416,7 @@ func TestSearchVersionsAndChannelsCoexist(t *testing.T) {
 	}
 	logger := ui.New(ui.LevelInfo, os.Stdout, os.Stderr, true, true)
 	ffs := vfs.InMemoryFS(files)
-	ss := []sources.Source{}
+	ss := []sources.ManifestSource{}
 	for name, content := range files {
 		ss = append(ss, sources.NewMemSource(name, content))
 	}

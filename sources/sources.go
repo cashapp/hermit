@@ -17,26 +17,26 @@ import (
 // SyncFrequency determines how frequently sources will be synced.
 const SyncFrequency = time.Hour * 24
 
-// Source is a single source for manifest files
-type Source interface {
+// ManifestSource provides manifest files from one source.
+type ManifestSource interface {
 	// Sync synchronises these sources from the possibly remote origin.
 	// Returns true if the source was actually updated.
 	Sync(p *ui.UI, force bool) (bool, error)
 	// URI returns a URI for the source
-	URI() string
+	URI() Source
 	// Bundle returns a fs.FS for the manifests from this source
 	Bundle() fs.FS
 }
 
 // Sources knows how to sync manifests from various sources such as git repositories.
 type Sources struct {
-	sources        []Source
+	sources        []ManifestSource
 	dir            string
 	isSynchronised bool // Keep track if the sources have been synchronised to avoid double synchronisation
 }
 
 // New returns a new set of sources
-func New(stateDir string, sources []Source) *Sources {
+func New(stateDir string, sources []ManifestSource) *Sources {
 	return &Sources{
 		dir:     stateDir,
 		sources: sources,
@@ -47,7 +47,7 @@ func (s *Sources) LocalDirs() []string {
 	var out []string
 	for _, source := range s.sources {
 		if local, ok := source.(*LocalSource); ok {
-			dir := strings.TrimPrefix(local.fs.uri, "env:///")
+			dir := strings.TrimPrefix(local.fs.uri.Get(), "env:///")
 			out = append(out, dir)
 		}
 	}
@@ -55,12 +55,12 @@ func (s *Sources) LocalDirs() []string {
 }
 
 // Prepend a new source
-func (s *Sources) Prepend(source Source) {
-	s.sources = append([]Source{source}, s.sources...)
+func (s *Sources) Prepend(source ManifestSource) {
+	s.sources = append([]ManifestSource{source}, s.sources...)
 }
 
 // Add a new source
-func (s *Sources) Add(source Source) {
+func (s *Sources) Add(source ManifestSource) {
 	s.sources = append(s.sources, source)
 }
 
@@ -86,23 +86,23 @@ func (s *Sources) Sync(p *ui.UI, force bool) error {
 }
 
 // URLRewriter is a function that can transform a source URI
-type URLRewriter func(uri string) (string, error)
+type URLRewriter func(source Source) (Source, error)
 
-// ForURIs returns Source instances for given uri strings
+// ForURIs constructs manifest sources for the given raw URI strings.
 func ForURIs(b *ui.UI, dir, env string, uris []string, rewriters ...URLRewriter) (*Sources, error) {
-	sources := make([]Source, 0, len(uris))
+	sources := make([]ManifestSource, 0, len(uris))
 	for _, uri := range uris {
 		// Apply each rewriter in sequence
-		transformedURI := uri
+		transformedSource := NewSource(uri)
 		for _, rewrite := range rewriters {
-			rewritten, err := rewrite(transformedURI)
+			rewritten, err := rewrite(transformedSource)
 			if err != nil {
 				return nil, errors.WithStack(err)
 			}
-			transformedURI = rewritten
+			transformedSource = rewritten
 		}
 
-		s, err := getSource(b, transformedURI, dir, env)
+		s, err := getSource(b, transformedSource, dir, env)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -116,20 +116,20 @@ func ForURIs(b *ui.UI, dir, env string, uris []string, rewriters ...URLRewriter)
 	}, nil
 }
 
-func getSource(b *ui.UI, source, dir, env string) (Source, error) {
-	task := b.Task(source)
+func getSource(b *ui.UI, source Source, dir, env string) (ManifestSource, error) {
+	task := b.Task(source.String())
 	defer task.Done()
 
-	if strings.HasSuffix(source, ".git") {
+	if strings.HasSuffix(source.Get(), ".git") {
 		if err := util.ValidateGitURL(source); err != nil {
 			return nil, errors.WithStack(err)
 		}
-		return NewGitSource(source, dir, &util.RealCommandRunner{}), nil
+		return NewGitSource(source, dir, &RealCommandRunner{}), nil
 	}
 
-	uri, err := url.Parse(source)
+	uri, err := url.Parse(source.Get())
 	if err != nil {
-		return nil, errors.Wrap(err, "invalid source")
+		return nil, errors.Errorf("invalid source %q", source)
 	}
 	var (
 		// Directory of source, if any, to check for existence.
@@ -139,7 +139,7 @@ func getSource(b *ui.UI, source, dir, env string) (Source, error) {
 	switch uri.Scheme {
 	case "env":
 		if uri.Path == "" {
-			task.Warnf("%s does not contain a path", uri)
+			task.Warnf("%s does not contain a path", source)
 			return nil, nil
 		}
 		cleanPath := filepath.Clean(strings.TrimLeft(uri.Path, "/\\"))
@@ -151,7 +151,7 @@ func getSource(b *ui.UI, source, dir, env string) (Source, error) {
 
 	case "file":
 		if uri.Path == "" {
-			task.Warnf("%s does not contain a path", uri)
+			task.Warnf("%s does not contain a path", source)
 			return nil, nil
 		}
 		checkDir = uri.Path
@@ -171,8 +171,8 @@ func getSource(b *ui.UI, source, dir, env string) (Source, error) {
 }
 
 // Sources returns the source URIs
-func (s *Sources) Sources() []string {
-	combined := []string{}
+func (s *Sources) Sources() []Source {
+	combined := []Source{}
 	for _, s := range s.sources {
 		combined = append(combined, s.URI())
 	}
@@ -190,11 +190,11 @@ func (s *Sources) Bundles() []fs.FS {
 
 // This exists to provide useful debugging information back to the user.
 type uriFS struct {
-	uri string
+	uri Source
 	fs.FS
 }
 
 func (u *uriFS) Stat(name string) (fs.FileInfo, error)      { return fs.Stat(u.FS, name) }
 func (u *uriFS) ReadDir(name string) ([]fs.DirEntry, error) { return fs.ReadDir(u.FS, name) }
 func (u *uriFS) Glob(pattern string) ([]string, error)      { return fs.Glob(u.FS, pattern) }
-func (u *uriFS) String() string                             { return u.uri }
+func (u *uriFS) String() string                             { return u.uri.String() }

@@ -11,17 +11,35 @@ import (
 	"github.com/cashapp/hermit/util"
 )
 
-// GitSource is a new Source based on a git repo
+// CommandRunner abstracts the git operations used to synchronise a source.
+type CommandRunner interface {
+	RunInDir(log *ui.Task, dir string, args ...string) error
+	CloneInDir(log *ui.Task, dir string, source Source, dest string) error
+}
+
+// RealCommandRunner runs git operations through Hermit's system command path.
+type RealCommandRunner struct{}
+
+func (r *RealCommandRunner) RunInDir(log *ui.Task, dir string, args ...string) error {
+	return errors.WithStack(util.RunSystemInDir(log, dir, args...))
+}
+
+func (r *RealCommandRunner) CloneInDir(log *ui.Task, dir string, source Source, dest string) error {
+	args := util.GitArgs("clone", "--depth=1", "--")
+	return errors.WithStack(util.RunSystemInDirWithSource(log, dir, args, source, dest))
+}
+
+// GitSource is a manifest source backed by a git repository.
 type GitSource struct {
 	fs        *uriFS
 	sourceDir string
 	path      string
-	runner    util.CommandRunner
+	runner    CommandRunner
 }
 
 // NewGitSource returns a new GitSource
-func NewGitSource(uri, sourceDir string, runner util.CommandRunner) *GitSource {
-	key := util.Hash(uri)
+func NewGitSource(uri Source, sourceDir string, runner CommandRunner) *GitSource {
+	key := util.Hash(uri.Get())
 	path := filepath.Join(sourceDir, key)
 	return &GitSource{&uriFS{
 		uri: uri,
@@ -31,7 +49,7 @@ func NewGitSource(uri, sourceDir string, runner util.CommandRunner) *GitSource {
 
 func (s *GitSource) Sync(p *ui.UI, force bool) (bool, error) {
 	info, _ := os.Stat(s.path)
-	task := p.Task(s.fs.uri)
+	task := p.Task(s.fs.uri.String())
 	if info == nil || force || time.Since(info.ModTime()) >= SyncFrequency {
 		err := s.ensureSourcesDirExists()
 		if err != nil {
@@ -54,7 +72,7 @@ func (s *GitSource) Sync(p *ui.UI, force bool) (bool, error) {
 	return false, nil
 }
 
-func (s *GitSource) URI() string {
+func (s *GitSource) URI() Source {
 	return s.fs.uri
 }
 
@@ -70,7 +88,7 @@ func (s *GitSource) ensureSourcesDirExists() error {
 }
 
 // Atomically clone git repo.
-func syncGit(b *ui.Task, dir, source, finalDest string, runner util.CommandRunner) (err error) {
+func syncGit(b *ui.Task, dir string, source Source, finalDest string, runner CommandRunner) (err error) {
 	task := b.SubProgress("sync", 1)
 	defer func() {
 		task.Done()
@@ -94,7 +112,7 @@ func syncGit(b *ui.Task, dir, source, finalDest string, runner util.CommandRunne
 		return errors.WithStack(err)
 	}
 	defer os.RemoveAll(dest)
-	if err = runner.RunInDir(b, dest, util.GitArgs("clone", "--depth=1", "--", source, dest)...); err != nil {
+	if err = runner.CloneInDir(b, dest, source, dest); err != nil {
 		return errors.WithStack(err)
 	}
 	_ = os.RemoveAll(finalDest)

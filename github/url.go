@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/sources"
 )
 
 // isGitHubHTTPSURL checks if a URL is a GitHub HTTPS URL and returns owner/repo if it is
@@ -27,16 +28,16 @@ func isGitHubSSHURL(uri string) bool {
 }
 
 // AuthenticatedURLRewriter rewrites GitHub URLs to include an auth token if they match the provided pattern
-func AuthenticatedURLRewriter(token string, matcher RepoMatcher) func(uri string) (string, error) {
-	return func(repo string) (string, error) {
+func AuthenticatedURLRewriter(token string, matcher RepoMatcher) sources.URLRewriter {
+	return func(repo sources.Source) (sources.Source, error) {
 		// Pass through SSH URLs unchanged
-		if isGitHubSSHURL(repo) {
+		if isGitHubSSHURL(repo.Get()) {
 			return repo, nil
 		}
 
-		u, err := url.Parse(repo)
+		u, err := url.Parse(repo.Get())
 		if err != nil {
-			return "", errors.WithStack(err)
+			return sources.Source{}, errors.Errorf("invalid GitHub source %q", repo)
 		}
 
 		owner, repoName, ok := isGitHubHTTPSURL(u)
@@ -45,7 +46,7 @@ func AuthenticatedURLRewriter(token string, matcher RepoMatcher) func(uri string
 		}
 		if matcher(owner, repoName) {
 			u.User = url.UserPassword("x-access-token", token)
-			return u.String(), nil
+			return sources.NewSource(u.String()), nil
 		}
 		return repo, nil
 	}

@@ -1,4 +1,4 @@
-package sources
+package sources_test
 
 import (
 	"os"
@@ -8,6 +8,7 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/github"
+	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/ui"
 )
 
@@ -24,10 +25,21 @@ func TestEnvSourceRejectsPathTraversal(t *testing.T) {
 	} {
 		t.Run(uri, func(t *testing.T) {
 			ui, _ := ui.NewForTesting()
-			_, err := ForURIs(ui, filepath.Join(root, "state"), env, []string{uri})
+			_, err := sources.ForURIs(ui, filepath.Join(root, "state"), env, []string{uri})
 			assert.Error(t, err)
 		})
 	}
+}
+
+func TestInvalidSourceDoesNotLeakCredentials(t *testing.T) {
+	l, _ := ui.NewForTesting()
+	_, err := sources.ForURIs(l, "testdir", "testenv", []string{
+		"https://x-access-token:secret-token@github.com/owner/%zz",
+	})
+
+	assert.Error(t, err)
+	assert.NotContains(t, err.Error(), "secret-token")
+	assert.Contains(t, err.Error(), "https://x-access-token:****@github.com/owner/%zz")
 }
 
 func TestGitHubTokenRewriter(t *testing.T) {
@@ -81,12 +93,23 @@ func TestGitHubTokenRewriter(t *testing.T) {
 			assert.NoError(t, err)
 
 			rewriter := github.AuthenticatedURLRewriter(tt.token, matcher)
-			result, err := rewriter(tt.uri)
+			result, err := rewriter(sources.NewSource(tt.uri))
 
 			assert.NoError(t, err)
-			assert.Equal(t, tt.want, result)
+			assert.Equal(t, tt.want, result.Get())
 		})
 	}
+}
+
+func TestGitHubTokenRewriterErrorDoesNotLeakCredentials(t *testing.T) {
+	matcher, err := github.GlobRepoMatcher([]string{"*/*"})
+	assert.NoError(t, err)
+	rewriter := github.AuthenticatedURLRewriter("unused", matcher)
+
+	_, err = rewriter(sources.NewSource("https://x-access-token:secret-token@github.com/owner/%zz"))
+	assert.Error(t, err)
+	assert.NotContains(t, err.Error(), "secret-token")
+	assert.Contains(t, err.Error(), "https://x-access-token:****@github.com/owner/%zz")
 }
 
 // TestForURIsIntegration tests the integration of ForURIs with rewriters
@@ -103,44 +126,45 @@ func TestForURIsIntegration(t *testing.T) {
 			"https://github.com/other/repo2.git",
 			"git@github.com:owner/repo3.git",
 		}
-		sources, err := ForURIs(l, "testdir", "testenv", uris, rewriter)
+		sourceSet, err := sources.ForURIs(l, "testdir", "testenv", uris, rewriter)
 
 		assert.NoError(t, err)
-		assert.Equal(t, len(uris), len(sources.sources))
+		assert.Equal(t, len(uris), len(sourceSet.Sources()))
 
 		// Verify the sources were created with appropriate URIs
 		// First URI should be rewritten with token, others should remain unchanged
-		assert.Contains(t, sources.sources[0].URI(), "x-access-token:test-token@github.com")
-		assert.Equal(t, uris[1], sources.sources[1].URI())
-		assert.Equal(t, uris[2], sources.sources[2].URI())
+		assert.Contains(t, sourceSet.Sources()[0].Get(), "x-access-token:test-token@github.com")
+		assert.Equal(t, "https://x-access-token:****@github.com/owner/repo1.git", sourceSet.Sources()[0].String())
+		assert.Equal(t, uris[1], sourceSet.Sources()[1].Get())
+		assert.Equal(t, uris[2], sourceSet.Sources()[2].Get())
 	})
 
 	t.Run("rewriter error", func(t *testing.T) {
-		errorRewriter := func(uri string) (string, error) {
-			return "", errors.New("rewriter error")
+		errorRewriter := func(_ sources.Source) (sources.Source, error) {
+			return sources.Source{}, errors.New("rewriter error")
 		}
 
 		uris := []string{"https://github.com/owner/repo.git"}
-		_, err := ForURIs(l, "testdir", "testenv", uris, errorRewriter)
+		_, err := sources.ForURIs(l, "testdir", "testenv", uris, errorRewriter)
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "rewriter error")
 	})
 
 	t.Run("git remote helper uri", func(t *testing.T) {
-		_, err := ForURIs(l, "testdir", "testenv", []string{"zzq::x.git"})
+		_, err := sources.ForURIs(l, "testdir", "testenv", []string{"zzq::x.git"})
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "remote helpers are not supported")
 	})
 
 	t.Run("invalid rewritten uri", func(t *testing.T) {
-		invalidRewriter := func(uri string) (string, error) {
-			return "invalid://not-a-valid-source", nil
+		invalidRewriter := func(_ sources.Source) (sources.Source, error) {
+			return sources.NewSource("invalid://not-a-valid-source"), nil
 		}
 
 		uris := []string{"https://github.com/owner/repo.git"}
-		_, err := ForURIs(l, "testdir", "testenv", uris, invalidRewriter)
+		_, err := sources.ForURIs(l, "testdir", "testenv", uris, invalidRewriter)
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "unsupported source")

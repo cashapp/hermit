@@ -13,8 +13,8 @@ func TestLoader(t *testing.T) {
 	l, _ := ui.NewForTesting()
 
 	stateDir := t.TempDir()
-	srcs := sources.New(stateDir, []sources.Source{
-		sources.NewLocalSource("test://", os.DirFS("./testdata")),
+	srcs := sources.New(stateDir, []sources.ManifestSource{
+		sources.NewLocalSource(sources.NewSource("test://"), os.DirFS("./testdata")),
 	})
 	loader := NewLoader(srcs)
 	assert.Equal(t, len(srcs.Sources()), 1)

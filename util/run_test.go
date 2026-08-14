@@ -10,6 +10,7 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/cashapp/hermit/envars"
+	"github.com/cashapp/hermit/ui"
 	"github.com/cashapp/hermit/util"
 )
 
@@ -51,4 +52,20 @@ func TestSystemCommandRejectsPaths(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "git")
 	_, err := util.SystemCommand(path)
 	assert.EqualError(t, err, `system command must be a bare name: "`+path+`"`)
+}
+
+func TestRunRedactsURLCredentialsFromLogsAndErrors(t *testing.T) {
+	const (
+		secret = "dx26-super-secret"
+		rawURL = "https://x-access-token:" + secret + "@github.com/owner/repo.git"
+	)
+	l, output := ui.NewForTesting()
+	l.SetProgressBarEnabled(false)
+
+	err := util.Run(l.Task("source"), "/bin/sh", "-c", "printf '%s\\n' '"+rawURL+"'; exit 1")
+	assert.Error(t, err)
+
+	combined := output.String() + err.Error()
+	assert.False(t, strings.Contains(combined, secret), "credential leaked in output: %s", combined)
+	assert.Contains(t, combined, "https://x-access-token:****@github.com/owner/repo.git")
 }

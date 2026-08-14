@@ -20,8 +20,8 @@ func (s *BuiltInSource) Sync(_ *ui.UI, _ bool) (bool, error) {
 	return true, nil
 }
 
-func (s *BuiltInSource) URI() string {
-	return "builtin:///"
+func (s *BuiltInSource) URI() Source {
+	return NewSource("builtin:///")
 }
 
 func (s *BuiltInSource) Bundle() fs.FS {
