@@ -17,8 +17,10 @@ import (
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/platform"
+	"github.com/cashapp/hermit/redact"
 	"github.com/cashapp/hermit/state"
 	"github.com/cashapp/hermit/ui"
+	"github.com/cashapp/hermit/util"
 )
 
 // UpdateDigests for the manifest at the given path.
@@ -35,7 +37,7 @@ func UpdateDigests(l *ui.UI, client *http.Client, state *state.State, path strin
 		return errors.Wrap(err, "failed to load manifest")
 	}
 	// Dedupe by source, as channels often have the same source as normal packages.
-	pkgsBySource := map[string]pkgAndref{}
+	pkgsBySource := map[redact.URL]pkgAndref{}
 	for _, ref := range mani.References(name) {
 		for _, p := range slices.Concat(platform.Core, platform.Optional) {
 			config := manifest.Config{
@@ -57,7 +59,7 @@ func UpdateDigests(l *ui.UI, client *http.Client, state *state.State, path strin
 				continue
 			}
 			// Skip git repos
-			if strings.Contains(pkg.Source, ".git#") || strings.HasSuffix(pkg.Source, ".git") {
+			if strings.Contains(pkg.Source.Reveal(), ".git#") || strings.HasSuffix(pkg.Source.Reveal(), ".git") {
 				continue
 			}
 			// Skip checksums for channels.
@@ -154,7 +156,7 @@ func writeAST(path string, ast *hcl.AST, filename string) error {
 
 type pkgAndDigest struct {
 	ref    manifest.Reference
-	source string
+	source redact.URL
 	digest string
 }
 
@@ -182,11 +184,17 @@ var digestRe = regexp.MustCompile(`^([A-Z0-9a-z]{64})(?:\s+(.*))?`)
 var checksumCache sync.Map
 
 func tryGetSHA(task *ui.Task, client *http.Client, pkg *manifest.Package) string {
-	u := pkg.Source
+	u := pkg.Source.Reveal()
 	dir := u[:strings.LastIndex(u, "/")]
-	variants := []string{u + ".sha256.txt", u + ".sha256", dir + "/checksums.txt", dir + "/sha256.txt", dir + "/SHA256SUMS"}
+	variants := []redact.URL{
+		redact.URL(u + ".sha256.txt"),
+		redact.URL(u + ".sha256"),
+		redact.URL(dir + "/checksums.txt"),
+		redact.URL(dir + "/sha256.txt"),
+		redact.URL(dir + "/SHA256SUMS"),
+	}
 	if pkg.SHA256Source != "" {
-		variants = []string{pkg.SHA256Source}
+		variants = []redact.URL{pkg.SHA256Source}
 	}
 	filename, err := url.PathUnescape(path.Base(u))
 	if err != nil {
@@ -196,13 +204,13 @@ func tryGetSHA(task *ui.Task, client *http.Client, pkg *manifest.Package) string
 		content, ok := checksumCache.Load(variant)
 		if !ok {
 			task.Tracef("Trying %s", variant)
-			req, err := http.NewRequest(http.MethodGet, variant, &strings.Reader{}) //nolint: noctx
+			req, err := http.NewRequest(http.MethodGet, variant.Reveal(), &strings.Reader{}) //nolint: noctx
 			if err != nil {
 				return ""
 			}
 			resp, err := client.Do(req)
 			if err != nil {
-				task.Tracef("Failed to fetch %s: %v", variant, err)
+				task.Tracef("Failed to fetch %s: %v", variant, util.StripURLError(err))
 				return ""
 			}
 			if resp.StatusCode < 200 || resp.StatusCode >= 300 {
@@ -245,8 +253,9 @@ func updateHCLSHA256Sums(ast *hcl.AST, updated []pkgAndDigest) error {
 	}
 
 	for _, pkg := range updated {
+		source := pkg.source.Reveal()
 		sha256Sums.Map = append(sha256Sums.Map, &hcl.MapEntry{
-			Key:   &hcl.Value{Str: &pkg.source},
+			Key:   &hcl.Value{Str: &source},
 			Value: &hcl.Value{Str: &pkg.digest},
 		})
 	}

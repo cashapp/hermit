@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
+	"github.com/cashapp/hermit/redact"
 	"github.com/cashapp/hermit/util"
 )
 
@@ -31,7 +32,7 @@ func TestValidateGitURL(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := util.ValidateGitURL(test.url)
+			err := util.ValidateGitURL(redact.URL(test.url))
 			if test.fails {
 				assert.Error(t, err)
 			} else {
@@ -39,6 +40,13 @@ func TestValidateGitURL(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestValidateGitURLRedactsCredentialsInErrors(t *testing.T) {
+	err := util.ValidateGitURL(redact.URL("zzq://x-access-token:sekret@example.com/repo.git"))
+	assert.Error(t, err)
+	assert.NotContains(t, err.Error(), "sekret")
+	assert.Contains(t, err.Error(), "zzq://example.com/repo.git")
 }
 
 func TestGitArgsPinsTransportPolicy(t *testing.T) {

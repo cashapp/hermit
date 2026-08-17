@@ -8,6 +8,7 @@ import (
 	"github.com/cashapp/hermit/envars"
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/platform"
+	"github.com/cashapp/hermit/redact"
 )
 
 //go:generate stringer -linecomment -type PackageState
@@ -38,11 +39,11 @@ type Layer struct {
 	Test         *string           `hcl:"test,optional" help:"Command that will test the package is operational."`
 	Env          envars.Envars     `hcl:"env,optional" help:"Environment variables to export."`
 	Vars         map[string]string `hcl:"vars,optional" help:"Set local variables used during manifest evaluation."`
-	Source       string            `hcl:"source,optional" help:"URL for source package. Valid URLs are Git repositories (using .git[#<tag>] suffix), Local Files (using file:// prefix), and Remote Files (using http:// or https:// prefix)"`
+	Source       redact.URL        `hcl:"source,optional" help:"URL for source package. Valid URLs are Git repositories (using .git[#<tag>] suffix), Local Files (using file:// prefix), and Remote Files (using http:// or https:// prefix)"`
 	DontExtract  bool              `hcl:"dont-extract,optional" help:"Don't extract the package source, just copy it into the installation directory."`
-	Mirrors      []string          `hcl:"mirrors,optional" help:"Mirrors to use if the primary source is unavailable."`
+	Mirrors      []redact.URL      `hcl:"mirrors,optional" help:"Mirrors to use if the primary source is unavailable."`
 	SHA256       string            `hcl:"sha256,optional" help:"SHA256 of source package for verification. When in conflict with SHA256 in sha256sums, this value takes precedence."`
-	SHA256Source string            `hcl:"sha256-source,optional" help:"URL for SHA256 checksum file for source package."`
+	SHA256Source redact.URL        `hcl:"sha256-source,optional" help:"URL for SHA256 checksum file for source package."`
 	Darwin       []*Layer          `hcl:"darwin,block" help:"Darwin-specific configuration."`
 	Linux        []*Layer          `hcl:"linux,block" help:"Linux-specific configuration."`
 	Platform     []*PlatformBlock  `hcl:"platform,block" help:"Platform-specific configuration. <attr> is a set regexes that must all match against one of CPU, OS, etc.."`
@@ -92,7 +93,7 @@ type AutoVersionBlock struct {
 	GitHubRelease string                `hcl:"github-release,optional" help:"GitHub <user>/<repo> to retrieve and update versions from the releases API."`
 	HTML          *HTMLAutoVersionBlock `hcl:"html,block" help:"Extract version information from a HTML URL using XPath."`
 	JSON          *JSONAutoVersionBlock `hcl:"json,block" help:"Extract version information from a JSON URL using jq."`
-	GitTags       string                `hcl:"git-tags,optional" help:"Git remote URL to fetch git tags for version extraction."`
+	GitTags       redact.URL            `hcl:"git-tags,optional" help:"Git remote URL to fetch git tags for version extraction."`
 
 	VersionPattern        string `hcl:"version-pattern,optional" help:"Regex with one capture group to extract the version number from the origin." default:"v?(.*)"`
 	IgnoreInvalidVersions bool   `hcl:"ignore-invalid-versions,optional" help:"Ignore tags that don't match the versin-pattern instead of failing. Does not apply to versions extracted using HTML URL"`

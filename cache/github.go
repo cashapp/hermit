@@ -10,6 +10,7 @@ import (
 
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/github"
+	"github.com/cashapp/hermit/redact"
 	"github.com/cashapp/hermit/ui"
 )
 
@@ -18,8 +19,8 @@ var githubRe = regexp.MustCompile(`^https\://github\.com/([^/]+)/([^/]+)/release
 
 // GitHubSourceSelector can download private release assets from GitHub using an authenticated GitHub client.
 func GitHubSourceSelector(getSource PackageSourceSelector, ghclient *github.Client, match github.RepoMatcher) PackageSourceSelector {
-	return func(client *http.Client, uri string) (PackageSource, error) {
-		info, ok := getGitHubReleaseInfo(uri)
+	return func(client *http.Client, uri redact.URL) (PackageSource, error) {
+		info, ok := getGitHubReleaseInfo(uri.Reveal())
 		if !ok || match == nil || !match(info.owner, info.repo) {
 			return getSource(client, uri)
 		}
@@ -30,7 +31,7 @@ func GitHubSourceSelector(getSource PackageSourceSelector, ghclient *github.Clie
 type githubReleaseSource struct {
 	info     *githubReleaseInfo
 	ghclient *github.Client
-	url      string
+	url      redact.URL
 }
 
 func (g *githubReleaseSource) OpenLocal(c *Cache, checksum string) (*os.File, error) {

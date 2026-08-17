@@ -8,6 +8,7 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/github"
+	"github.com/cashapp/hermit/redact"
 	"github.com/cashapp/hermit/ui"
 )
 
@@ -18,13 +19,13 @@ func TestEnvSourceRejectsPathTraversal(t *testing.T) {
 	assert.NoError(t, os.MkdirAll(env, 0750))
 	assert.NoError(t, os.MkdirAll(outside, 0750))
 
-	for _, uri := range []string{
+	for _, uri := range []redact.URL{
 		"env:///../outside",
 		"env:///%2e%2e/outside",
 	} {
-		t.Run(uri, func(t *testing.T) {
+		t.Run(uri.String(), func(t *testing.T) {
 			ui, _ := ui.NewForTesting()
-			_, err := ForURIs(ui, filepath.Join(root, "state"), env, []string{uri})
+			_, err := ForURIs(ui, filepath.Join(root, "state"), env, []redact.URL{uri})
 			assert.Error(t, err)
 		})
 	}
@@ -80,11 +81,12 @@ func TestGitHubTokenRewriter(t *testing.T) {
 			matcher, err := github.GlobRepoMatcher([]string{tt.pattern})
 			assert.NoError(t, err)
 
-			rewriter := github.AuthenticatedURLRewriter(tt.token, matcher)
-			result, err := rewriter(tt.uri)
+			rewriter := github.AuthenticatedURLRewriter(redact.Secret(tt.token), matcher)
+			result, err := rewriter(redact.URL(tt.uri))
 
 			assert.NoError(t, err)
-			assert.Equal(t, tt.want, result)
+			assert.Equal(t, tt.want, result.Reveal())
+			assert.Equal(t, tt.uri, result.String())
 		})
 	}
 }
@@ -96,9 +98,9 @@ func TestForURIsIntegration(t *testing.T) {
 	t.Run("successful rewriting", func(t *testing.T) {
 		matcher, err := github.GlobRepoMatcher([]string{"owner/*"})
 		assert.NoError(t, err)
-		rewriter := github.AuthenticatedURLRewriter("test-token", matcher)
+		rewriter := github.AuthenticatedURLRewriter(redact.Secret("test-token"), matcher)
 
-		uris := []string{
+		uris := []redact.URL{
 			"https://github.com/owner/repo1.git",
 			"https://github.com/other/repo2.git",
 			"git@github.com:owner/repo3.git",
@@ -108,19 +110,20 @@ func TestForURIsIntegration(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, len(uris), len(sources.sources))
 
-		// Verify the sources were created with appropriate URIs
-		// First URI should be rewritten with token, others should remain unchanged
-		assert.Contains(t, sources.sources[0].URI(), "x-access-token:test-token@github.com")
-		assert.Equal(t, uris[1], sources.sources[1].URI())
-		assert.Equal(t, uris[2], sources.sources[2].URI())
+		gitSource, ok := sources.sources[0].(*GitSource)
+		assert.True(t, ok)
+		assert.Equal(t, "https://x-access-token:test-token@github.com/owner/repo1.git", gitSource.remote.Reveal())
+		assert.Equal(t, "https://github.com/owner/repo1.git", sources.sources[0].URI())
+		assert.Equal(t, uris[1].Reveal(), sources.sources[1].URI())
+		assert.Equal(t, uris[2].Reveal(), sources.sources[2].URI())
 	})
 
 	t.Run("rewriter error", func(t *testing.T) {
-		errorRewriter := func(uri string) (string, error) {
+		errorRewriter := func(uri redact.URL) (redact.URL, error) {
 			return "", errors.New("rewriter error")
 		}
 
-		uris := []string{"https://github.com/owner/repo.git"}
+		uris := []redact.URL{"https://github.com/owner/repo.git"}
 		_, err := ForURIs(l, "testdir", "testenv", uris, errorRewriter)
 
 		assert.Error(t, err)
@@ -128,18 +131,18 @@ func TestForURIsIntegration(t *testing.T) {
 	})
 
 	t.Run("git remote helper uri", func(t *testing.T) {
-		_, err := ForURIs(l, "testdir", "testenv", []string{"zzq::x.git"})
+		_, err := ForURIs(l, "testdir", "testenv", []redact.URL{"zzq::x.git"})
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "remote helpers are not supported")
 	})
 
 	t.Run("invalid rewritten uri", func(t *testing.T) {
-		invalidRewriter := func(uri string) (string, error) {
+		invalidRewriter := func(uri redact.URL) (redact.URL, error) {
 			return "invalid://not-a-valid-source", nil
 		}
 
-		uris := []string{"https://github.com/owner/repo.git"}
+		uris := []redact.URL{"https://github.com/owner/repo.git"}
 		_, err := ForURIs(l, "testdir", "testenv", uris, invalidRewriter)
 
 		assert.Error(t, err)

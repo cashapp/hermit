@@ -11,6 +11,7 @@ import (
 	"github.com/cashapp/hermit/util"
 
 	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/redact"
 	"github.com/cashapp/hermit/ui"
 )
 
@@ -86,10 +87,10 @@ func (s *Sources) Sync(p *ui.UI, force bool) error {
 }
 
 // URLRewriter is a function that can transform a source URI
-type URLRewriter func(uri string) (string, error)
+type URLRewriter func(uri redact.URL) (redact.URL, error)
 
 // ForURIs returns Source instances for given uri strings
-func ForURIs(b *ui.UI, dir, env string, uris []string, rewriters ...URLRewriter) (*Sources, error) {
+func ForURIs(b *ui.UI, dir, env string, uris []redact.URL, rewriters ...URLRewriter) (*Sources, error) {
 	sources := make([]Source, 0, len(uris))
 	for _, uri := range uris {
 		// Apply each rewriter in sequence
@@ -116,20 +117,23 @@ func ForURIs(b *ui.UI, dir, env string, uris []string, rewriters ...URLRewriter)
 	}, nil
 }
 
-func getSource(b *ui.UI, source, dir, env string) (Source, error) {
-	task := b.Task(source)
+func getSource(b *ui.UI, source redact.URL, dir, env string) (Source, error) {
+	task := b.Task(source.String())
 	defer task.Done()
 
-	if strings.HasSuffix(source, ".git") {
+	if strings.HasSuffix(source.Reveal(), ".git") {
 		if err := util.ValidateGitURL(source); err != nil {
 			return nil, errors.WithStack(err)
 		}
 		return NewGitSource(source, dir, &util.RealCommandRunner{}), nil
 	}
 
-	uri, err := url.Parse(source)
+	uri, err := url.Parse(source.Reveal())
 	if err != nil {
-		return nil, errors.Wrap(err, "invalid source")
+		if uerr, ok := err.(*url.Error); ok { //nolint:errorlint
+			return nil, errors.Errorf("invalid source %q: %s", source, uerr.Err)
+		}
+		return nil, errors.Errorf("invalid source %q", source)
 	}
 	var (
 		// Directory of source, if any, to check for existence.
@@ -161,7 +165,7 @@ func getSource(b *ui.UI, source, dir, env string) (Source, error) {
 		return nil, errors.Errorf("unsupported source %q", source)
 	}
 	if info, err := os.Stat(checkDir); err == nil {
-		return NewLocalSource(source, candidate), nil
+		return NewLocalSource(source.String(), candidate), nil
 	} else if info != nil && !info.IsDir() {
 		task.Warnf("source %q should be a directory but is not", source)
 	} else {

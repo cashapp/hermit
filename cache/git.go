@@ -6,12 +6,14 @@ import (
 	"strings"
 
 	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/redact"
 	"github.com/cashapp/hermit/ui"
 	"github.com/cashapp/hermit/util"
 )
 
 type gitSource struct {
-	URL string
+	URL    redact.URL
+	runner util.CommandRunner
 }
 
 func (s *gitSource) OpenLocal(c *Cache, checksum string) (*os.File, error) {
@@ -26,17 +28,17 @@ func (s *gitSource) Download(b *ui.Task, cache *Cache, checksum string) (string,
 	if err != nil {
 		return "", "", "", err
 	}
-	args := util.GitArgs("clone", "--depth=1")
+	args := redact.Args(util.GitArgs("clone", "--depth=1")...)
 	if tag != "" {
-		args = append(args, "--branch="+tag)
+		args = append(args, redact.Plain("--branch="+tag))
 	}
-	args = append(args, "--", repo, checkoutDir)
-	err = util.RunSystemInDir(b, cache.root, args...)
+	args = append(args, redact.Plain("--"), repo, redact.Plain(checkoutDir))
+	err = s.runner.RunInDir(b, cache.root, args...)
 	if err != nil {
 		return "", "", "", errors.WithStack(err)
 	}
 
-	bts, err := util.CaptureSystemInDir(b, checkoutDir, "git", "rev-parse", "HEAD")
+	bts, err := s.runner.CaptureInDir(b, checkoutDir, redact.Args("git", "rev-parse", "HEAD")...)
 	if err != nil {
 		return "", "", "", errors.WithStack(err)
 	}
@@ -46,16 +48,9 @@ func (s *gitSource) Download(b *ui.Task, cache *Cache, checksum string) (string,
 }
 
 func (s *gitSource) ETag(b *ui.Task) (etag string, err error) {
-	repo, tag, err := parseGitURL(s.URL)
+	bts, err := s.lsRemote(b)
 	if err != nil {
-		return "", err
-	}
-	if tag == "" {
-		tag = "HEAD"
-	}
-	bts, err := util.CaptureSystem(b, util.GitArgs("ls-remote", "--", repo, tag)...)
-	if err != nil {
-		return "", errors.Wrap(err, s.URL)
+		return "", errors.Wrap(err, s.URL.String())
 	}
 	str := string(bts)
 	parts := strings.Split(str, "\t")
@@ -67,28 +62,25 @@ func (s *gitSource) ETag(b *ui.Task) (etag string, err error) {
 }
 
 func (s *gitSource) Validate() error {
+	_, err := s.lsRemote(nil)
+	return errors.Wrap(err, "error getting remote HEAD")
+}
+
+func (s *gitSource) lsRemote(log ui.Logger) ([]byte, error) {
 	repo, tag, err := parseGitURL(s.URL)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if tag == "" {
 		tag = "HEAD"
 	}
-	args := util.GitArgs("ls-remote", "--", repo, tag)
-	cmd, err := util.SystemCommand(args...)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return errors.Wrapf(err, "error getting remote HEAD: %s", string(out))
-	}
-	return nil
+	args := append(redact.Args(util.GitArgs("ls-remote", "--")...), repo, redact.Plain(tag))
+	return s.runner.CaptureInDir(log, "", args...)
 }
 
-func parseGitURL(source string) (repo, tag string, err error) {
-	parts := strings.SplitN(source, "#", 2)
-	repo = parts[0]
+func parseGitURL(source redact.URL) (repo redact.URL, tag string, err error) {
+	parts := strings.SplitN(source.Reveal(), "#", 2)
+	repo = redact.URL(parts[0])
 
 	if err := util.ValidateGitURL(repo); err != nil {
 		return "", "", errors.WithStack(err)

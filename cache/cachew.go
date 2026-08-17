@@ -3,13 +3,15 @@ package cache
 import (
 	"net/http"
 	"net/url"
+
+	"github.com/cashapp/hermit/redact"
 )
 
 // CachewSourceSelector wraps another PackageSourceSelector to redirect HTTP/HTTPS
 // downloads through a Cachew proxy server https://github.com/block/cachew.
 func CachewSourceSelector(getSource PackageSourceSelector, cachewURL string) PackageSourceSelector {
-	return func(client *http.Client, uri string) (PackageSource, error) {
-		u, err := url.Parse(uri)
+	return func(client *http.Client, uri redact.URL) (PackageSource, error) {
+		u, err := url.Parse(uri.Reveal())
 		if err != nil {
 			return getSource(client, uri)
 		}
@@ -25,6 +27,6 @@ func CachewSourceSelector(getSource PackageSourceSelector, cachewURL string) Pac
 			rewrittenURI += "?" + u.RawQuery
 		}
 
-		return HTTPSource(client, rewrittenURI), nil
+		return HTTPSource(client, redact.URL(rewrittenURI)), nil
 	}
 }

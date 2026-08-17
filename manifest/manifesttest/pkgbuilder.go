@@ -7,6 +7,7 @@ import (
 	"github.com/cashapp/hermit/envars"
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/platform"
+	"github.com/cashapp/hermit/redact"
 )
 
 // PkgBuilder is a builder pattern implementation for manifest.Package objects
@@ -70,7 +71,7 @@ func (b PkgBuilder) WithBinaries(bins ...string) PkgBuilder {
 
 // WithSource sets the source of the package
 func (b PkgBuilder) WithSource(src string) PkgBuilder {
-	b.result.Source = src
+	b.result.Source = redact.URL(src)
 	return b
 }
 
