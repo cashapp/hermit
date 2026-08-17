@@ -14,6 +14,7 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/cashapp/hermit/manifest"
+	"github.com/cashapp/hermit/redact"
 	"github.com/cashapp/hermit/ui"
 )
 
@@ -96,7 +97,7 @@ func TestExtractRegularTarEntryWithLinkname(t *testing.T) {
 	finalise, err := Extract(
 		p.Task("extract"),
 		archivePath,
-		&manifest.Package{Dest: dest, Source: filepath.Base(archivePath)},
+		&manifest.Package{Dest: dest, Source: redact.URL(filepath.Base(archivePath))},
 	)
 	assert.NoError(t, err)
 	assert.NoError(t, finalise())
@@ -149,7 +150,7 @@ func TestExtract(t *testing.T) {
 			finalise, err := Extract(
 				p.Task("extract"),
 				filepath.Join("testdata", test.file),
-				&manifest.Package{Dest: dest, Source: test.file},
+				&manifest.Package{Dest: dest, Source: redact.URL(test.file)},
 			)
 			assert.NoError(t, err)
 			assert.NoError(t, finalise())

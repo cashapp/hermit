@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/redact"
 )
 
 var (
@@ -26,12 +27,13 @@ func GitArgs(args ...string) []string {
 
 // ValidateGitURL rejects URLs selecting a transport Hermit does not support, and
 // URLs that git would interpret as an option.
-func ValidateGitURL(url string) error {
-	if strings.HasPrefix(url, "-") {
+func ValidateGitURL(url redact.URL) error {
+	raw := url.Reveal()
+	if strings.HasPrefix(raw, "-") {
 		return errors.Errorf("invalid git URL %q: cannot start with '-'", url)
 	}
-	scheme := gitURLSchemeRe.FindString(url)
-	switch rest := url[len(scheme):]; {
+	scheme := gitURLSchemeRe.FindString(raw)
+	switch rest := raw[len(scheme):]; {
 	case strings.HasPrefix(rest, "://"):
 		if !slices.Contains(allowedGitSchemes, strings.ToLower(scheme)) {
 			return errors.Errorf("invalid git URL %q: scheme must be one of %s", url, strings.Join(allowedGitSchemes, ", "))

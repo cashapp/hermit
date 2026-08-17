@@ -136,7 +136,7 @@ func Extract(b *ui.Task, source string, pkg *manifest.Package) (finalise func() 
 	r = io.NopCloser(io.TeeReader(r, task.ProgressWriter()))
 
 	if pkg.DontExtract {
-		return finalise, copyDirect(r, tmpDest, path.Base(pkg.Source))
+		return finalise, copyDirect(r, tmpDest, path.Base(pkg.Source.Reveal()))
 	}
 
 	// Archive is a single executable.
@@ -150,7 +150,7 @@ func Extract(b *ui.Task, source string, pkg *manifest.Package) (finalise func() 
 	case "application/x-mach-binary", "application/x-elf",
 		"application/x-executable", "application/x-sharedlib",
 		"text/x-shellscript":
-		return finalise, extractExecutable(r, tmpDest, path.Base(pkg.Source))
+		return finalise, extractExecutable(r, tmpDest, path.Base(pkg.Source.Reveal()))
 
 	case "application/x-tar":
 		return finalise, extractPackageTarball(task, r, tmpDest, pkg.Strip)

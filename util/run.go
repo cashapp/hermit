@@ -12,20 +12,28 @@ import (
 
 	"github.com/cashapp/hermit/envars"
 	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/redact"
 	"github.com/cashapp/hermit/ui"
 )
 
 // CommandRunner abstracts how we run command in a given directory
 type CommandRunner interface {
 	// RunInDir runs a command in the given directory.
-	RunInDir(log *ui.Task, dir string, args ...string) error
+	RunInDir(log *ui.Task, dir string, args ...redact.Value) error
+	// CaptureInDir runs a command in the given directory and returns its
+	// combined output. A nil log discards debug and output logging.
+	CaptureInDir(log ui.Logger, dir string, args ...redact.Value) ([]byte, error)
 }
 
 // RealCommandRunner actually calls command
 type RealCommandRunner struct{}
 
-func (g *RealCommandRunner) RunInDir(task *ui.Task, dir string, commands ...string) error {
-	return errors.WithStack(RunSystemInDir(task, dir, commands...))
+func (g *RealCommandRunner) RunInDir(task *ui.Task, dir string, commands ...redact.Value) error {
+	return errors.WithStack(runSystemInDir(task, dir, commands))
+}
+
+func (g *RealCommandRunner) CaptureInDir(log ui.Logger, dir string, commands ...redact.Value) ([]byte, error) {
+	return captureSystemInDir(log, dir, commands)
 }
 
 // SystemCommand constructs a command for an external tool used internally by
@@ -84,6 +92,43 @@ func systemEnviron() (envars.Envars, error) {
 	return environ, nil
 }
 
+func displayJoin(args []redact.Value) string {
+	display := make([]string, len(args))
+	for i, arg := range args {
+		display[i] = arg.String()
+	}
+	return shellquote.Join(display...)
+}
+
+// scrubbingWriter replaces sensitive values in subprocess output before it
+// reaches the log, buffering by line so a value cannot straddle two writes.
+type scrubbingWriter struct {
+	w    io.Writer
+	repl *strings.Replacer
+	buf  bytes.Buffer
+}
+
+func (s *scrubbingWriter) Write(b []byte) (int, error) {
+	s.buf.Write(b)
+	for {
+		i := bytes.IndexByte(s.buf.Bytes(), '\n')
+		if i < 0 {
+			return len(b), nil
+		}
+		line := string(s.buf.Next(i + 1))
+		if _, err := io.WriteString(s.w, s.repl.Replace(line)); err != nil {
+			return len(b), err
+		}
+	}
+}
+
+func (s *scrubbingWriter) flush() {
+	if s.buf.Len() > 0 {
+		_, _ = io.WriteString(s.w, s.repl.Replace(s.buf.String()))
+		s.buf.Reset()
+	}
+}
+
 // Run a command, outputting to stdout and stderr.
 func Run(log *ui.Task, args ...string) error {
 	return RunInDir(log, "", args...)
@@ -109,13 +154,29 @@ func CaptureSystem(log ui.Logger, args ...string) ([]byte, error) {
 // CaptureSystemInDir runs an external tool used internally by Hermit in the given dir
 // and returns its output.
 func CaptureSystemInDir(log ui.Logger, dir string, args ...string) ([]byte, error) {
-	log.Debugf("%s", shellquote.Join(args...))
-	cmd, err := SystemCommand(args...)
+	return captureSystemInDir(log, dir, redact.Args(args...))
+}
+
+func captureSystemInDir(log ui.Logger, dir string, args []redact.Value) ([]byte, error) {
+	if log != nil {
+		log.Debugf("%s", displayJoin(args))
+	}
+	cmd, err := SystemCommand(redact.Reveal(args)...)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	cmd.Dir = dir
-	return captureOutput(log, cmd)
+	out, err := cmd.CombinedOutput()
+	if scrubber := redact.Scrubber(args); scrubber != nil {
+		out = []byte(scrubber.Replace(string(out)))
+	}
+	if err != nil {
+		return out, errors.Wrapf(err, "%s: %s", displayJoin(args), strings.TrimSpace(string(out)))
+	}
+	if log != nil {
+		_, _ = log.Write(out)
+	}
+	return out, nil
 }
 
 // CaptureInDir runs a command in the given dir, returning combined stdout and stderr.
@@ -152,11 +213,22 @@ func RunInDir(log *ui.Task, dir string, args ...string) error {
 
 // RunSystemInDir runs an external tool used internally by Hermit in the given dir.
 func RunSystemInDir(log *ui.Task, dir string, args ...string) error {
+	return runSystemInDir(log, dir, redact.Args(args...))
+}
+
+func runSystemInDir(log *ui.Task, dir string, args []redact.Value) error {
 	log = log.SubTask("exec")
-	log.Debugf("%s", shellquote.Join(args...))
+	log.Debugf("%s", displayJoin(args))
 	b := &bytes.Buffer{}
-	w := io.MultiWriter(b, log)
-	cmd, err := SystemCommand(args...)
+	var relay io.Writer = log
+	scrubber := redact.Scrubber(args)
+	if scrubber != nil {
+		sw := &scrubbingWriter{w: log, repl: scrubber}
+		defer sw.flush()
+		relay = sw
+	}
+	w := io.MultiWriter(b, relay)
+	cmd, err := SystemCommand(redact.Reveal(args)...)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -165,9 +237,13 @@ func RunSystemInDir(log *ui.Task, dir string, args ...string) error {
 	cmd.Stderr = w
 	if err = cmd.Run(); err != nil {
 		if !log.WillLog(ui.LevelDebug) {
-			log.Errorf("%s", b.String())
+			out := b.String()
+			if scrubber != nil {
+				out = scrubber.Replace(out)
+			}
+			log.Errorf("%s", out)
 		}
-		return errors.Wrapf(err, "%s failed", shellquote.Join(args...))
+		return errors.Wrapf(err, "%s failed", displayJoin(args))
 	}
 	return nil
 }

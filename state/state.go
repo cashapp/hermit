@@ -16,6 +16,7 @@ import (
 	"github.com/cashapp/hermit/internal/dao"
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/platform"
+	"github.com/cashapp/hermit/redact"
 	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/ui"
 	"github.com/cashapp/hermit/util"
@@ -24,7 +25,7 @@ import (
 )
 
 // DefaultSources if no others are defined.
-var DefaultSources = []string{"https://github.com/cashapp/hermit-packages.git"}
+var DefaultSources = []redact.URL{"https://github.com/cashapp/hermit-packages.git"}
 
 type precompiledAutoMirror struct {
 	re     *regexp.Regexp
@@ -43,7 +44,7 @@ type AutoMirror struct {
 // Config for Hermit's global state.
 type Config struct {
 	// List of sources to sync packages from.
-	Sources []string
+	Sources []redact.URL
 	// Auto-generated mirrors.
 	AutoMirrors []AutoMirror
 	// Builtin sources.
@@ -327,7 +328,7 @@ func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 	// This is safe because cache paths are content-addressed and the cache layer
 	// uses temp files + atomic os.Rename (see cache/http.go downloadHTTP()).
 	if !s.isCached(p) {
-		mirrors := make([]string, len(p.Mirrors))
+		mirrors := make([]redact.URL, len(p.Mirrors))
 		copy(mirrors, p.Mirrors)
 		mirrors = append(mirrors, s.generateMirrors(p.Source)...)
 		_, etag, _, err := s.cache.Download(b, p.SHA256, p.Source, mirrors...)
@@ -366,7 +367,7 @@ func (s *State) CacheAndDigest(b *ui.Task, p *manifest.Package) (string, error) 
 	var actualDigest string
 	var err error
 	if !s.isCached(p) {
-		mirrors := make([]string, len(p.Mirrors))
+		mirrors := make([]redact.URL, len(p.Mirrors))
 		copy(mirrors, p.Mirrors)
 		mirrors = append(mirrors, s.generateMirrors(p.Source)...)
 		_, _, actualDigest, err = s.cache.Download(b, p.SHA256, p.Source, mirrors...)
@@ -426,7 +427,7 @@ func (s *State) extract(b *ui.Task, p *manifest.Package) error {
 	)
 
 	if !s.isCached(p) {
-		mirrors := make([]string, len(p.Mirrors))
+		mirrors := make([]redact.URL, len(p.Mirrors))
 		copy(mirrors, p.Mirrors)
 		mirrors = append(mirrors, s.generateMirrors(p.Source)...)
 		path, etag, _, err = s.cache.Download(b, p.SHA256, p.Source, mirrors...)
@@ -562,7 +563,7 @@ func (s *State) UpgradeChannel(b *ui.Task, pkg *manifest.Package) error {
 	}
 
 	name := pkg.Reference.String()
-	mirrors := make([]string, len(pkg.Mirrors))
+	mirrors := make([]redact.URL, len(pkg.Mirrors))
 	copy(mirrors, pkg.Mirrors)
 	mirrors = append(mirrors, s.generateMirrors(pkg.Source)...)
 
@@ -626,16 +627,16 @@ func (s *State) evictPackage(b *ui.Task, pkg *manifest.Package) error {
 }
 
 // Return the generated mirrors that match URL.
-func (s *State) generateMirrors(url string) (mirrors []string) {
+func (s *State) generateMirrors(url redact.URL) (mirrors []redact.URL) {
 	for _, pam := range s.autoMirrors {
-		matches := pam.re.FindStringSubmatch(url)
+		matches := pam.re.FindStringSubmatch(url.Reveal())
 		if matches == nil {
 			continue
 		}
 		mirror := os.Expand(pam.mirror, func(key string) string {
 			return matches[pam.groups[key]]
 		})
-		mirrors = append(mirrors, mirror)
+		mirrors = append(mirrors, redact.URL(mirror))
 	}
 	return
 }

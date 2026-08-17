@@ -30,7 +30,7 @@ func gitTagsAutoVersion(autoVersion *manifest.AutoVersionBlock) (string, error) 
 	// output format of refs is
 	// <oid> TAB <ref> LF
 	// source: https://git-scm.com/docs/git-ls-remote
-	args := util.GitArgs("ls-remote", "--tags", "--refs", "--", remoteURL)
+	args := util.GitArgs("ls-remote", "--tags", "--refs", "--", remoteURL.Reveal())
 	cmd, err := util.SystemCommand(args...)
 	if err != nil {
 		return "", errors.WithStack(err)

@@ -29,6 +29,7 @@ import (
 	"github.com/cashapp/hermit/internal/system"
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/platform"
+	"github.com/cashapp/hermit/redact"
 	"github.com/cashapp/hermit/shell"
 	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/state"
@@ -91,7 +92,7 @@ const (
 // Config for a Hermit environment.
 type Config struct {
 	Envars            envars.Envars `hcl:"env,optional" help:"Extra environment variables."`
-	Sources           []string      `hcl:"sources,optional" help:"Package manifest sources."`
+	Sources           []redact.URL  `hcl:"sources,optional" help:"Package manifest sources."`
 	ManageGit         bool          `hcl:"manage-git,optional" default:"true" help:"Whether Hermit should automatically 'git add' new packages."`
 	InheritParent     bool          `hcl:"inherit-parent,optional" default:"false" help:"Whether this environment inherits a potential parent environment from one of the parent directories"`
 	InstallOnActivate []string      `hcl:"install-on-activate,optional" help:"List of packages to eagerly download and unpack when the environment is activated."`
@@ -269,7 +270,7 @@ func FindEnvDir(binary string) (envDir string, err error) {
 	return
 }
 
-func getSources(l *ui.UI, envDir string, config *Config, state *state.State, defaultSources []string, sourceRewriters ...sources.URLRewriter) (*sources.Sources, error) {
+func getSources(l *ui.UI, envDir string, config *Config, state *state.State, defaultSources []redact.URL, sourceRewriters ...sources.URLRewriter) (*sources.Sources, error) {
 	configuredSources := config.Sources
 	if config.Sources == nil {
 		configuredSources = defaultSources
