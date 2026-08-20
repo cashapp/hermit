@@ -856,6 +856,43 @@ EOF
 			`,
 		},
 		{
+			// Terminal shell integrations (eg. Ghostty, kitty) prepend an OSC 133
+			// prompt mark to PS1 and require it to stay at column 0. Ghostty's
+			// mark carries "cl=line" ("the prompt starts here, clear the line"),
+			// so a prefix inserted ahead of it makes the terminal clear the line
+			// partway through the prompt and lose the input start column.
+			name:         "ZshPromptPrefixGoesAfterTerminalPromptMarks",
+			preparations: prep{fixture("testenv1")},
+			script: `
+				cat > "$HERMIT_USER_CONFIG" <<EOF
+prompt = "short"
+EOF
+				if [ -n "${ZSH_VERSION-}" ]; then
+					PS1=$'%{\e]133;A;cl=line\a%}%~ '
+					. bin/activate-hermit
+					for f in $precmd_functions; do "$f"; done
+					assert test "${PS1}" = $'%{\e]133;A;cl=line\a%}🐚 %~ '
+				fi
+			`,
+		},
+		{
+			// Only leading zero-width escape groups are skipped; a prompt that
+			// starts with ordinary text keeps the prefix at the very front.
+			name:         "ZshPromptPrefixStaysLeadingWithoutTerminalPromptMarks",
+			preparations: prep{fixture("testenv1")},
+			script: `
+				cat > "$HERMIT_USER_CONFIG" <<EOF
+prompt = "short"
+EOF
+				if [ -n "${ZSH_VERSION-}" ]; then
+					PS1='%~ '
+					. bin/activate-hermit
+					for f in $precmd_functions; do "$f"; done
+					assert test "${PS1}" = '🐚 %~ '
+				fi
+			`,
+		},
+		{
 			name:         "CleanPackagesDoesNotChmodSymlinkTargets",
 			preparations: prep{fixture("testenv1"), activate(".")},
 			script: `
