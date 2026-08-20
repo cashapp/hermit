@@ -33,7 +33,7 @@ func TestInfer(t *testing.T) {
 		p,
 		cache.GetSource,
 		http.DefaultClient,
-		github.New(nil, ""),
+		github.NewWithHosts(nil, nil),
 		srv.URL+"/releases/download/0.1.1/pkg-0.1.1-linux-amd64.tgz",
 		"",
 	)

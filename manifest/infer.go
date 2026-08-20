@@ -40,9 +40,9 @@ func InferFromArtefact(p *ui.UI, packageSource cache.PackageSourceSelector, http
 	description := ""
 	homepage := ""
 	githubRelease := ""
-	githubHost, repoName := ghClient.ProjectForURLWithHost(url)
+	githubHost, repoName := ghClient.ProjectForURL(url)
 	if repoName != "" {
-		repo, err := ghClient.RepoForHost(githubHost, repoName)
+		repo, err := ghClient.Repo(githubHost, repoName)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}

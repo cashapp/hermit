@@ -104,8 +104,8 @@ type Config struct {
 // GitHub token authentication should be used.
 type GitHubTokenAuthConfig struct {
 	Host     string   `hcl:"host,optional" default:"github.com" help:"GitHub web host for matched repositories. Defaults to github.com. For GitHub Enterprise Cloud with data residency this is typically <subdomain>.ghe.com."`
-	TokenEnv string   `hcl:"token-env,optional" help:"Environment variable containing the token for this host. Defaults to HERMIT_GITHUB_TOKEN/GITHUB_TOKEN for github.com. Non-github.com hosts use gh auth token -h <host> if this is unset or empty."`
-	Match    []string `hcl:"match,optional" help:"One or more glob patterns. If any of these match the 'owner/repo' pair of a GitHub repository on the configured host, that host's GitHub token from the current environment will be used to fetch their artifacts."`
+	TokenEnv string   `hcl:"token-env,optional" help:"Environment variable containing the token for this host. Defaults to HERMIT_GITHUB_TOKEN/GITHUB_TOKEN for github.com. Non-github.com hosts fall back to gh auth token -h <host> if this is unset or empty."`
+	Match    []string `hcl:"match,optional" help:"One or more glob patterns. If any match the owner/repo pair of a GitHub repository on this host, Hermit uses that host's token for release downloads and HTTPS git source rewriting."`
 }
 
 // Env is a Hermit environment.

@@ -172,7 +172,10 @@ func Main(config Config) {
 		cli = &unactivated{cliBase: common}
 	}
 
-	githubToken, githubTokenSource := githubTokenForHost(hermit.GitHubTokenAuthConfig{Host: "github.com"})
+	githubToken, githubTokenSource, err := githubTokenForHost(hermit.GitHubTokenAuthConfig{Host: "github.com"})
+	if err != nil {
+		log.Fatalf("failed to retrieve GitHub token: %s", err)
+	}
 	if githubTokenSource != "" {
 		p.Tracef("GitHub token for github.com set from %s", githubTokenSource)
 	}
@@ -277,7 +280,7 @@ func Main(config Config) {
 	var sourceRewriters []sources.URLRewriter
 	if isActivated {
 		for _, auth := range githubAuths {
-			sourceRewriters = append(sourceRewriters, github.AuthenticatedURLRewriterForHost(auth.host.WebHost, auth.host.Token, auth.matcher))
+			sourceRewriters = append(sourceRewriters, github.AuthenticatedURLRewriter(auth.host.WebHost, auth.host.Token, auth.matcher))
 		}
 
 		env, err = hermit.OpenEnv(envInfo, sta, cache.GetSource, cli.getGlobalState().Env, defaultHTTPClient, config.SHA256Sums, sourceRewriters...)
@@ -369,7 +372,10 @@ func configuredGitHubAuths(p *ui.UI, envInfo *hermit.EnvInfo) ([]gitHubAuth, err
 			return nil, err
 		}
 
-		token, source := githubTokenForHost(ghTokenAuth)
+		token, source, err := githubTokenForHost(ghTokenAuth)
+		if err != nil {
+			return nil, err
+		}
 		host := github.HostConfig{
 			WebHost: ghTokenAuth.Host,
 			Token:   token,
@@ -383,21 +389,23 @@ func configuredGitHubAuths(p *ui.UI, envInfo *hermit.EnvInfo) ([]gitHubAuth, err
 	return auths, nil
 }
 
-func githubTokenForHost(config hermit.GitHubTokenAuthConfig) (token, source string) {
+var githubTokenFromCLI = github.TokenFromCLI
+
+func githubTokenForHost(config hermit.GitHubTokenAuthConfig) (string, string, error) {
 	if config.TokenEnv != "" {
-		token := os.Getenv(config.TokenEnv)
-		if token != "" {
-			return token, config.TokenEnv
+		if token := os.Getenv(config.TokenEnv); token != "" {
+			return token, config.TokenEnv, nil
 		}
 	}
 
-	if github.NormalizeHost(config.Host) != "github.com" {
-		return "", ""
+	if host := github.NormalizeHost(config.Host); host != "github.com" {
+		token, err := githubTokenFromCLI(host)
+		return token, "gh auth token", err
 	}
 	for _, candidate := range []string{"HERMIT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
 		if token := os.Getenv(candidate); token != "" {
-			return token, candidate
+			return token, candidate, nil
 		}
 	}
-	return "", ""
+	return "", "", nil
 }

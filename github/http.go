@@ -4,8 +4,6 @@ import (
 	"net/http"
 	"strings"
 	"sync"
-
-	"github.com/cashapp/hermit/errors"
 )
 
 // TokenAuthenticatedTransport returns a HTTP transport that will inject a
@@ -28,7 +26,7 @@ func TokenAuthenticatedTransportForHosts(transport http.RoundTripper, hosts []Ho
 	auth := &githubAuthTokenSource{
 		tokensByWebHost: map[string]string{},
 		knownWebHosts:   map[string]bool{},
-		ghTokens:        map[string]string{},
+		ghTokens:        map[string]func() (string, error){},
 	}
 	for _, host := range hosts {
 		webHost := NormalizeHost(host.WebHost)
@@ -61,7 +59,7 @@ type githubAuthTokenSource struct {
 	mu              sync.Mutex
 	tokensByWebHost map[string]string
 	knownWebHosts   map[string]bool
-	ghTokens        map[string]string
+	ghTokens        map[string]func() (string, error)
 }
 
 func (g *githubAuthTokenSource) tokenForRequestHost(requestHost string) (string, error) {
@@ -71,25 +69,23 @@ func (g *githubAuthTokenSource) tokenForRequestHost(requestHost string) (string,
 	}
 
 	g.mu.Lock()
-	defer g.mu.Unlock()
 	if token := g.tokensByWebHost[webHost]; token != "" {
+		g.mu.Unlock()
 		return token, nil
 	}
 	if webHost == gitHubHost {
+		g.mu.Unlock()
 		return "", nil
 	}
-	if token := g.ghTokens[webHost]; token != "" {
-		return token, nil
+	tokenFromCLI, ok := g.ghTokens[webHost]
+	if !ok {
+		tokenFromCLI = sync.OnceValues(func() (string, error) {
+			return TokenFromCLI(webHost)
+		})
+		g.ghTokens[webHost] = tokenFromCLI
 	}
-	token, err := ghAuthToken(webHost)
-	if err != nil {
-		return "", err
-	}
-	if token == "" {
-		return "", errors.Errorf("gh auth token -h %s returned an empty token", webHost)
-	}
-	g.ghTokens[webHost] = token
-	return token, nil
+	g.mu.Unlock()
+	return tokenFromCLI()
 }
 
 func (g *githubAuthTokenSource) webHostForRequestHost(requestHost string) (string, bool) {

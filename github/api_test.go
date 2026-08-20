@@ -17,6 +17,32 @@ func TestAPIBaseURL(t *testing.T) {
 	assert.Equal(t, "https://api.github.example.com", APIBaseURL("github.example.com"))
 }
 
+func TestNormalizeHost(t *testing.T) {
+	for _, tt := range []struct {
+		input string
+		want  string
+	}{
+		{"", "github.com"},
+		{" GitHub.com ", "github.com"},
+		{"https://MyCompany.ghe.com/", "mycompany.ghe.com"},
+		{"mycompany.ghe.com:443", "mycompany.ghe.com"},
+		{"mycompany.ghe.com:8443", "mycompany.ghe.com:8443"},
+	} {
+		t.Run(tt.input, func(t *testing.T) {
+			assert.Equal(t, tt.want, NormalizeHost(tt.input))
+		})
+	}
+}
+
+func TestNewWithHostsDoesNotMutateHostConfigs(t *testing.T) {
+	hosts := []HostConfig{{WebHost: "https://GitHub.com/"}, {WebHost: "MyCompany.ghe.com"}}
+	want := append([]HostConfig(nil), hosts...)
+
+	NewWithHosts(nil, hosts)
+
+	assert.Equal(t, want, hosts)
+}
+
 func TestEnterpriseHostAPIAndConfiguredToken(t *testing.T) {
 	var gotHost, gotPath, gotAuth string
 	client := NewWithHosts(&http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
@@ -28,7 +54,7 @@ func TestEnterpriseHostAPIAndConfiguredToken(t *testing.T) {
 		return &http.Response{StatusCode: http.StatusOK, Status: "200 OK", Body: io.NopCloser(strings.NewReader(string(body))), Request: r}, nil
 	})}, []HostConfig{{WebHost: "mycompany.ghe.com", Token: "enterprise-token"}})
 
-	repo, err := client.RepoForHost("mycompany.ghe.com", "owner/repo")
+	repo, err := client.Repo("mycompany.ghe.com", "owner/repo")
 	assert.NoError(t, err)
 	assert.Equal(t, "private repo", repo.Description)
 	assert.Equal(t, "api.mycompany.ghe.com", gotHost)
@@ -51,7 +77,7 @@ func TestEnterpriseHostTokenFromGHCLI(t *testing.T) {
 		return &http.Response{StatusCode: http.StatusOK, Status: "200 OK", Body: io.NopCloser(strings.NewReader(`{"description":"private repo"}`)), Request: r}, nil
 	})}, []HostConfig{{WebHost: "mycompany.ghe.com"}})
 
-	_, err := client.RepoForHost("mycompany.ghe.com", "owner/repo")
+	_, err := client.Repo("mycompany.ghe.com", "owner/repo")
 	assert.NoError(t, err)
 	assert.Equal(t, "mycompany.ghe.com", gotTokenHost)
 	assert.Equal(t, "token gh-token", gotAuth)
@@ -59,9 +85,18 @@ func TestEnterpriseHostTokenFromGHCLI(t *testing.T) {
 
 func TestProjectForURLEnterpriseHost(t *testing.T) {
 	client := NewWithHosts(nil, []HostConfig{{WebHost: "mycompany.ghe.com"}})
-	assert.Equal(t, "owner/repo", client.ProjectForURL("https://mycompany.ghe.com/owner/repo/releases/download/v1/asset.tar.gz"))
-	assert.Equal(t, "owner/repo", client.ProjectForURL("https://another.ghe.com/owner/repo/releases/download/v1/asset.tar.gz"))
-	assert.Equal(t, "", client.ProjectForURL("https://github.example.com/owner/repo/releases/download/v1/asset.tar.gz"))
+	host, project := client.ProjectForURL("https://mycompany.ghe.com/owner/repo/releases/download/v1/asset.tar.gz")
+	assert.Equal(t, "mycompany.ghe.com", host)
+	assert.Equal(t, "owner/repo", project)
+	host, project = client.ProjectForURL("https://another.ghe.com/owner/repo/releases/download/v1/asset.tar.gz")
+	assert.Equal(t, "another.ghe.com", host)
+	assert.Equal(t, "owner/repo", project)
+	host, project = client.ProjectForURL("https://github.example.com/owner/repo/releases/download/v1/asset.tar.gz")
+	assert.Equal(t, "", host)
+	assert.Equal(t, "", project)
+	host, project = client.ProjectForURL("https://MYCOMPANY.GHE.COM:443/owner/repo/releases/download/v1/asset.tar.gz")
+	assert.Equal(t, "mycompany.ghe.com", host)
+	assert.Equal(t, "owner/repo", project)
 }
 
 func TestObjectStorageRedirectHostDoesNotUseGHToken(t *testing.T) {
@@ -88,9 +123,16 @@ func TestObjectStorageRedirectHostDoesNotUseGHToken(t *testing.T) {
 func TestEnterpriseAssetURLCannotUseGitHubDotCom(t *testing.T) {
 	client := NewWithHosts(nil, []HostConfig{{WebHost: "github.com"}, {WebHost: "mycompany.ghe.com"}})
 
-	_, err := client.DownloadForHost("mycompany.ghe.com", Asset{URL: "https://api.github.com/repos/mycompany/tool/releases/assets/1"})
+	_, err := client.Download("mycompany.ghe.com", Asset{URL: "https://api.github.com/repos/mycompany/tool/releases/assets/1"})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), `does not match configured GitHub host "mycompany.ghe.com"`)
+}
+
+func TestEnterpriseAssetURLHostIsNormalized(t *testing.T) {
+	client := NewWithHosts(nil, []HostConfig{{WebHost: "mycompany.ghe.com"}})
+
+	err := client.validateAssetURLForHost("mycompany.ghe.com", "https://API.MYCOMPANY.GHE.COM:443/repos/mycompany/tool/releases/assets/1")
+	assert.NoError(t, err)
 }
 
 func TestEnterpriseHostMissingGHTokenFails(t *testing.T) {
@@ -105,7 +147,7 @@ func TestEnterpriseHostMissingGHTokenFails(t *testing.T) {
 		return nil, nil
 	})}, []HostConfig{{WebHost: "mycompany.ghe.com"}})
 
-	_, err := client.RepoForHost("mycompany.ghe.com", "owner/repo")
+	_, err := client.Repo("mycompany.ghe.com", "owner/repo")
 	assert.Error(t, err)
 }
 

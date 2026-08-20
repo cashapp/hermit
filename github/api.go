@@ -46,9 +46,12 @@ func NormalizeHost(host string) string {
 	}
 	u, err := url.Parse(host)
 	if err != nil || u.Host == "" {
-		return strings.Trim(strings.TrimPrefix(strings.TrimPrefix(host, "https://"), "http://"), "/")
+		return strings.ToLower(strings.Trim(strings.TrimPrefix(strings.TrimPrefix(host, "https://"), "http://"), "/"))
 	}
-	return u.Host
+	if u.Port() == "" || u.Port() == "443" {
+		return strings.ToLower(u.Hostname())
+	}
+	return strings.ToLower(u.Host)
 }
 
 // IsGitHubHost returns true for hosts Hermit treats as GitHub-compatible by default.
@@ -81,15 +84,9 @@ type Asset struct {
 
 // Client for GitHub.
 type Client struct {
-	cache       sync.Map
-	client      *http.Client
-	defaultHost string
-	hosts       map[string]HostConfig
-}
-
-// New creates a new GitHub.com API client.
-func New(client *http.Client, token string) *Client {
-	return NewWithHosts(client, []HostConfig{{WebHost: gitHubHost, Token: token}})
+	cache  sync.Map
+	client *http.Client
+	hosts  map[string]HostConfig
 }
 
 // NewWithHosts creates a new GitHub API client for one or more GitHub hosts.
@@ -102,15 +99,14 @@ func NewWithHosts(client *http.Client, hosts []HostConfig) *Client {
 	}
 
 	normalized := make(map[string]HostConfig, len(hosts))
-	for i, host := range hosts {
+	for _, host := range hosts {
 		host.WebHost = NormalizeHost(host.WebHost)
 		normalized[host.WebHost] = host
-		hosts[i] = host
 	}
 
 	authenticatedClient := *client
 	authenticatedClient.Transport = TokenAuthenticatedTransportForHosts(client.Transport, hosts)
-	return &Client{client: &authenticatedClient, defaultHost: NormalizeHost(hosts[0].WebHost), hosts: normalized}
+	return &Client{client: &authenticatedClient, hosts: normalized}
 }
 
 // SupportsHost returns true if this client supports the given GitHub web host.
@@ -123,36 +119,26 @@ func (a *Client) SupportsHost(host string) bool {
 	return ok
 }
 
-// ProjectForURL returns the <repo>/<project> for the given URL if it is a configured GitHub project.
-func (a *Client) ProjectForURL(sourceURL string) string {
-	_, project := a.ProjectForURLWithHost(sourceURL)
-	return project
-}
-
-// ProjectForURLWithHost returns the configured GitHub web host and <repo>/<project>
+// ProjectForURL returns the configured GitHub web host and <repo>/<project>
 // for the given URL if it is a configured GitHub project.
-func (a *Client) ProjectForURLWithHost(sourceURL string) (host, project string) {
+func (a *Client) ProjectForURL(sourceURL string) (host, project string) {
 	u, err := url.Parse(sourceURL)
 	if err != nil {
 		return "", ""
 	}
-	if !a.SupportsHost(u.Host) {
+	host = NormalizeHost(u.Host)
+	if !a.SupportsHost(host) {
 		return "", ""
 	}
 	parts := strings.Split(u.Path, "/")
 	if len(parts) < 3 {
 		return "", ""
 	}
-	return u.Host, strings.Join(parts[1:3], "/")
+	return host, strings.Join(parts[1:3], "/")
 }
 
 // Repo information.
-func (a *Client) Repo(repo string) (*Repo, error) {
-	return a.RepoForHost(a.defaultHost, repo)
-}
-
-// RepoForHost retrieves repository information from the configured GitHub host.
-func (a *Client) RepoForHost(host, repo string) (*Repo, error) {
+func (a *Client) Repo(host, repo string) (*Repo, error) {
 	response := &Repo{}
 	url, err := a.apiURL(host, "/repos/"+repo)
 	if err != nil {
@@ -161,13 +147,8 @@ func (a *Client) RepoForHost(host, repo string) (*Repo, error) {
 	return response, a.decode(url, response)
 }
 
-// Release attempts to fetch Release info for a tag.
-func (a *Client) Release(repo, tag string) (*Release, error) {
-	return a.ReleaseForHost(a.defaultHost, repo, tag)
-}
-
-// ReleaseForHost attempts to fetch Release info for a tag from the configured GitHub host.
-func (a *Client) ReleaseForHost(host, repo, tag string) (*Release, error) {
+// Release attempts to fetch Release info for a tag from the configured GitHub host.
+func (a *Client) Release(host, repo, tag string) (*Release, error) {
 	url, err := a.apiURL(host, "/repos/"+repo+"/releases/tags/"+tag)
 	if err != nil {
 		return nil, err
@@ -176,13 +157,8 @@ func (a *Client) ReleaseForHost(host, repo, tag string) (*Release, error) {
 	return release, a.decode(url, release)
 }
 
-// LatestRelease details for a GitHub repository.
-func (a *Client) LatestRelease(repo string) (*Release, error) {
-	return a.LatestReleaseForHost(a.defaultHost, repo)
-}
-
-// LatestReleaseForHost details for a GitHub repository from the configured GitHub host.
-func (a *Client) LatestReleaseForHost(host, repo string) (*Release, error) {
+// LatestRelease details for a GitHub repository from the configured GitHub host.
+func (a *Client) LatestRelease(host, repo string) (*Release, error) {
 	url, err := a.apiURL(host, "/repos/"+repo+"/releases/latest")
 	if err != nil {
 		return nil, err
@@ -192,13 +168,7 @@ func (a *Client) LatestReleaseForHost(host, repo string) (*Release, error) {
 }
 
 // Releases for a particular repo. If limit is 0, fetches all releases.
-func (a *Client) Releases(repo string, limit int) (releases []*Release, err error) {
-	return a.ReleasesForHost(a.defaultHost, repo, limit)
-}
-
-// ReleasesForHost returns releases for a particular repo from the configured GitHub host.
-// If limit is 0, fetches all releases.
-func (a *Client) ReleasesForHost(host, repo string, limit int) (releases []*Release, err error) {
+func (a *Client) Releases(host, repo string, limit int) (releases []*Release, err error) {
 	baseURL, err := a.apiURL(host, fmt.Sprintf("/repos/%s/releases", repo))
 	if err != nil {
 		return nil, err
@@ -222,13 +192,8 @@ func (a *Client) ReleasesForHost(host, repo string, limit int) (releases []*Rele
 	return nil, errors.Errorf("could not fully paginate over GitHub releases in %s, too many results", repo)
 }
 
-// Download creates a download request for retrieving a release asset from GitHub.
-func (a *Client) Download(asset Asset) (resp *http.Response, err error) {
-	return a.DownloadForHost(a.defaultHost, asset)
-}
-
-// DownloadForHost creates a download request for retrieving a release asset from the configured GitHub host.
-func (a *Client) DownloadForHost(host string, asset Asset) (resp *http.Response, err error) {
+// Download creates a download request for retrieving a release asset from the configured GitHub host.
+func (a *Client) Download(host string, asset Asset) (resp *http.Response, err error) {
 	if err := a.validateAssetURLForHost(host, asset.URL); err != nil {
 		return nil, err
 	}
@@ -241,13 +206,8 @@ func (a *Client) DownloadForHost(host string, asset Asset) (resp *http.Response,
 	return a.doForHost(host, req)
 }
 
-// ETag issues a HEAD request for an Asset and returns its ETag.
-func (a *Client) ETag(asset Asset) (etag string, err error) {
-	return a.ETagForHost(a.defaultHost, asset)
-}
-
-// ETagForHost issues a HEAD request for an Asset from the configured GitHub host and returns its ETag.
-func (a *Client) ETagForHost(host string, asset Asset) (etag string, err error) {
+// ETag issues a HEAD request for an Asset from the configured GitHub host and returns its ETag.
+func (a *Client) ETag(host string, asset Asset) (etag string, err error) {
 	if err := a.validateAssetURLForHost(host, asset.URL); err != nil {
 		return "", err
 	}
@@ -285,8 +245,9 @@ func (a *Client) validateAssetURLForHost(host, rawURL string) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	if u.Host != host && u.Host != "api."+host {
-		return errors.Errorf("GitHub asset URL host %q does not match configured GitHub host %q", u.Host, host)
+	assetHost := NormalizeHost(u.Host)
+	if assetHost != host && assetHost != NormalizeHost("api."+host) {
+		return errors.Errorf("GitHub asset URL host %q does not match configured GitHub host %q", assetHost, host)
 	}
 	return nil
 }
@@ -314,8 +275,9 @@ func rejectGitHubDotComRedirectForHost(host string, u *url.URL) error {
 	if NormalizeHost(host) == gitHubHost {
 		return nil
 	}
-	if u.Host == gitHubHost || u.Host == "api."+gitHubHost {
-		return errors.Errorf("refusing to follow GitHub Enterprise asset redirect to %s", u.Host)
+	redirectHost := NormalizeHost(u.Host)
+	if redirectHost == gitHubHost || redirectHost == "api."+gitHubHost {
+		return errors.Errorf("refusing to follow GitHub Enterprise asset redirect to %s", redirectHost)
 	}
 	return nil
 }
@@ -365,9 +327,22 @@ func (a *Client) request(method string, url string, headers http.Header) (*http.
 }
 
 var ghAuthToken = func(host string) (string, error) {
-	out, err := exec.Command("gh", "auth", "token", "-h", host).Output() //nolint:noctx
+	out, err := exec.Command("gh", "auth", "token", "-h", host).Output()
 	if err != nil {
 		return "", errors.Wrapf(err, "GitHub Enterprise host %q requires authentication via the gh CLI; run `gh auth login -h %s`", host, host)
 	}
 	return strings.TrimSpace(string(out)), nil
+}
+
+// TokenFromCLI retrieves a token for an authenticated GitHub Enterprise host.
+func TokenFromCLI(host string) (string, error) {
+	host = NormalizeHost(host)
+	token, err := ghAuthToken(host)
+	if err != nil {
+		return "", err
+	}
+	if token == "" {
+		return "", errors.Errorf("gh auth token -h %s returned an empty token", host)
+	}
+	return token, nil
 }

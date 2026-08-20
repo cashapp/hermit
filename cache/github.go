@@ -40,15 +40,16 @@ func GitHubSourceSelectorForHosts(getSource PackageSourceSelector, ghclient *git
 }
 
 func matchesGitHubHost(info *githubReleaseInfo, matchers []GitHubHostMatcher) bool {
-	if info.host != "github.com" && strings.HasSuffix(info.host, ".ghe.com") {
-		return true
-	}
+	hasMatcher := false
 	for _, matcher := range matchers {
-		if matcher.Host == info.host && matcher.Match != nil && matcher.Match(info.owner, info.repo) {
-			return true
+		if matcher.Host == info.host {
+			hasMatcher = true
+			if matcher.Match != nil && matcher.Match(info.owner, info.repo) {
+				return true
+			}
 		}
 	}
-	return false
+	return !hasMatcher && info.host != "github.com" && github.IsGitHubHost(info.host)
 }
 
 type githubReleaseSource struct {
@@ -77,7 +78,7 @@ func (g *githubReleaseSource) ETag(b *ui.Task) (etag string, err error) {
 	if err != nil {
 		return "", err
 	}
-	return g.ghclient.ETagForHost(g.info.host, asset)
+	return g.ghclient.ETag(g.info.host, asset)
 }
 
 func (g *githubReleaseSource) Validate() error {
@@ -85,12 +86,12 @@ func (g *githubReleaseSource) Validate() error {
 	if err != nil {
 		return err
 	}
-	_, err = g.ghclient.ETagForHost(g.info.host, asset)
+	_, err = g.ghclient.ETag(g.info.host, asset)
 	return errors.WithStack(err)
 }
 
 func (g *githubReleaseSource) getAsset() (github.Asset, error) {
-	release, err := g.ghclient.ReleaseForHost(g.info.host, fmt.Sprintf("%s/%s", g.info.owner, g.info.repo), g.info.tag)
+	release, err := g.ghclient.Release(g.info.host, fmt.Sprintf("%s/%s", g.info.owner, g.info.repo), g.info.tag)
 	if err != nil {
 		return github.Asset{}, errors.WithStack(err)
 	}
@@ -102,7 +103,7 @@ func (g *githubReleaseSource) getAsset() (github.Asset, error) {
 }
 
 func downloadGHPrivate(client *github.Client, ghi *githubReleaseInfo) (response *http.Response, err error) {
-	release, err := client.ReleaseForHost(ghi.host, fmt.Sprintf("%s/%s", ghi.owner, ghi.repo), ghi.tag)
+	release, err := client.Release(ghi.host, fmt.Sprintf("%s/%s", ghi.owner, ghi.repo), ghi.tag)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -110,7 +111,7 @@ func downloadGHPrivate(client *github.Client, ghi *githubReleaseInfo) (response 
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	resp, err := client.DownloadForHost(ghi.host, asset)
+	resp, err := client.Download(ghi.host, asset)
 	if err != nil {
 		return nil, errors.Wrap(err, "GitHub release API download failed")
 	}
@@ -123,14 +124,14 @@ type githubReleaseInfo struct {
 
 func getGitHubReleaseInfo(uri string) (*githubReleaseInfo, bool) {
 	u, err := url.Parse(uri)
-	if err != nil || u.Scheme != "https" || u.Host == "" {
+	if err != nil || u.Scheme != "https" || u.Host == "" || u.RawQuery != "" || u.Fragment != "" {
 		return nil, false
 	}
 	parts := strings.Split(strings.TrimPrefix(u.Path, "/"), "/")
 	if len(parts) != 6 || parts[2] != "releases" || parts[3] != "download" {
 		return nil, false
 	}
-	g := &githubReleaseInfo{host: u.Host}
+	g := &githubReleaseInfo{host: github.NormalizeHost(u.Host)}
 	if g.owner, err = url.PathUnescape(parts[0]); err != nil {
 		return nil, false
 	}

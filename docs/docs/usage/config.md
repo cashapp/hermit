@@ -48,6 +48,8 @@ github-token-auth {
 }
 ```
 
+Release URLs on GitHub Enterprise Cloud data residency hosts (`<subdomain>.ghe.com`) are recognized without a `github-token-auth` block. In that case Hermit obtains a token lazily with `gh auth token -h <host>`. Adding a block for that host makes its `match` globs authoritative and also supplies the same token to HTTPS git source rewriting. Other Enterprise hosts must be configured explicitly.
+
 ## Attributes
 
 | Attribute          | Type               | Description                                                                                          |
@@ -65,7 +67,7 @@ github-token-auth {
 |-----------|----------|-----------------------------------------------------------------------------------------------------------------------|
 | `host` | `string?` | GitHub web host for matched repositories. Defaults to `github.com`. For GitHub Enterprise Cloud with data residency this is typically `<subdomain>.ghe.com`. |
 | `token-env` | `string?` | Environment variable containing the token for this host. Defaults to `HERMIT_GITHUB_TOKEN`/`GITHUB_TOKEN` for `github.com`. Non-`github.com` hosts use `gh auth token -h <host>` if this is unset or empty. |
-| `match` | `[string]?` | One or more glob patterns. If any of these match the 'owner/repo' pair of a GitHub repository on the configured host, that host's GitHub token from the current environment will be used to fetch their artifacts. |
+| `match` | `[string]?` | One or more glob patterns. If any of these match the `owner/repo` pair of a GitHub repository on the configured host, Hermit uses that host's token for release downloads and HTTPS git source rewriting. |
 
 ## Per-environment Sources
 
