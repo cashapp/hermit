@@ -7,6 +7,7 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/cashapp/hermit/github"
+	"github.com/cashapp/hermit/redact"
 	"github.com/cashapp/hermit/ui"
 )
 
@@ -23,21 +24,21 @@ func TestGitHubSourceSelector(t *testing.T) {
 	matcher, err := github.GlobRepoMatcher([]string{"mycompany/*"})
 	assert.NoError(t, err)
 	fallback := testPackageSource{}
-	selector := GitHubSourceSelectorForHosts(func(*http.Client, string) (PackageSource, error) {
+	selector := GitHubSourceSelectorForHosts(func(*http.Client, redact.URL) (PackageSource, error) {
 		return fallback, nil
 	}, github.NewWithHosts(nil, []github.HostConfig{{WebHost: "github.com"}, {WebHost: "mycompany.ghe.com"}}), []GitHubHostMatcher{{Host: "mycompany.ghe.com", Match: matcher}})
 
-	source, err := selector(nil, "https://mycompany.ghe.com/mycompany/tool/releases/download/v1/tool.tar.gz")
+	source, err := selector(nil, redact.URL("https://mycompany.ghe.com/mycompany/tool/releases/download/v1/tool.tar.gz"))
 	assert.NoError(t, err)
 	_, ok := source.(*githubReleaseSource)
 	assert.True(t, ok)
 
-	source, err = selector(nil, "https://github.com/mycompany/tool/releases/download/v1/tool.tar.gz")
+	source, err = selector(nil, redact.URL("https://github.com/mycompany/tool/releases/download/v1/tool.tar.gz"))
 	assert.NoError(t, err)
 	_, ok = source.(testPackageSource)
 	assert.True(t, ok)
 
-	source, err = selector(nil, "https://mycompany.ghe.com/other/tool/releases/download/v1/tool.tar.gz")
+	source, err = selector(nil, redact.URL("https://mycompany.ghe.com/other/tool/releases/download/v1/tool.tar.gz"))
 	assert.NoError(t, err)
 	_, ok = source.(testPackageSource)
 	assert.True(t, ok)
@@ -45,11 +46,11 @@ func TestGitHubSourceSelector(t *testing.T) {
 
 func TestGitHubSourceSelectorRecognizesGHEByDefault(t *testing.T) {
 	fallback := testPackageSource{}
-	selector := GitHubSourceSelectorForHosts(func(*http.Client, string) (PackageSource, error) {
+	selector := GitHubSourceSelectorForHosts(func(*http.Client, redact.URL) (PackageSource, error) {
 		return fallback, nil
 	}, github.NewWithHosts(nil, []github.HostConfig{{WebHost: "github.com"}}), nil)
 
-	source, err := selector(nil, "https://another.ghe.com/other/tool/releases/download/v1/tool.tar.gz")
+	source, err := selector(nil, redact.URL("https://another.ghe.com/other/tool/releases/download/v1/tool.tar.gz"))
 	assert.NoError(t, err)
 	_, ok := source.(*githubReleaseSource)
 	assert.True(t, ok)
@@ -59,11 +60,11 @@ func TestGitHubSourceSelectorRecognizesConfiguredEnterpriseHost(t *testing.T) {
 	matcher, err := github.GlobRepoMatcher([]string{"owner/*"})
 	assert.NoError(t, err)
 	fallback := testPackageSource{}
-	selector := GitHubSourceSelectorForHosts(func(*http.Client, string) (PackageSource, error) {
+	selector := GitHubSourceSelectorForHosts(func(*http.Client, redact.URL) (PackageSource, error) {
 		return fallback, nil
 	}, github.NewWithHosts(nil, []github.HostConfig{{WebHost: "github.internal.example"}}), []GitHubHostMatcher{{Host: "github.internal.example", Match: matcher}})
 
-	source, err := selector(nil, "https://github.internal.example/owner/tool/releases/download/v1/tool.tar.gz")
+	source, err := selector(nil, redact.URL("https://github.internal.example/owner/tool/releases/download/v1/tool.tar.gz"))
 	assert.NoError(t, err)
 	_, ok := source.(*githubReleaseSource)
 	assert.True(t, ok)
@@ -85,4 +86,18 @@ func TestGetGitHubReleaseInfoNormalizesHost(t *testing.T) {
 	info, ok := getGitHubReleaseInfo("https://MYCOMPANY.GHE.COM:443/owner/repo/releases/download/v1/tool.tar.gz")
 	assert.True(t, ok)
 	assert.Equal(t, "mycompany.ghe.com", info.host)
+}
+
+func TestGitHubSourceSelectorRejectsUnknownHost(t *testing.T) {
+	matcher, err := github.GlobRepoMatcher([]string{"owner/*"})
+	assert.NoError(t, err)
+	fallback := testPackageSource{}
+	selector := GitHubSourceSelector(func(*http.Client, redact.URL) (PackageSource, error) {
+		return fallback, nil
+	}, github.NewWithHosts(nil, nil), matcher)
+
+	source, err := selector(nil, redact.URL("https://githubXcom/owner/repo/releases/download/v1/tool.tar.gz"))
+	assert.NoError(t, err)
+	_, ok := source.(testPackageSource)
+	assert.True(t, ok)
 }

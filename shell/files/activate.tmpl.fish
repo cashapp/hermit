@@ -1,6 +1,6 @@
 # Hermit {{.Shell}} activation script
 
-set -gx HERMIT_ENV {{ .Root | Quote }}
+set -gx HERMIT_ENV {{ .Root | FishQuote }}
 
 if set -q ACTIVE_HERMIT
     if test "$ACTIVE_HERMIT" = "$HERMIT_ENV"
@@ -18,7 +18,7 @@ if set -q ACTIVE_HERMIT
 end
 
 {{ range $ENV_NAME, $ENV_VALUE := .Env }}
-set -gx {{ $ENV_NAME }} {{ $ENV_VALUE | Quote }}
+set -gx {{ $ENV_NAME }} {{ $ENV_VALUE | FishQuote }}
 {{- end }}
 
 function _hermit_deactivate
@@ -48,11 +48,11 @@ end
 set -e DEACTIVATED_HERMIT
 set -gx ACTIVE_HERMIT "$HERMIT_ENV"
 set -gx HERMIT_ENV_OPS "$("$HERMIT_ENV/bin/hermit" env --ops)"
-set -gx HERMIT_BIN_CHANGE "$(date -r "$HERMIT_ENV/bin" +"%s")"
+set -gx HERMIT_BIN_CHANGE "$(/bin/date -r "$HERMIT_ENV/bin" +"%s")"
 
 # Function to update Hermit environment
 function update_hermit_env
-    set CURRENT "$(date -r "$HERMIT_ENV/bin" +"%s")"
+    set CURRENT "$(/bin/date -r "$HERMIT_ENV/bin" +"%s")"
     test "$CURRENT" = "$HERMIT_BIN_CHANGE"; and return 0
     set CUR_HERMIT "$HERMIT_ENV/bin/hermit"
     "$ACTIVE_HERMIT/bin/hermit" env --deactivate-from-ops="$HERMIT_ENV_OPS" | source

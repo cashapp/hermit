@@ -20,6 +20,7 @@ import (
 	"github.com/cashapp/hermit"
 	"github.com/cashapp/hermit/cache"
 	"github.com/cashapp/hermit/github"
+	"github.com/cashapp/hermit/redact"
 	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/state"
 	"github.com/cashapp/hermit/ui"
@@ -391,10 +392,10 @@ func configuredGitHubAuths(p *ui.UI, envInfo *hermit.EnvInfo) ([]gitHubAuth, err
 
 var githubTokenFromCLI = github.TokenFromCLI
 
-func githubTokenForHost(config hermit.GitHubTokenAuthConfig) (string, string, error) {
+func githubTokenForHost(config hermit.GitHubTokenAuthConfig) (redact.Secret, string, error) {
 	if config.TokenEnv != "" {
 		if token := os.Getenv(config.TokenEnv); token != "" {
-			return token, config.TokenEnv, nil
+			return redact.Secret(token), config.TokenEnv, nil
 		}
 	}
 
@@ -404,7 +405,7 @@ func githubTokenForHost(config hermit.GitHubTokenAuthConfig) (string, string, er
 	}
 	for _, candidate := range []string{"HERMIT_GITHUB_TOKEN", "GITHUB_TOKEN"} {
 		if token := os.Getenv(candidate); token != "" {
-			return token, candidate, nil
+			return redact.Secret(token), candidate, nil
 		}
 	}
 	return "", "", nil

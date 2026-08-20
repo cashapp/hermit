@@ -71,3 +71,13 @@ func Quote(word string) string {
 	}
 	return buf.String()
 }
+
+// FishQuote returns a word quoted with single-quotes for consumption by Fish.
+//
+// Unlike POSIX shells, Fish treats backslash as an escape character inside
+// single-quotes, so both backslashes and single-quotes must be escaped.
+func FishQuote(word string) string {
+	word = strings.ReplaceAll(word, `\`, `\\`)
+	word = strings.ReplaceAll(word, `'`, `\'`)
+	return `'` + word + `'`
+}

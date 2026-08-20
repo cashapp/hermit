@@ -14,6 +14,7 @@ import (
 	"sync"
 
 	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/redact"
 )
 
 const (
@@ -27,7 +28,7 @@ type HostConfig struct {
 	// "github.com" or "mycompany.ghe.com".
 	WebHost string
 	// Token is the token to use for this host and API.
-	Token string
+	Token redact.Secret
 }
 
 // APIBaseURL returns the REST API base URL for a GitHub web host.
@@ -335,7 +336,7 @@ var ghAuthToken = func(host string) (string, error) {
 }
 
 // TokenFromCLI retrieves a token for an authenticated GitHub Enterprise host.
-func TokenFromCLI(host string) (string, error) {
+func TokenFromCLI(host string) (redact.Secret, error) {
 	host = NormalizeHost(host)
 	token, err := ghAuthToken(host)
 	if err != nil {
@@ -344,5 +345,5 @@ func TokenFromCLI(host string) (string, error) {
 	if token == "" {
 		return "", errors.Errorf("gh auth token -h %s returned an empty token", host)
 	}
-	return token, nil
+	return redact.Secret(token), nil
 }

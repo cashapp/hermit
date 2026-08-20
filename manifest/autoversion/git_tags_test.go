@@ -10,6 +10,7 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/manifest"
+	"github.com/cashapp/hermit/redact"
 )
 
 func Test_GitTagsAutoVersion(t *testing.T) {
@@ -39,7 +40,7 @@ func Test_GitTagsAutoVersion(t *testing.T) {
 	assert.NoError(t, err)
 
 	latest, err := gitTagsAutoVersion(&manifest.AutoVersionBlock{
-		GitTags:        tmpDir,
+		GitTags:        redact.URL(tmpDir),
 		VersionPattern: "v?(.*)",
 	})
 

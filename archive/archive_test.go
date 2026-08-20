@@ -3,6 +3,7 @@ package archive
 import (
 	"archive/tar"
 	"archive/zip"
+	"bytes"
 	"compress/gzip"
 	"os"
 	"path/filepath"
@@ -13,8 +14,101 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/cashapp/hermit/manifest"
+	"github.com/cashapp/hermit/redact"
 	"github.com/cashapp/hermit/ui"
 )
+
+func TestRegularTarEntryWithLinkname(t *testing.T) {
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+
+	target := []byte("target content")
+	assert.NoError(t, tw.WriteHeader(&tar.Header{
+		Name:     "target",
+		Mode:     0644,
+		Typeflag: tar.TypeReg,
+		Size:     int64(len(target)),
+	}))
+	_, err := tw.Write(target)
+	assert.NoError(t, err)
+
+	payload := []byte("regular file content")
+	assert.NoError(t, tw.WriteHeader(&tar.Header{
+		Name:     "regular",
+		Mode:     0644,
+		Typeflag: tar.TypeReg,
+		Linkname: "target",
+		Size:     int64(len(payload)),
+	}))
+	_, err = tw.Write(payload)
+	assert.NoError(t, err)
+	assert.NoError(t, tw.Close())
+
+	p, _ := ui.NewForTesting()
+	dest := t.TempDir()
+	assert.NoError(t, extractPackageTarball(p.Task("extract"), bytes.NewReader(buf.Bytes()), dest, 0))
+
+	info, err := os.Lstat(filepath.Join(dest, "regular"))
+	assert.NoError(t, err)
+	assert.True(t, info.Mode().IsRegular())
+	contents, err := os.ReadFile(filepath.Join(dest, "regular"))
+	assert.NoError(t, err)
+	assert.Equal(t, payload, contents)
+}
+
+func TestExtractRegularTarEntryWithLinkname(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Cleanup(func() {
+		_ = makeWritable(tmpDir)
+	})
+
+	archivePath := filepath.Join(tmpDir, "regular-with-linkname.tar.gz")
+	f, err := os.Create(archivePath)
+	assert.NoError(t, err)
+	gw := gzip.NewWriter(f)
+	tw := tar.NewWriter(gw)
+
+	target := []byte("target content")
+	assert.NoError(t, tw.WriteHeader(&tar.Header{
+		Name:     "target",
+		Mode:     0644,
+		Typeflag: tar.TypeReg,
+		Size:     int64(len(target)),
+	}))
+	_, err = tw.Write(target)
+	assert.NoError(t, err)
+
+	payload := []byte("regular file content")
+	assert.NoError(t, tw.WriteHeader(&tar.Header{
+		Name:     "regular",
+		Mode:     0644,
+		Typeflag: tar.TypeReg,
+		Linkname: "target",
+		Size:     int64(len(payload)),
+	}))
+	_, err = tw.Write(payload)
+	assert.NoError(t, err)
+	assert.NoError(t, tw.Close())
+	assert.NoError(t, gw.Close())
+	assert.NoError(t, f.Close())
+
+	p, _ := ui.NewForTesting()
+	dest := filepath.Join(tmpDir, "extracted")
+	finalise, err := Extract(
+		p.Task("extract"),
+		archivePath,
+		&manifest.Package{Dest: dest, Source: redact.URL(filepath.Base(archivePath))},
+	)
+	assert.NoError(t, err)
+	assert.NoError(t, finalise())
+
+	info, err := os.Lstat(filepath.Join(dest, "regular"))
+	assert.NoError(t, err)
+	assert.True(t, info.Mode().IsRegular())
+	contents, err := os.ReadFile(filepath.Join(dest, "regular"))
+	assert.NoError(t, err)
+	assert.Equal(t, payload, contents)
+}
 
 func makeWritable(path string) error {
 	return filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
@@ -56,7 +150,7 @@ func TestExtract(t *testing.T) {
 			finalise, err := Extract(
 				p.Task("extract"),
 				filepath.Join("testdata", test.file),
-				&manifest.Package{Dest: dest, Source: test.file},
+				&manifest.Package{Dest: dest, Source: redact.URL(test.file)},
 			)
 			assert.NoError(t, err)
 			assert.NoError(t, finalise())

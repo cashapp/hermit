@@ -3,14 +3,15 @@ package app
 import (
 	"github.com/cashapp/hermit"
 	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/redact"
 	"github.com/cashapp/hermit/ui"
 )
 
 type initCmd struct {
-	Git     *bool    `negatable:"" help:"Enable Hermit's automatic management of Git'"`
-	Idea    bool     `negatable:"" help:"Enable Hermit's automatic addition of its IntelliJ IDEA plugin"`
-	Sources []string `help:"Sources to sync package manifests from."`
-	Dir     string   `arg:"" help:"Directory to create environment in (${default})." default:"${env}" predictor:"dir"`
+	Git     *bool        `negatable:"" help:"Enable Hermit's automatic management of Git'"`
+	Idea    bool         `negatable:"" help:"Enable Hermit's automatic addition of its IntelliJ IDEA plugin"`
+	Sources []redact.URL `help:"Sources to sync package manifests from."`
+	Dir     string       `arg:"" help:"Directory to create environment in (${default})." default:"${env}" predictor:"dir"`
 }
 
 func (i *initCmd) Run(w *ui.UI, config Config, userConfig UserConfig) error {

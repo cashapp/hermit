@@ -56,7 +56,7 @@ deactivate-hermit() {
 unset DEACTIVATED_HERMIT
 export ACTIVE_HERMIT="${HERMIT_ENV}"
 export HERMIT_ENV_OPS="$("${HERMIT_ENV}/bin/hermit" env --ops)"
-export HERMIT_BIN_CHANGE="$(date -r "${HERMIT_ENV}/bin" +"%s")"
+export HERMIT_BIN_CHANGE="$(/bin/date -r "${HERMIT_ENV}/bin" +"%s")"
 
 {{- if ne .Prompt "none" }}
 if test -n "${PS1+_}"; then
@@ -82,7 +82,7 @@ fi
 
 update_hermit_env() {
   local CURRENT
-  CURRENT="$(date -r "${HERMIT_ENV}/bin" +"%s")"
+  CURRENT="$(/bin/date -r "${HERMIT_ENV}/bin" +"%s")"
   test "$CURRENT" = "$HERMIT_BIN_CHANGE" && return 0
   local CUR_HERMIT="${HERMIT_ENV}/bin/hermit"
   eval "$("${ACTIVE_HERMIT}/bin/hermit" env --deactivate-from-ops="${HERMIT_ENV_OPS}")"

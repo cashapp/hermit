@@ -136,7 +136,7 @@ func Extract(b *ui.Task, source string, pkg *manifest.Package) (finalise func() 
 	r = io.NopCloser(io.TeeReader(r, task.ProgressWriter()))
 
 	if pkg.DontExtract {
-		return finalise, copyDirect(r, tmpDest, path.Base(pkg.Source))
+		return finalise, copyDirect(r, tmpDest, path.Base(pkg.Source.Reveal()))
 	}
 
 	// Archive is a single executable.
@@ -150,7 +150,7 @@ func Extract(b *ui.Task, source string, pkg *manifest.Package) (finalise func() 
 	case "application/x-mach-binary", "application/x-elf",
 		"application/x-executable", "application/x-sharedlib",
 		"text/x-shellscript":
-		return finalise, extractExecutable(r, tmpDest, path.Base(pkg.Source))
+		return finalise, extractExecutable(r, tmpDest, path.Base(pkg.Source.Reveal()))
 
 	case "application/x-tar":
 		return finalise, extractPackageTarball(task, r, tmpDest, pkg.Strip)
@@ -209,7 +209,7 @@ func installMacDMG(b *ui.Task, source string, pkg *manifest.Package) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	output, err := util.Capture(b, "hdiutil", "attach", "-plist", source)
+	output, err := util.CaptureSystem(b, "hdiutil", "attach", "-plist", source)
 	if err != nil {
 		return errors.Wrap(err, "could not mount DMG")
 	}
@@ -228,14 +228,14 @@ func installMacDMG(b *ui.Task, source string, pkg *manifest.Package) error {
 	if entry == nil {
 		return errors.New("couldn't determine volume information from hdiutil attach, volume may still be mounted :(")
 	}
-	defer util.Run(b, "hdiutil", "detach", entry.DevEntry) //nolint: errcheck
+	defer util.RunSystem(b, "hdiutil", "detach", entry.DevEntry) //nolint: errcheck
 	switch {
 	case len(pkg.Apps) != 0:
 		for _, app := range pkg.Apps {
 			base := filepath.Base(app)
 			// Use rsync because reliably syncing all filesystem attributes is non-trivial.
 			appDest := filepath.Join(dest, base)
-			err = util.Run(b, "rsync", "-av",
+			err = util.RunSystem(b, "rsync", "-av",
 				filepath.Join(entry.MountPoint, app)+"/",
 				appDest+"/")
 			if err != nil {
@@ -377,7 +377,7 @@ func extractMacPKG(b *ui.Task, path, dest string, strip int) error {
 	fmt.Fprint(changesf, os.Expand(extractMacPkgChangesXML, func(s string) string { return dest }))
 	_ = changesf.Close()
 	task.Add(1)
-	return util.Run(b, "installer", "-verbose",
+	return util.RunSystem(b, "installer", "-verbose",
 		"-pkg", path,
 		"-target", "CurrentUserHomeDirectory",
 		"-applyChoiceChangesXML", changesf.Name())
@@ -503,7 +503,7 @@ func extractPackageTarball(b *ui.Task, r io.Reader, dest string, strip int) erro
 				return err
 			}
 
-		case hdr.Typeflag&(tar.TypeLink|tar.TypeGNULongLink) != 0 && hdr.Linkname != "":
+		case (hdr.Typeflag == tar.TypeLink || hdr.Typeflag == tar.TypeGNULongLink) && hdr.Linkname != "":
 			// Convert hard links into symlinks so we don't have to track inodes later on during relocation.
 			src := filepath.Join(dest, hdr.Linkname) //nolint: gosec
 			rp, err := filepath.Rel(filepath.Dir(destFile), src)

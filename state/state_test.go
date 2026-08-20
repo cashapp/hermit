@@ -13,6 +13,28 @@ import (
 	"github.com/cashapp/hermit/ui"
 )
 
+func TestCleanPackagesDoesNotChmodSymlinkTargets(t *testing.T) {
+	fixture := NewStateTestFixture(t)
+	defer fixture.Clean()
+	state := fixture.State()
+
+	target := filepath.Join(t.TempDir(), "target")
+	assert.NoError(t, os.WriteFile(target, nil, 0600))
+
+	packageDir := filepath.Join(state.PkgDir(), "malicious-package")
+	assert.NoError(t, os.MkdirAll(packageDir, 0700))
+	assert.NoError(t, os.Symlink(target, filepath.Join(packageDir, "link")))
+
+	log, _ := ui.NewForTesting()
+	assert.NoError(t, state.CleanPackages(log))
+
+	_, err := os.Lstat(packageDir)
+	assert.True(t, os.IsNotExist(err), "package directory should be removed")
+	info, err := os.Stat(target)
+	assert.NoError(t, err)
+	assert.Equal(t, os.FileMode(0600), info.Mode().Perm(), "symlink target permissions must not change")
+}
+
 func TestCacheAndUnpackDownloadsOnlyWhenNeeded(t *testing.T) {
 	calls := 0
 	fixture := NewStateTestFixture(t).

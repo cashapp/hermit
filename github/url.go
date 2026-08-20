@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/redact"
 )
 
 // isGitHubHTTPSURL checks if a URL is an HTTPS URL for a configured GitHub host and returns owner/repo if it is.
@@ -28,17 +29,20 @@ func isGitHubSSHURL(uri string) bool {
 
 // AuthenticatedURLRewriter rewrites HTTPS URLs for a configured GitHub host to
 // include an auth token if they match the provided pattern.
-func AuthenticatedURLRewriter(host, token string, matcher RepoMatcher) func(uri string) (string, error) {
+func AuthenticatedURLRewriter(host string, token redact.Secret, matcher RepoMatcher) func(uri redact.URL) (redact.URL, error) {
 	host = NormalizeHost(host)
-	return func(repo string) (string, error) {
+	return func(repo redact.URL) (redact.URL, error) {
 		// Pass through SSH URLs unchanged. Users should configure SSH authentication separately.
-		if isGitHubSSHURL(repo) {
+		if isGitHubSSHURL(repo.Reveal()) {
 			return repo, nil
 		}
 
-		u, err := url.Parse(repo)
+		u, err := url.Parse(repo.Reveal())
 		if err != nil {
-			return "", errors.WithStack(err)
+			if uerr, ok := err.(*url.Error); ok { //nolint:errorlint
+				return "", errors.Errorf("invalid URL %q: %s", repo, uerr.Err)
+			}
+			return "", errors.Errorf("invalid URL %q", repo)
 		}
 
 		owner, repoName, ok := isGitHubHTTPSURL(u, host)
@@ -46,8 +50,8 @@ func AuthenticatedURLRewriter(host, token string, matcher RepoMatcher) func(uri 
 			return repo, nil
 		}
 		if matcher(owner, repoName) {
-			u.User = url.UserPassword("x-access-token", token)
-			return u.String(), nil
+			u.User = url.UserPassword("x-access-token", token.Reveal())
+			return redact.URL(u.String()), nil
 		}
 		return repo, nil
 	}

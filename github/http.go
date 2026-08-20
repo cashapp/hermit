@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+
+	"github.com/cashapp/hermit/redact"
 )
 
 // TokenAuthenticatedTransport returns a HTTP transport that will inject a
@@ -11,7 +13,7 @@ import (
 //
 // Conceptually similar to
 // https://github.com/google/go-github/blob/d23570d44313ca73dbcaadec71fc43eca4d29f8b/github/github.go#L841-L875
-func TokenAuthenticatedTransport(transport http.RoundTripper, token string) http.RoundTripper {
+func TokenAuthenticatedTransport(transport http.RoundTripper, token redact.Secret) http.RoundTripper {
 	return TokenAuthenticatedTransportForHosts(transport, []HostConfig{{WebHost: gitHubHost, Token: token}})
 }
 
@@ -24,9 +26,9 @@ func TokenAuthenticatedTransportForHosts(transport http.RoundTripper, hosts []Ho
 		transport = http.DefaultTransport
 	}
 	auth := &githubAuthTokenSource{
-		tokensByWebHost: map[string]string{},
+		tokensByWebHost: map[string]redact.Secret{},
 		knownWebHosts:   map[string]bool{},
-		ghTokens:        map[string]func() (string, error){},
+		ghTokens:        map[string]func() (redact.Secret, error){},
 	}
 	for _, host := range hosts {
 		webHost := NormalizeHost(host.WebHost)
@@ -50,19 +52,19 @@ func (g *githubAuthenticatedHTTPClient) RoundTrip(req *http.Request) (*http.Resp
 		return nil, err
 	}
 	if token != "" {
-		req.Header.Set("Authorization", "token "+token)
+		req.Header.Set("Authorization", "token "+token.Reveal())
 	}
 	return g.rt.RoundTrip(req)
 }
 
 type githubAuthTokenSource struct {
 	mu              sync.Mutex
-	tokensByWebHost map[string]string
+	tokensByWebHost map[string]redact.Secret
 	knownWebHosts   map[string]bool
-	ghTokens        map[string]func() (string, error)
+	ghTokens        map[string]func() (redact.Secret, error)
 }
 
-func (g *githubAuthTokenSource) tokenForRequestHost(requestHost string) (string, error) {
+func (g *githubAuthTokenSource) tokenForRequestHost(requestHost string) (redact.Secret, error) {
 	webHost, ok := g.webHostForRequestHost(requestHost)
 	if !ok {
 		return "", nil
@@ -79,7 +81,7 @@ func (g *githubAuthTokenSource) tokenForRequestHost(requestHost string) (string,
 	}
 	tokenFromCLI, ok := g.ghTokens[webHost]
 	if !ok {
-		tokenFromCLI = sync.OnceValues(func() (string, error) {
+		tokenFromCLI = sync.OnceValues(func() (redact.Secret, error) {
 			return TokenFromCLI(webHost)
 		})
 		g.ghTokens[webHost] = tokenFromCLI

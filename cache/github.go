@@ -9,6 +9,7 @@ import (
 
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/github"
+	"github.com/cashapp/hermit/redact"
 	"github.com/cashapp/hermit/ui"
 )
 
@@ -30,8 +31,8 @@ func GitHubSourceSelectorForHosts(getSource PackageSourceSelector, ghclient *git
 		matcher.Host = github.NormalizeHost(matcher.Host)
 		normalizedMatchers = append(normalizedMatchers, matcher)
 	}
-	return func(client *http.Client, uri string) (PackageSource, error) {
-		info, ok := getGitHubReleaseInfo(uri)
+	return func(client *http.Client, uri redact.URL) (PackageSource, error) {
+		info, ok := getGitHubReleaseInfo(uri.Reveal())
 		if !ok || !ghclient.SupportsHost(info.host) || !matchesGitHubHost(info, normalizedMatchers) {
 			return getSource(client, uri)
 		}
@@ -55,7 +56,7 @@ func matchesGitHubHost(info *githubReleaseInfo, matchers []GitHubHostMatcher) bo
 type githubReleaseSource struct {
 	info     *githubReleaseInfo
 	ghclient *github.Client
-	url      string
+	url      redact.URL
 }
 
 func (g *githubReleaseSource) OpenLocal(c *Cache, checksum string) (*os.File, error) {

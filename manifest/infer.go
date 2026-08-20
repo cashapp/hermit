@@ -11,6 +11,7 @@ import (
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/github"
 	"github.com/cashapp/hermit/platform"
+	"github.com/cashapp/hermit/redact"
 	"github.com/cashapp/hermit/ui"
 )
 
@@ -77,7 +78,7 @@ func InferFromArtefact(p *ui.UI, packageSource cache.PackageSourceSelector, http
 		platforms = append(platforms, &PlatformBlock{
 			Attrs: []string{plat.OS, plat.Arch},
 			Layer: Layer{
-				Source: platSource,
+				Source: redact.URL(platSource),
 			},
 		})
 	}
@@ -124,7 +125,7 @@ func validateSourcesByPlatform(p *ui.UI, packageSource cache.PackageSourceSelect
 nextPlatform:
 	for plat, url := range sourcesByPlatform {
 		p.Debugf("  %s - %s", plat, url)
-		if err := ValidatePackageSource(packageSource, httpClient, url); err != nil {
+		if err := ValidatePackageSource(packageSource, httpClient, redact.URL(url)); err != nil {
 			// Try different extensions as packages sometimes use .zip for Windows, .tar.gz for Linux, etc.
 			candidate := url
 			// Strip the existing suffix.
@@ -134,7 +135,7 @@ nextPlatform:
 			// Try alternative suffixAlternatives.
 			for _, suffix := range suffixAlternatives {
 				url = candidate + suffix
-				if err := ValidatePackageSource(packageSource, httpClient, url); err == nil {
+				if err := ValidatePackageSource(packageSource, httpClient, redact.URL(url)); err == nil {
 					sourcesByPlatform[plat] = url
 					continue nextPlatform
 				}

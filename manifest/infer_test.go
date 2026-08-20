@@ -11,6 +11,7 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/cashapp/hermit/cache"
 	"github.com/cashapp/hermit/github"
+	"github.com/cashapp/hermit/redact"
 	"github.com/cashapp/hermit/ui"
 )
 
@@ -42,9 +43,9 @@ func TestInfer(t *testing.T) {
 		Layer: Layer{
 			Binaries: []string{},
 			Platform: []*PlatformBlock{
-				{Attrs: []string{"darwin", "amd64"}, Layer: Layer{Source: srv.URL + "/releases/download/${version}/pkg-${version}-${os}-${arch}.zip"}},
-				{Attrs: []string{"darwin", "arm64"}, Layer: Layer{Source: srv.URL + "/releases/download/${version}/pkg-${version}-${os}-amd64.zip"}},
-				{Attrs: []string{"linux", "amd64"}, Layer: Layer{Source: srv.URL + "/releases/download/${version}/pkg-${version}-${os}-${arch}.tgz"}},
+				{Attrs: []string{"darwin", "amd64"}, Layer: Layer{Source: redact.URL(srv.URL + "/releases/download/${version}/pkg-${version}-${os}-${arch}.zip")}},
+				{Attrs: []string{"darwin", "arm64"}, Layer: Layer{Source: redact.URL(srv.URL + "/releases/download/${version}/pkg-${version}-${os}-amd64.zip")}},
+				{Attrs: []string{"linux", "amd64"}, Layer: Layer{Source: redact.URL(srv.URL + "/releases/download/${version}/pkg-${version}-${os}-${arch}.tgz")}},
 			},
 		},
 		Versions: []VersionBlock{{

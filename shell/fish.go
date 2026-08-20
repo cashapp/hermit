@@ -18,7 +18,7 @@ var (
 	fishActivationScript     string
 	fishActivationScriptTmpl = template.Must(
 		template.New("activation").
-			Funcs(template.FuncMap{"Quote": Quote}).
+			Funcs(template.FuncMap{"FishQuote": FishQuote}).
 			Parse(fishActivationScript),
 	)
 )
@@ -55,7 +55,7 @@ func (sh *Fish) ApplyEnvars(w io.Writer, env envars.Envars) error {
 		if value == "" {
 			fmt.Fprintf(w, "set -e %s\n", key)
 		} else {
-			fmt.Fprintf(w, "set -gx %s %s\n", key, Quote(value))
+			fmt.Fprintf(w, "set -gx %s %s\n", key, FishQuote(value))
 		}
 	}
 	return nil
