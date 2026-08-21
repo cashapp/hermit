@@ -237,7 +237,7 @@ func Main(config Config) {
 	for _, auth := range githubAuths {
 		githubHosts = append(githubHosts, auth.host)
 	}
-	ghClient := github.NewWithHosts(defaultHTTPClient, githubHosts)
+	ghClient := github.New(defaultHTTPClient, githubHosts)
 
 	var githubHostMatchers []cache.GitHubHostMatcher
 	for _, auth := range githubAuths {

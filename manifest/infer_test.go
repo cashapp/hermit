@@ -34,7 +34,7 @@ func TestInfer(t *testing.T) {
 		p,
 		cache.GetSource,
 		http.DefaultClient,
-		github.NewWithHosts(nil, nil),
+		github.New(nil, nil),
 		srv.URL+"/releases/download/0.1.1/pkg-0.1.1-linux-amd64.tgz",
 		"",
 	)
@@ -103,7 +103,7 @@ func TestInferFromArtefactUsesGHEHostForRepoLookup(t *testing.T) {
 		p,
 		cache.GetSource,
 		client,
-		github.NewWithHosts(client, []github.HostConfig{{WebHost: "github.com"}, {WebHost: "mycompany.ghe.com", Token: "enterprise-token"}}),
+		github.New(client, []github.HostConfig{{WebHost: "github.com"}, {WebHost: "mycompany.ghe.com", Token: "enterprise-token"}}),
 		"https://mycompany.ghe.com/mycompany/tool/releases/download/v1.2.3/tool-v1.2.3-linux-amd64.tgz",
 		"",
 	)

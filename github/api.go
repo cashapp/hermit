@@ -90,8 +90,8 @@ type Client struct {
 	hosts  map[string]HostConfig
 }
 
-// NewWithHosts creates a new GitHub API client for one or more GitHub hosts.
-func NewWithHosts(client *http.Client, hosts []HostConfig) *Client {
+// New creates a new GitHub API client for one or more GitHub hosts.
+func New(client *http.Client, hosts []HostConfig) *Client {
 	if client == nil {
 		client = http.DefaultClient
 	}
@@ -106,7 +106,7 @@ func NewWithHosts(client *http.Client, hosts []HostConfig) *Client {
 	}
 
 	authenticatedClient := *client
-	authenticatedClient.Transport = TokenAuthenticatedTransportForHosts(client.Transport, hosts)
+	authenticatedClient.Transport = TokenAuthenticatedTransport(client.Transport, hosts)
 	return &Client{client: &authenticatedClient, hosts: normalized}
 }
 

@@ -34,18 +34,18 @@ func TestNormalizeHost(t *testing.T) {
 	}
 }
 
-func TestNewWithHostsDoesNotMutateHostConfigs(t *testing.T) {
+func TestNewDoesNotMutateHostConfigs(t *testing.T) {
 	hosts := []HostConfig{{WebHost: "https://GitHub.com/"}, {WebHost: "MyCompany.ghe.com"}}
 	want := append([]HostConfig(nil), hosts...)
 
-	NewWithHosts(nil, hosts)
+	New(nil, hosts)
 
 	assert.Equal(t, want, hosts)
 }
 
 func TestEnterpriseHostAPIAndConfiguredToken(t *testing.T) {
 	var gotHost, gotPath, gotAuth string
-	client := NewWithHosts(&http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+	client := New(&http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		gotHost = r.URL.Host
 		gotPath = r.URL.Path
 		gotAuth = r.Header.Get("Authorization")
@@ -72,7 +72,7 @@ func TestEnterpriseHostTokenFromGHCLI(t *testing.T) {
 	}
 
 	var gotAuth string
-	client := NewWithHosts(&http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+	client := New(&http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		gotAuth = r.Header.Get("Authorization")
 		return &http.Response{StatusCode: http.StatusOK, Status: "200 OK", Body: io.NopCloser(strings.NewReader(`{"description":"private repo"}`)), Request: r}, nil
 	})}, []HostConfig{{WebHost: "mycompany.ghe.com"}})
@@ -84,7 +84,7 @@ func TestEnterpriseHostTokenFromGHCLI(t *testing.T) {
 }
 
 func TestProjectForURLEnterpriseHost(t *testing.T) {
-	client := NewWithHosts(nil, []HostConfig{{WebHost: "mycompany.ghe.com"}})
+	client := New(nil, []HostConfig{{WebHost: "mycompany.ghe.com"}})
 	host, project := client.ProjectForURL("https://mycompany.ghe.com/owner/repo/releases/download/v1/asset.tar.gz")
 	assert.Equal(t, "mycompany.ghe.com", host)
 	assert.Equal(t, "owner/repo", project)
@@ -108,7 +108,7 @@ func TestObjectStorageRedirectHostDoesNotUseGHToken(t *testing.T) {
 	}
 
 	var gotAuth string
-	transport := TokenAuthenticatedTransportForHosts(roundTripFunc(func(r *http.Request) (*http.Response, error) {
+	transport := TokenAuthenticatedTransport(roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		gotAuth = r.Header.Get("Authorization")
 		return &http.Response{StatusCode: http.StatusOK, Status: "200 OK", Body: io.NopCloser(strings.NewReader("")), Request: r}, nil
 	}), []HostConfig{{WebHost: "mycompany.ghe.com"}})
@@ -121,7 +121,7 @@ func TestObjectStorageRedirectHostDoesNotUseGHToken(t *testing.T) {
 }
 
 func TestEnterpriseAssetURLCannotUseGitHubDotCom(t *testing.T) {
-	client := NewWithHosts(nil, []HostConfig{{WebHost: "github.com"}, {WebHost: "mycompany.ghe.com"}})
+	client := New(nil, []HostConfig{{WebHost: "github.com"}, {WebHost: "mycompany.ghe.com"}})
 
 	_, err := client.Download("mycompany.ghe.com", Asset{URL: "https://api.github.com/repos/mycompany/tool/releases/assets/1"})
 	assert.Error(t, err)
@@ -129,7 +129,7 @@ func TestEnterpriseAssetURLCannotUseGitHubDotCom(t *testing.T) {
 }
 
 func TestEnterpriseAssetURLHostIsNormalized(t *testing.T) {
-	client := NewWithHosts(nil, []HostConfig{{WebHost: "mycompany.ghe.com"}})
+	client := New(nil, []HostConfig{{WebHost: "mycompany.ghe.com"}})
 
 	err := client.validateAssetURLForHost("mycompany.ghe.com", "https://API.MYCOMPANY.GHE.COM:443/repos/mycompany/tool/releases/assets/1")
 	assert.NoError(t, err)
@@ -142,7 +142,7 @@ func TestEnterpriseHostMissingGHTokenFails(t *testing.T) {
 		return "", errors.New("gh missing")
 	}
 
-	client := NewWithHosts(&http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+	client := New(&http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		t.Fatalf("request should not be sent without a token")
 		return nil, nil
 	})}, []HostConfig{{WebHost: "mycompany.ghe.com"}})

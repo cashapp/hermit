@@ -21,7 +21,7 @@ func TestGHTokenFailureIsCached(t *testing.T) {
 		return "", errors.New("not authenticated")
 	}
 
-	transport := TokenAuthenticatedTransportForHosts(roundTripFunc(func(*http.Request) (*http.Response, error) {
+	transport := TokenAuthenticatedTransport(roundTripFunc(func(*http.Request) (*http.Response, error) {
 		t.Fatal("request should not be sent without a token")
 		return nil, nil
 	}), []HostConfig{{WebHost: "mycompany.ghe.com"}})
@@ -48,7 +48,7 @@ func TestGHTokenLookupsForDifferentHostsDoNotBlockEachOther(t *testing.T) {
 		return "token", nil
 	}
 
-	transport := TokenAuthenticatedTransportForHosts(roundTripFunc(func(req *http.Request) (*http.Response, error) {
+	transport := TokenAuthenticatedTransport(roundTripFunc(func(req *http.Request) (*http.Response, error) {
 		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader("")), Request: req}, nil
 	}), []HostConfig{{WebHost: "one.ghe.com"}, {WebHost: "two.ghe.com"}})
 

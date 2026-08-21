@@ -8,20 +8,14 @@ import (
 	"github.com/cashapp/hermit/redact"
 )
 
-// TokenAuthenticatedTransport returns a HTTP transport that will inject a
-// GitHub.com authentication token into requests to github.com and api.github.com.
+// TokenAuthenticatedTransport returns a HTTP transport that will inject the
+// configured GitHub authentication token into requests to each configured GitHub
+// web host and API host. Tokens for non-GitHub.com hosts are fetched from gh if
+// not explicitly configured.
 //
 // Conceptually similar to
 // https://github.com/google/go-github/blob/d23570d44313ca73dbcaadec71fc43eca4d29f8b/github/github.go#L841-L875
-func TokenAuthenticatedTransport(transport http.RoundTripper, token redact.Secret) http.RoundTripper {
-	return TokenAuthenticatedTransportForHosts(transport, []HostConfig{{WebHost: gitHubHost, Token: token}})
-}
-
-// TokenAuthenticatedTransportForHosts returns a HTTP transport that will inject
-// the configured GitHub authentication token into requests to each configured
-// GitHub web host and API host. Tokens for non-GitHub.com hosts are fetched from
-// gh if not explicitly configured.
-func TokenAuthenticatedTransportForHosts(transport http.RoundTripper, hosts []HostConfig) http.RoundTripper {
+func TokenAuthenticatedTransport(transport http.RoundTripper, hosts []HostConfig) http.RoundTripper {
 	if transport == nil {
 		transport = http.DefaultTransport
 	}

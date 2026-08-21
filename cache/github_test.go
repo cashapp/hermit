@@ -26,7 +26,7 @@ func TestGitHubSourceSelector(t *testing.T) {
 	fallback := testPackageSource{}
 	selector := GitHubSourceSelectorForHosts(func(*http.Client, redact.URL) (PackageSource, error) {
 		return fallback, nil
-	}, github.NewWithHosts(nil, []github.HostConfig{{WebHost: "github.com"}, {WebHost: "mycompany.ghe.com"}}), []GitHubHostMatcher{{Host: "mycompany.ghe.com", Match: matcher}})
+	}, github.New(nil, []github.HostConfig{{WebHost: "github.com"}, {WebHost: "mycompany.ghe.com"}}), []GitHubHostMatcher{{Host: "mycompany.ghe.com", Match: matcher}})
 
 	source, err := selector(nil, redact.URL("https://mycompany.ghe.com/mycompany/tool/releases/download/v1/tool.tar.gz"))
 	assert.NoError(t, err)
@@ -48,7 +48,7 @@ func TestGitHubSourceSelectorRecognizesGHEByDefault(t *testing.T) {
 	fallback := testPackageSource{}
 	selector := GitHubSourceSelectorForHosts(func(*http.Client, redact.URL) (PackageSource, error) {
 		return fallback, nil
-	}, github.NewWithHosts(nil, []github.HostConfig{{WebHost: "github.com"}}), nil)
+	}, github.New(nil, []github.HostConfig{{WebHost: "github.com"}}), nil)
 
 	source, err := selector(nil, redact.URL("https://another.ghe.com/other/tool/releases/download/v1/tool.tar.gz"))
 	assert.NoError(t, err)
@@ -62,7 +62,7 @@ func TestGitHubSourceSelectorRecognizesConfiguredEnterpriseHost(t *testing.T) {
 	fallback := testPackageSource{}
 	selector := GitHubSourceSelectorForHosts(func(*http.Client, redact.URL) (PackageSource, error) {
 		return fallback, nil
-	}, github.NewWithHosts(nil, []github.HostConfig{{WebHost: "github.internal.example"}}), []GitHubHostMatcher{{Host: "github.internal.example", Match: matcher}})
+	}, github.New(nil, []github.HostConfig{{WebHost: "github.internal.example"}}), []GitHubHostMatcher{{Host: "github.internal.example", Match: matcher}})
 
 	source, err := selector(nil, redact.URL("https://github.internal.example/owner/tool/releases/download/v1/tool.tar.gz"))
 	assert.NoError(t, err)
@@ -94,7 +94,7 @@ func TestGitHubSourceSelectorRejectsUnknownHost(t *testing.T) {
 	fallback := testPackageSource{}
 	selector := GitHubSourceSelector(func(*http.Client, redact.URL) (PackageSource, error) {
 		return fallback, nil
-	}, github.NewWithHosts(nil, nil), matcher)
+	}, github.New(nil, nil), matcher)
 
 	source, err := selector(nil, redact.URL("https://githubXcom/owner/repo/releases/download/v1/tool.tar.gz"))
 	assert.NoError(t, err)
