@@ -14,8 +14,8 @@ import (
 
 // GitHubClient is the GitHub API subset that we need for auto-versioning.
 type GitHubClient interface {
-	LatestRelease(repo string) (*github.Release, error)
-	Releases(repo string, limit int) (releases []*github.Release, err error)
+	LatestRelease(host, repo string) (*github.Release, error)
+	Releases(host, repo string, limit int) (releases []*github.Release, err error)
 }
 
 type versionBlock struct {

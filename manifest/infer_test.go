@@ -4,6 +4,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
@@ -32,7 +34,7 @@ func TestInfer(t *testing.T) {
 		p,
 		cache.GetSource,
 		http.DefaultClient,
-		github.New(nil, ""),
+		github.New(nil, nil),
 		srv.URL+"/releases/download/0.1.1/pkg-0.1.1-linux-amd64.tgz",
 		"",
 	)
@@ -55,4 +57,59 @@ func TestInfer(t *testing.T) {
 		}},
 	}
 	assert.Equal(t, expected, actual)
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+func TestInferFromArtefactUsesGHEHostForRepoLookup(t *testing.T) {
+	var hosts []string
+	client := &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		hosts = append(hosts, req.URL.Host)
+		assert.NotEqual(t, "github.com", req.URL.Host)
+		assert.NotEqual(t, "api.github.com", req.URL.Host)
+
+		switch {
+		case req.Method == http.MethodGet && req.URL.Host == "api.mycompany.ghe.com" && req.URL.Path == "/repos/mycompany/tool":
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Status:     "200 OK",
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Body:       io.NopCloser(strings.NewReader(`{"description":"ghe repo","homepage":"https://example.com"}`)),
+				Request:    req,
+			}, nil
+		case req.Method == http.MethodHead && req.URL.Host == "mycompany.ghe.com":
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Status:     "200 OK",
+				Body:       io.NopCloser(strings.NewReader("")),
+				Request:    req,
+			}, nil
+		default:
+			return &http.Response{
+				StatusCode: http.StatusNotFound,
+				Status:     "404 Not Found",
+				Body:       io.NopCloser(strings.NewReader("")),
+				Request:    req,
+			}, nil
+		}
+	})}
+
+	p, _ := ui.NewForTesting()
+	actual, err := InferFromArtefact(
+		p,
+		cache.GetSource,
+		client,
+		github.New(client, []github.HostConfig{{WebHost: "github.com"}, {WebHost: "mycompany.ghe.com", Token: "enterprise-token"}}),
+		"https://mycompany.ghe.com/mycompany/tool/releases/download/v1.2.3/tool-v1.2.3-linux-amd64.tgz",
+		"",
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, "ghe repo", actual.Description)
+	assert.Equal(t, "https://example.com", actual.Homepage)
+	assert.Equal(t, "", actual.Versions[0].AutoVersion.GitHubRelease)
+	assert.True(t, slices.Contains(hosts, "api.mycompany.ghe.com"))
 }

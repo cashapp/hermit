@@ -523,10 +523,52 @@ func TestLoadEnvInfo(t *testing.T) {
 			expected: hermit.Config{
 				Envars:    map[string]string{},
 				ManageGit: true,
-				GitHubTokenAuth: hermit.GitHubTokenAuthConfig{
+				GitHubTokenAuth: []hermit.GitHubTokenAuthConfig{{
+					Host: "github.com",
 					Match: []string{
 						"cashapp/*",
 					},
+				}},
+			},
+		},
+		{
+			name: "github-token-auth-enterprise",
+			in: joinLines(
+				`github-token-auth {`,
+				`  host = "mycompany.ghe.com"`,
+				`  token-env = "HERMIT_GITHUB_TOKEN_MYCOMPANY"`,
+				`  match = ["mycompany/*"]`,
+				`}`,
+			),
+			expected: hermit.Config{
+				Envars:    map[string]string{},
+				ManageGit: true,
+				GitHubTokenAuth: []hermit.GitHubTokenAuthConfig{{
+					Host:     "mycompany.ghe.com",
+					TokenEnv: "HERMIT_GITHUB_TOKEN_MYCOMPANY",
+					Match: []string{
+						"mycompany/*",
+					},
+				}},
+			},
+		},
+		{
+			name: "github-token-auth-multiple-hosts",
+			in: joinLines(
+				`github-token-auth {`,
+				`  match = ["cashapp/*"]`,
+				`}`,
+				`github-token-auth {`,
+				`  host = "mycompany.ghe.com"`,
+				`  match = ["mycompany/*"]`,
+				`}`,
+			),
+			expected: hermit.Config{
+				Envars:    map[string]string{},
+				ManageGit: true,
+				GitHubTokenAuth: []hermit.GitHubTokenAuthConfig{
+					{Host: "github.com", Match: []string{"cashapp/*"}},
+					{Host: "mycompany.ghe.com", Match: []string{"mycompany/*"}},
 				},
 			},
 		},

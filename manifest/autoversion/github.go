@@ -17,12 +17,12 @@ func gitHub(client GitHubClient, autoVersion *hmanifest.AutoVersionBlock) (strin
 	// When there may be invalid versions, we need to fetch multiple release to find the latest valid one.
 	// When IgnoreInvalidVersions is off, fetch only the latest release for performance.
 	if autoVersion.IgnoreInvalidVersions {
-		releases, err = client.Releases(autoVersion.GitHubRelease, history)
+		releases, err = client.Releases("github.com", autoVersion.GitHubRelease, history)
 		if err != nil {
 			return "", errors.WithStack(err)
 		}
 	} else {
-		release, err := client.LatestRelease(autoVersion.GitHubRelease)
+		release, err := client.LatestRelease("github.com", autoVersion.GitHubRelease)
 		if err != nil {
 			return "", errors.WithStack(err)
 		}
