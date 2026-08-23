@@ -1,6 +1,6 @@
 ---
 name: hermit
-description: Use when working in repositories that contain ./bin/activate-hermit. Covers detecting Hermit environments with that definitive check, activating Hermit before running commands, preferring Hermit-managed tools over global tools, and contributing missing packages to hermit-packages.
+description: Use when working in repositories that contain ./bin/activate-hermit. Covers detecting Hermit environments with that definitive check, activating Hermit before running commands, and preferring Hermit-managed tools over global tools.
 ---
 
 # Hermit
@@ -75,19 +75,3 @@ environment:
 
 After changing environment variables, run the repository's tests through the
 Hermit environment.
-
-## Contribute Missing Packages
-
-If a required tool is not available from Hermit, contribute it to
-`cashapp/hermit-packages` when it is generally useful. Follow the packaging
-tutorial at [cashapp.github.io/hermit/packaging/tutorial](https://cashapp.github.io/hermit/packaging/tutorial/).
-
-1. Clone `https://github.com/cashapp/hermit-packages`.
-2. Activate that repository with `. ./bin/activate-hermit`.
-3. Add or update the package manifest.
-4. Run `hermit add-digests <manifest>.hcl` when download digests are needed.
-5. Run `hermit test <package> --trace`.
-6. Open a pull request to `cashapp/hermit-packages`.
-
-For project-private tools, prefer adding a private package source in
-`bin/hermit.hcl` instead of depending on global machine state.
