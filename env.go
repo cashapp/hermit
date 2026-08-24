@@ -468,6 +468,12 @@ func (e *Env) EnsureInstalled(l *ui.UI) error {
 		if err := e.state.CacheAndUnpack(l.Task(pkg.Reference.String()), pkg); err != nil {
 			return errors.WithStack(err)
 		}
+		// Binary packages get their channel freshness checked when their stubs
+		// are executed, but packages installed purely for activation may never
+		// be executed, so check for channel updates here.
+		if err := e.EnsureChannelIsUpToDate(l, pkg); err != nil {
+			return errors.WithStack(err)
+		}
 	}
 	return nil
 }
