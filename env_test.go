@@ -152,6 +152,46 @@ func TestEnsureUpToDate(t *testing.T) {
 	assert.Equal(t, etag, dbPkg.Etag)
 }
 
+// Tests that Activate runs the full activation lifecycle: installing
+// install-on-activate packages, running "on activate" triggers, and
+// returning the environment operations.
+func TestActivateRunsLifecycle(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		tar := TestTarGz{map[string]string{"bin": "data"}}
+		tar.Write(t, w)
+	})
+	fixture := hermittest.NewEnvTestFixture(t, handler)
+	fixture.WithManifests(map[string]string{
+		"test.hcl": `
+			description = ""
+			binaries = ["bin"]
+			on "activate" {
+				message { text = "hello from activate" }
+			}
+			version "1.0.0" {
+				source = "` + fixture.Server.URL + `"
+			}
+		`,
+	})
+
+	pkg := manifesttest.NewPkgBuilder(filepath.Join(fixture.RootDir(), "test-1.0.0")).
+		WithName("test").
+		WithBinaries("bin").
+		WithVersion("1.0.0").
+		WithSource(fixture.Server.URL).
+		Result()
+	_, err := fixture.Env.Install(fixture.P, pkg)
+	assert.NoError(t, err)
+
+	messages, ops, err := fixture.Env.Activate(fixture.P)
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"hello from activate"}, messages)
+
+	expected, err := fixture.Env.EnvOps(fixture.P)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, ops)
+}
+
 // Test that files referred in the Files map are copied correctly
 func TestCopyFiles(t *testing.T) {
 	dir := t.TempDir()

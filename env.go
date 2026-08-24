@@ -472,6 +472,27 @@ func (e *Env) EnsureInstalled(l *ui.UI) error {
 	return nil
 }
 
+// Activate performs the full environment activation lifecycle and returns
+// the environment variable operations to apply to the shell.
+//
+// It installs any install-on-activate packages, runs "on activate" triggers
+// for installed packages, and returns any trigger messages that should be
+// displayed to the user.
+func (e *Env) Activate(l *ui.UI) (messages []string, ops envars.Ops, err error) {
+	if err := e.EnsureInstalled(l); err != nil {
+		return nil, nil, errors.WithStack(err)
+	}
+	messages, err = e.Trigger(l, manifest.EventEnvActivate)
+	if err != nil {
+		return nil, nil, errors.WithStack(err)
+	}
+	ops, err = e.EnvOps(l)
+	if err != nil {
+		return nil, nil, errors.WithStack(err)
+	}
+	return messages, ops, nil
+}
+
 // Trigger an event for all installed packages.
 func (e *Env) Trigger(l *ui.UI, event manifest.Event) (messages []string, err error) {
 	pkgs, err := e.ListInstalled(l)
