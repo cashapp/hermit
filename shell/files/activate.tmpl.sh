@@ -68,30 +68,18 @@ if test -n "${PS1+_}"; then
   update_hermit_ps1 () {
     if [[ ! -v _HERMIT_OLD_PS1 ]]; then
       typeset -g +x _HERMIT_OLD_PS1="${PS1}"
-      # Terminal shell integrations (eg. Ghostty, kitty) prepend an OSC 133
-      # prompt mark to PS1, wrapped in %{...%} so zsh treats it as zero width,
-      # and rely on it remaining at column 0. Some marks carry directives:
-      # Ghostty's is "OSC 133;A;cl=line", meaning "the prompt starts here, clear
-      # the line". Inserting our prefix ahead of such a mark makes the terminal
-      # clear the line partway through drawing the prompt and lose track of where
-      # input begins, so skip past any leading zero-width escape groups first.
-      # The delimiters are held in variables because a literal "%}" inside a
-      # parameter expansion pattern is a zsh parse error ("bad substitution").
+      # Keep leading zero-width terminal prompt marks at column 0 by inserting the Hermit prefix after them.
+      # Variables avoid zsh treating a literal "%}" in a parameter expansion pattern as a bad substitution.
       local _hermit_ps1_open='%{' _hermit_ps1_close='%}'
       local _hermit_ps1_head='' _hermit_ps1_rest="${PS1}" _hermit_ps1_group=''
       while [[ "${_hermit_ps1_rest}" == ${_hermit_ps1_open}* ]]; do
         _hermit_ps1_group="${_hermit_ps1_rest%%$_hermit_ps1_close*}"
-        # Stop unless the group is closed and holds an escape sequence. Comparing
-        # against the remainder detects a missing "%}", which also guarantees the
-        # remainder shrinks every iteration and the loop terminates.
+        # Reject unclosed or non-escape groups so the remainder shrinks on every iteration.
         [[ "${_hermit_ps1_group}" != "${_hermit_ps1_rest}" && "${_hermit_ps1_group}" == *$'\e'* ]] || break
         _hermit_ps1_head+="${_hermit_ps1_group}${_hermit_ps1_close}"
         _hermit_ps1_rest="${_hermit_ps1_rest#*$_hermit_ps1_close}"
       done
-      # Assigned in two steps so the environment name stays adjacent to the
-      # opening PS1=" -- TestActivationScriptNeutralisesMaliciousEnvBasename
-      # reads the text between them to check the name is free of shell
-      # metacharacters (VULN-78225). Do not collapse these into one assignment.
+      # Keep this two-step assignment for TestActivationScriptNeutralisesMaliciousEnvBasename (VULN-78225).
       PS1="{{if eq .Prompt "env"}}{{ .EnvName }}{{end}}🐚 ${_hermit_ps1_rest}"
       PS1="${_hermit_ps1_head}${PS1}"
     fi

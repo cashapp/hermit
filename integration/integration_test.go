@@ -856,11 +856,7 @@ EOF
 			`,
 		},
 		{
-			// Terminal shell integrations (eg. Ghostty, kitty) prepend an OSC 133
-			// prompt mark to PS1 and require it to stay at column 0. Ghostty's
-			// mark carries "cl=line" ("the prompt starts here, clear the line"),
-			// so a prefix inserted ahead of it makes the terminal clear the line
-			// partway through the prompt and lose the input start column.
+			// Terminal prompt marks must remain at column 0 before the Hermit prefix.
 			name:         "ZshPromptPrefixGoesAfterTerminalPromptMarks",
 			preparations: prep{fixture("testenv1")},
 			script: `
@@ -876,8 +872,7 @@ EOF
 			`,
 		},
 		{
-			// Only leading zero-width escape groups are skipped; a prompt that
-			// starts with ordinary text keeps the prefix at the very front.
+			// Without terminal prompt marks, the Hermit prefix stays at the front.
 			name:         "ZshPromptPrefixStaysLeadingWithoutTerminalPromptMarks",
 			preparations: prep{fixture("testenv1")},
 			script: `
