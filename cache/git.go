@@ -2,17 +2,18 @@ package cache
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/redact"
 	"github.com/cashapp/hermit/ui"
 	"github.com/cashapp/hermit/util"
 )
 
 type gitSource struct {
-	URL string
+	URL    redact.URL
+	runner util.CommandRunner
 }
 
 func (s *gitSource) OpenLocal(c *Cache, checksum string) (*os.File, error) {
@@ -32,27 +33,27 @@ func (s *gitSource) Download(b *ui.Task, cache *Cache, checksum string) (string,
 		// A full-hex name may still be a valid branch or tag name. Only treat
 		// it as a commit pin when the remote does not advertise a ref with
 		// that exact name, preserving prior "git clone --branch" behaviour.
-		advertised, aerr := resolveAdvertisedRef(b, repo, tag)
+		advertised, aerr := s.resolveAdvertisedRef(b, repo, tag)
 		if aerr != nil {
 			return "", "", "", aerr
 		}
 		pinned = advertised == ""
 	}
 	if pinned {
-		err = checkoutGitCommit(b, cache.root, repo, tag, checkoutDir)
+		err = s.checkoutGitCommit(b, cache.root, repo, tag, checkoutDir)
 	} else {
-		args := []string{"git", "clone", "--depth=1"}
+		args := redact.Args(util.GitArgs("clone", "--depth=1")...)
 		if tag != "" {
-			args = append(args, "--branch="+tag)
+			args = append(args, redact.Plain("--branch="+tag))
 		}
-		args = append(args, "--", repo, checkoutDir)
-		err = util.RunInDir(b, cache.root, args...)
+		args = append(args, redact.Plain("--"), repo, redact.Plain(checkoutDir))
+		err = s.runner.RunInDir(b, cache.root, args...)
 	}
 	if err != nil {
 		return "", "", "", errors.WithStack(err)
 	}
 
-	bts, err := util.CaptureInDir(b, checkoutDir, "git", "rev-parse", "HEAD")
+	bts, err := s.runner.CaptureInDir(b, checkoutDir, redact.Args("git", "rev-parse", "HEAD")...)
 	if err != nil {
 		return "", "", "", errors.WithStack(err)
 	}
@@ -67,9 +68,9 @@ func (s *gitSource) ETag(b *ui.Task) (etag string, err error) {
 		return "", err
 	}
 	if isFullGitSHA(tag) {
-		advertised, err := resolveAdvertisedRef(b, repo, tag)
+		advertised, err := s.resolveAdvertisedRef(b, repo, tag)
 		if err != nil {
-			return "", errors.Wrap(err, s.URL)
+			return "", errors.Wrap(err, s.URL.String())
 		}
 		if advertised != "" {
 			return advertised, nil
@@ -81,9 +82,10 @@ func (s *gitSource) ETag(b *ui.Task) (etag string, err error) {
 	if tag == "" {
 		tag = "HEAD"
 	}
-	bts, err := util.Capture(b, "git", "ls-remote", "--", repo, tag)
+	args := append(redact.Args(util.GitArgs("ls-remote", "--")...), repo, redact.Plain(tag))
+	bts, err := s.runner.CaptureInDir(b, "", args...)
 	if err != nil {
-		return "", errors.Wrap(err, s.URL)
+		return "", errors.Wrap(err, s.URL.String())
 	}
 	str := string(bts)
 	parts := strings.Split(str, "\t")
@@ -95,28 +97,28 @@ func (s *gitSource) ETag(b *ui.Task) (etag string, err error) {
 }
 
 func (s *gitSource) Validate() error {
+	_, err := s.lsRemote(nil)
+	return errors.Wrap(err, "error getting remote HEAD")
+}
+
+func (s *gitSource) lsRemote(log ui.Logger) ([]byte, error) {
 	repo, tag, err := parseGitURL(s.URL)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if tag == "" || isFullGitSHA(tag) {
-		// A commit SHA cannot be listed with ls-remote, so just verify that
-		// the repository is reachable.
 		tag = "HEAD"
 	}
-	cmd := exec.Command("git", "ls-remote", "--", repo, tag) //nolint
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return errors.Wrapf(err, "error getting remote HEAD: %s", string(out))
-	}
-	return nil
+	args := append(redact.Args(util.GitArgs("ls-remote", "--")...), repo, redact.Plain(tag))
+	return s.runner.CaptureInDir(log, "", args...)
 }
 
 // resolveAdvertisedRef returns the commit the remote advertises for the
 // branch or tag with the exact name ref, or "" when the remote advertises no
 // such ref. Branches take precedence over tags, matching "git clone --branch".
-func resolveAdvertisedRef(b *ui.Task, repo, ref string) (string, error) {
-	bts, err := util.Capture(b, "git", "ls-remote", "--", repo, "refs/heads/"+ref, "refs/tags/"+ref)
+func (s *gitSource) resolveAdvertisedRef(b *ui.Task, repo redact.URL, ref string) (string, error) {
+	args := append(redact.Args(util.GitArgs("ls-remote", "--")...), repo, redact.Plain("refs/heads/"+ref), redact.Plain("refs/tags/"+ref))
+	bts, err := s.runner.CaptureInDir(b, "", args...)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
@@ -138,14 +140,15 @@ func resolveAdvertisedRef(b *ui.Task, repo, ref string) (string, error) {
 // A commit SHA cannot be passed to "git clone --branch", so initialise an
 // empty repository and fetch just the commit instead. This requires the
 // server to allow fetching by commit SHA (GitHub and GitLab both do).
-func checkoutGitCommit(b *ui.Task, root, repo, sha, checkoutDir string) error {
-	if err := util.RunInDir(b, root, "git", "init", "--", checkoutDir); err != nil {
+func (s *gitSource) checkoutGitCommit(b *ui.Task, root string, repo redact.URL, sha, checkoutDir string) error {
+	if err := s.runner.RunInDir(b, root, redact.Args("git", "init", "--", checkoutDir)...); err != nil {
 		return errors.WithStack(err)
 	}
-	if err := util.RunInDir(b, checkoutDir, "git", "fetch", "--depth=1", "--", repo, sha); err != nil {
+	args := append(redact.Args(util.GitArgs("fetch", "--depth=1", "--")...), repo, redact.Plain(sha))
+	if err := s.runner.RunInDir(b, checkoutDir, args...); err != nil {
 		return errors.WithStack(err)
 	}
-	return errors.WithStack(util.RunInDir(b, checkoutDir, "git", "checkout", "--detach", "FETCH_HEAD"))
+	return errors.WithStack(s.runner.RunInDir(b, checkoutDir, redact.Args("git", "checkout", "--detach", "FETCH_HEAD")...))
 }
 
 // isFullGitSHA reports whether ref is a full lowercase hex commit hash
@@ -162,13 +165,12 @@ func isFullGitSHA(ref string) bool {
 	return true
 }
 
-func parseGitURL(source string) (repo, tag string, err error) {
-	parts := strings.SplitN(source, "#", 2)
-	repo = parts[0]
+func parseGitURL(source redact.URL) (repo redact.URL, tag string, err error) {
+	parts := strings.SplitN(source.Reveal(), "#", 2)
+	repo = redact.URL(parts[0])
 
-	// Validate repo doesn't start with dash to prevent argument injection
-	if strings.HasPrefix(repo, "-") {
-		return "", "", errors.Errorf("invalid git URL: repository cannot start with '-': %s", repo)
+	if err := util.ValidateGitURL(repo); err != nil {
+		return "", "", errors.WithStack(err)
 	}
 
 	if len(parts) > 1 {

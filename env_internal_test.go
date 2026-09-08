@@ -7,6 +7,17 @@ import (
 	"github.com/cashapp/hermit/shell"
 )
 
+func TestHermitLauncherUsesTrustedSystemHelpers(t *testing.T) {
+	// Regression test for DX-27: the launcher can run after the environment's
+	// bin directory has been prepended to PATH.
+	script, err := files.ReadFile("files/hermit")
+	assert.NoError(t, err)
+
+	assert.Contains(t, string(script), `case "${OSTYPE}" in`)
+	assert.NotContains(t, string(script), "uname")
+	assert.Contains(t, string(script), `/usr/bin/basename `)
+}
+
 func TestActivationCommand(t *testing.T) {
 	const env = "/path/to/env"
 

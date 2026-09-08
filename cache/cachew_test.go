@@ -3,11 +3,13 @@ package cache
 import (
 	"net/http"
 	"testing"
+
+	"github.com/cashapp/hermit/redact"
 )
 
 func TestCachewSourceSelector(t *testing.T) {
 	// Mock base selector that always returns a file source
-	baseSelector := func(client *http.Client, uri string) (PackageSource, error) {
+	baseSelector := func(client *http.Client, uri redact.URL) (PackageSource, error) {
 		return &fileSource{path: "/tmp/test"}, nil
 	}
 
@@ -54,7 +56,7 @@ func TestCachewSourceSelector(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			source, err := selector(nil, tt.inputURI)
+			source, err := selector(nil, redact.URL(tt.inputURI))
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -64,7 +66,7 @@ func TestCachewSourceSelector(t *testing.T) {
 				if !ok {
 					t.Fatalf("expected httpSource, got %T", source)
 				}
-				if httpSrc.url != tt.expectedURI {
+				if httpSrc.url != redact.URL(tt.expectedURI) {
 					t.Errorf("expected URL %s, got %s", tt.expectedURI, httpSrc.url)
 				}
 			} else {
@@ -82,14 +84,14 @@ func TestCachewSourceSelector(t *testing.T) {
 }
 
 func TestCachewSourceSelectorInvalidURL(t *testing.T) {
-	baseSelector := func(client *http.Client, uri string) (PackageSource, error) {
+	baseSelector := func(client *http.Client, uri redact.URL) (PackageSource, error) {
 		return &fileSource{path: "/tmp/fallback"}, nil
 	}
 
 	selector := CachewSourceSelector(baseSelector, "https://cachew.example.com")
 
 	// Test invalid URL - should fall back to base selector
-	source, err := selector(nil, "://invalid-url")
+	source, err := selector(nil, redact.URL("://invalid-url"))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

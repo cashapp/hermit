@@ -25,6 +25,8 @@ import (
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
+	"github.com/kballard/go-shellquote"
+
 	"github.com/cashapp/hermit/envars"
 	"github.com/cashapp/hermit/errors"
 	"github.com/creack/pty"
@@ -119,6 +121,122 @@ EOF
 				echo "prompt is: $PS1"
 			`,
 			expectations: exp{outputContains("__printf PWNED_RCE.txt_🐚")},
+		},
+		{
+			// Regression test for DX-27: activation prepends bin to PATH before
+			// checking its modification time, so date must not resolve through PATH.
+			name: "BinDateDoesNotExecuteDuringActivation",
+			script: `
+				hermit init --no-git .
+				cat > bin/date <<'EOF'
+#!/bin/sh
+: > RCE.txt
+exec /bin/date "$@"
+EOF
+				chmod +x bin/date
+				assert hermit validate env .
+				. bin/activate-hermit
+				assert test ! -e RCE.txt
+			`,
+		},
+		{
+			name: "ManifestCannotSetReservedHermitEnvar",
+			script: `
+				hermit init .
+				cat > bin/hermit.hcl <<EOF
+env = {
+  "HERMIT_ROOT_BIN": "/tmp/evil",
+}
+EOF
+				assert test "$(hermit validate env . >/dev/null 2>&1; echo $?)" != "0"
+				. bin/activate-hermit >/dev/null 2>&1 || true
+				assert test -z "${HERMIT_ROOT_BIN:-}"
+			`,
+		},
+		{
+			// Regression test for DX-28: unprefixed variables consumed by
+			// Hermit's shell scripts and bootstrap must be reserved too.
+			name: "ManifestCannotSetHermitExecutionEnvars",
+			script: `
+				hermit init .
+				for name in ACTIVE_HERMIT XDG_CACHE_HOME; do
+				cat > bin/hermit.hcl <<EOF
+env = {
+  "$name": "/tmp/evil",
+}
+EOF
+					assert test "$(hermit validate env . >/dev/null 2>&1; echo $?)" != "0"
+				done
+				. bin/activate-hermit >/dev/null 2>&1 || true
+				assert test "${XDG_CACHE_HOME:-}" != "/tmp/evil"
+			`,
+		},
+		{
+			// Regression test for VULN-78247: RCE via an unvalidated git transport scheme.
+			name: "MaliciousGitSourceSchemeDoesNotExecute",
+			script: `
+				hermit init --no-git .
+				printf 'env = {}\nsources = ["zzq::x.git"]\n' > bin/hermit.hcl
+				cat > bin/git-remote-zzq <<'EOF'
+#!/bin/sh
+touch "$(dirname "$0")/../RCE.txt"
+exit 1
+EOF
+				chmod +x bin/git-remote-zzq
+				: > bin/.zzq-1.0.pkg
+				. bin/activate-hermit
+				hermit search || true
+				assert test ! -e RCE.txt
+			`,
+			expectations: exp{outputContains("remote helpers are not supported")},
+		},
+		{
+			// Regression test for DX-29: internal tools must still resolve from a
+			// user's custom PATH before a Hermit environment is activated.
+			name:         "InternalToolsUseCurrentPathBeforeActivation",
+			preparations: prep{gitSourceWithHostGit()},
+			script: `
+				assert test "$(command -v git)" = "$HOST_GIT"
+				hermit init --no-git .
+				cat > bin/hermit.hcl <<EOF
+env = {}
+sources = ["$PWD/source.git"]
+EOF
+				rm -f HOST_GIT_USED.txt
+
+				./bin/hermit search safehelper
+				assert test -e HOST_GIT_USED.txt
+			`,
+			expectations: exp{outputContains("safehelper")},
+		},
+		{
+			// Regression test for DX-29: after activation, internal tools must
+			// ignore the repository bin directory and use the pre-activation PATH.
+			name:         "InternalToolsRestorePathAfterActivation",
+			preparations: prep{gitSourceWithHostGit()},
+			script: `
+				hermit init --no-git .
+				cat > bin/hermit.hcl <<EOF
+env = {}
+sources = ["$PWD/source.git"]
+EOF
+				cat > bin/git <<'EOF'
+#!/bin/sh
+touch "$(dirname "$0")/../RCE.txt"
+exit 1
+EOF
+				chmod +x bin/git
+				. bin/activate-hermit
+				hash -r 2>/dev/null || true
+				rehash 2>/dev/null || true
+				assert test "$(command -v git)" = "$PWD/bin/git"
+
+				rm -f HOST_GIT_USED.txt
+				hermit search safehelper
+				assert test ! -e RCE.txt
+				assert test -e HOST_GIT_USED.txt
+			`,
+			expectations: exp{outputContains("safehelper")},
 		},
 		{
 			name: "InitBasicDefaultsToTrue",
@@ -738,6 +856,29 @@ EOF
 			`,
 		},
 		{
+			name:         "CleanPackagesDoesNotChmodSymlinkTargets",
+			preparations: prep{fixture("testenv1"), activate(".")},
+			script: `
+				target="$PWD/outside-target"
+				printf 'unchanged' > "$target"
+				chmod 600 "$target"
+
+				package_dir="$HERMIT_STATE_DIR/pkg/malicious-package"
+				mkdir -p "$package_dir"
+				ln -s "$target" "$package_dir/link"
+
+				hermit clean --packages
+
+				assert test ! -e "$package_dir"
+				assert test -e "$target"
+				case "$(uname -s)" in
+					Darwin) mode=$(stat -f '%Lp' "$target") ;;
+					*) mode=$(stat -c '%a' "$target") ;;
+				esac
+				assert test "$mode" = "600"
+			`,
+		},
+		{
 			name:         "InstallOnActivateEnsuresPackagesAreUnpacked",
 			preparations: prep{fixture("testenv-install-on-activate"), activate(".")},
 			script: `
@@ -936,6 +1077,44 @@ func addFile(name, content string) preparation {
 		err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0600)
 		assert.NoError(t, err)
 		return ""
+	}
+}
+
+// gitSourceWithHostGit creates a local Git manifest source and a recording Git
+// wrapper in a custom directory on the user's PATH.
+func gitSourceWithHostGit() preparation {
+	return func(t *testing.T, dir string) string {
+		t.Helper()
+		git, err := exec.LookPath("git")
+		assert.NoError(t, err)
+
+		sourceDir := filepath.Join(dir, "source.git")
+		assert.NoError(t, os.Mkdir(sourceDir, 0700))
+		runGit := func(args ...string) {
+			cmd := exec.Command(git, args...) //nolint:noctx
+			output, err := cmd.CombinedOutput()
+			assert.NoError(t, err, "%s", output)
+		}
+		runGit("init", "-q", sourceDir)
+		assert.NoError(t, os.WriteFile(filepath.Join(sourceDir, "safehelper.hcl"), []byte(`
+description = "Package from a safely cloned source"
+source = "https://example.com/safehelper-${version}"
+version "1.0.0" {}
+`), 0600))
+		runGit("-C", sourceDir, "add", "safehelper.hcl")
+		runGit("-C", sourceDir,
+			"-c", "user.name=Hermit",
+			"-c", "user.email=hermit@example.com",
+			"-c", "commit.gpgsign=false",
+			"commit", "-qm", "initial")
+
+		hostBin := t.TempDir()
+		hostGit := filepath.Join(hostBin, "git")
+		wrapper := fmt.Sprintf("#!/bin/sh\ntouch %s\nexec %s \"$@\"\n",
+			shellquote.Join(filepath.Join(dir, "HOST_GIT_USED.txt")), shellquote.Join(git))
+		assert.NoError(t, os.WriteFile(hostGit, []byte(wrapper), 0700))
+		return fmt.Sprintf("export HOST_GIT=%s\nexport PATH=%s:\"$PATH\"",
+			shellquote.Join(hostGit), shellquote.Join(hostBin))
 	}
 }
 
