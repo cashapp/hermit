@@ -557,6 +557,48 @@ EOF
 			`,
 			expectations: exp{outputContains("testbin1-1.0.0 hook"), outputContains("testbin1-1.0.1 hook")},
 		},
+
+		{
+			name: "ActivateSymlinkIsRepeatableAndPreservesDirectories",
+			script: `
+                hermit init --no-git --sources env:///packages .
+                mkdir -p packages
+                printf 'shared content' > packages/payload.txt
+                tar -czf packages/payload.tgz -C packages payload.txt
+                cat > packages/links.hcl <<'EOF'
+description = "Activation symlink"
+source = "${env}/packages/payload.tgz"
+binaries = ["payload.txt"]
+on activate {
+  symlink { from = "${root}/payload.txt" to = "${env}/linked.txt" }
+}
+version "1.0.0" {}
+EOF
+                ./bin/hermit install links
+                hermit activate . > /dev/null
+                target=$(readlink linked.txt)
+                assert test "$(cat linked.txt)" = 'shared content'
+                hermit activate . > /dev/null
+                assert test "$(readlink linked.txt)" = "$target"
+                rm linked.txt
+                ln -s nonexistent linked.txt
+                hermit activate . > /dev/null
+                assert test "$(readlink linked.txt)" = "$target"
+                rm linked.txt
+                printf 'old regular file' > linked.txt
+                hermit activate . > /dev/null
+                assert test "$(readlink linked.txt)" = "$target"
+                rm linked.txt
+                mkdir linked.txt
+                printf 'keep me' > linked.txt/owned.txt
+                if hermit activate . > failure.txt 2>&1; then
+                    hermit-send 'error: symlink replaced an existing directory'
+                    exit 1
+                fi
+                assert grep -q 'destination exists and is a directory' failure.txt
+                assert test "$(cat linked.txt/owned.txt)" = 'keep me'
+            `,
+		},
 		{
 			name:         "SymlinkAndMkdirActionsWork",
 			preparations: prep{fixture("testenv3"), activate(".")},
