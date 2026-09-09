@@ -7,8 +7,11 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/repr"
 
+	"github.com/alecthomas/hcl"
+
 	"github.com/cashapp/hermit/envars"
 	"github.com/cashapp/hermit/platform"
+	"github.com/cashapp/hermit/redact"
 	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/ui"
 )
@@ -307,3 +310,21 @@ func TestManifest(t *testing.T) {
 // func TestHelp(t *testing.T) {
 // assert.Equal(t, ``, Help())
 // }
+
+func TestLayerSerialisesSourceURLsRaw(t *testing.T) {
+	layer := Layer{
+		Source:       redact.URL("https://user:sekret@example.com/pkg-${version}.tar.gz"),
+		Mirrors:      []redact.URL{"https://user:sekret@mirror.example.com/pkg-${version}.tar.gz"},
+		SHA256Source: redact.URL("https://user:sekret@example.com/pkg-${version}.sha256"),
+	}
+	data, err := hcl.Marshal(&layer)
+	assert.NoError(t, err)
+	assert.Contains(t, string(data), "https://user:sekret@example.com/pkg-${version}.tar.gz")
+	assert.Contains(t, string(data), "https://user:sekret@mirror.example.com/pkg-${version}.tar.gz")
+
+	var back Layer
+	assert.NoError(t, hcl.Unmarshal(data, &back))
+	assert.Equal(t, layer.Source, back.Source)
+	assert.Equal(t, layer.Mirrors, back.Mirrors)
+	assert.Equal(t, layer.SHA256Source, back.SHA256Source)
+}

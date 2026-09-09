@@ -15,6 +15,7 @@ import (
 	"github.com/cashapp/hermit/cache"
 	"github.com/cashapp/hermit/hermittest"
 	"github.com/cashapp/hermit/manifest"
+	"github.com/cashapp/hermit/redact"
 	"github.com/cashapp/hermit/ui"
 )
 
@@ -125,7 +126,7 @@ func testLogsFor(
 	err = expected.Execute(&tbuf, state{
 		Source: uri,
 		State:  f.State.Root(),
-		Cache:  filepath.Join(f.State.Root(), "cache", cache.BasePath("", uri)),
+		Cache:  filepath.Join(f.State.Root(), "cache", cache.BasePath("", redact.URL(uri))),
 		Env:    f.Env.EnvDir(),
 		Bin:    f.Env.BinDir(),
 	})
