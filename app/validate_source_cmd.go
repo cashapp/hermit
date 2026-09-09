@@ -8,13 +8,14 @@ import (
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/platform"
+	"github.com/cashapp/hermit/redact"
 	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/state"
 	"github.com/cashapp/hermit/ui"
 )
 
 type validateSourceCmd struct {
-	Source string `arg:"" optional:"" name:"source" help:"The manifest source to validate."`
+	Source redact.URL `arg:"" optional:"" name:"source" help:"The manifest source to validate."`
 }
 
 func (g *validateSourceCmd) Run(l *ui.UI, env *hermit.Env, sta *state.State) error {
@@ -29,7 +30,7 @@ func (g *validateSourceCmd) Run(l *ui.UI, env *hermit.Env, sta *state.State) err
 			return errors.WithStack(err)
 		}
 	} else {
-		srcs, err = sources.ForURIs(l, sta.SourcesDir(), "", []string{g.Source})
+		srcs, err = sources.ForURIs(l, sta.SourcesDir(), "", []redact.URL{g.Source})
 		if err != nil {
 			return errors.WithStack(err)
 		}

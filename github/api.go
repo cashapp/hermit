@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/redact"
 )
 
 const (
@@ -49,7 +50,7 @@ type Client struct {
 }
 
 // New creates a new GitHub API client.
-func New(client *http.Client, token string) *Client {
+func New(client *http.Client, token redact.Secret) *Client {
 	if client == nil {
 		client = http.DefaultClient
 	}
