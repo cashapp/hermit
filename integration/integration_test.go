@@ -90,6 +90,78 @@ func TestIntegration(t *testing.T) {
 			`,
 			expectations: exp{outputContains("/hermit-local/hermit"), outputContains("devel (canary)")},
 		},
+
+		{
+			name: "ContentOnlyPackageInstallsOnActivation",
+			script: `
+                hermit init --no-git --sources env:///packages .
+                mkdir -p packages
+                printf 'shared instructions' > packages/content.txt
+                tar -czf packages/content.tgz -C packages content.txt
+                cat > packages/content.hcl <<'EOF'
+description = "Content without an executable"
+source = "${env}/packages/content.tgz"
+on activate {
+  run { cmd = "/bin/cp" args = ["${root}/content.txt", "${env}/instructions.txt"] }
+}
+version "1.0.0" {}
+EOF
+                printf 'sources = ["env:///packages"]\ninstall-on-activate = ["content"]\n' > bin/hermit.hcl
+                ./bin/hermit install content
+                ./bin/hermit clean --packages
+                . bin/activate-hermit
+                assert test "$(cat instructions.txt)" = 'shared instructions'
+                assert test -L bin/.content-1.0.0.pkg
+                assert test ! -e bin/content
+                assert test ! -e bin/content.txt
+                deactivate-hermit
+                rm -f instructions.txt
+                . bin/activate-hermit
+                assert test "$(cat instructions.txt)" = 'shared instructions'
+            `,
+		},
+		{
+			name: "EnvOnlyPackageSetsVariablesWithoutBinaries",
+			script: `
+                hermit init --no-git --sources env:///packages .
+                mkdir -p packages
+                printf 'configuration' > packages/config.txt
+                tar -czf packages/config.tgz -C packages config.txt
+                cat > packages/config.hcl <<'EOF'
+description = "Environment variables without an executable"
+source = "${env}/packages/config.tgz"
+env = { SHARED_CONFIG: "configured" }
+version "1.0.0" {}
+EOF
+                ./bin/hermit install config
+                . bin/activate-hermit
+                assert test "$SHARED_CONFIG" = configured
+                assert test -L bin/.config-1.0.0.pkg
+                assert test ! -e bin/config.txt
+                deactivate-hermit
+                assert test -z "${SHARED_CONFIG:-}"
+            `,
+		},
+		{
+			name: "EmptyContentPackageIsRejected",
+			script: `
+                hermit init --no-git --sources env:///packages .
+                mkdir -p packages
+                printf 'unused' > packages/empty.txt
+                cat > packages/empty.hcl <<'EOF'
+description = "No contribution"
+source = "${env}/packages/empty.txt"
+on activate {}
+version "1.0.0" {}
+EOF
+                if ./bin/hermit install empty > failure.txt 2>&1; then
+                    hermit-send 'error: empty package was accepted'
+                    exit 1
+                fi
+                assert grep -q 'no binaries or apps provided' failure.txt
+                assert test ! -L bin/.empty-1.0.0.pkg
+            `,
+		},
 		{
 			name: "Init",
 			script: `
