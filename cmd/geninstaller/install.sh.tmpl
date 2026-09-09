@@ -103,7 +103,7 @@ function system_install() {
 #!/bin/bash
 : "\${HERMIT_EXE:=${HERMIT_EXE_RAW}}"
 test -x \${HERMIT_EXE} && exec "\${HERMIT_EXE}" "\$@"
-(curl -fsSL "${HERMIT_DIST_URL}/install.sh" | bash) && exec "\${HERMIT_EXE}" "\$@"
+(curl -fsSL "${HERMIT_DIST_URL}/install.sh" | bash 1>&2) && exec "\${HERMIT_EXE}" "\$@"
 EOF
   chmod +x "$HERMIT_BIN_INSTALL_DIR/$HERMIT_INSTALL_NAME"
   if [ -n "${CREATE_SYMLINK}" ]; then
