@@ -524,6 +524,45 @@ EOF
 				assert test "$(testenv2/bin/hermit env TESTENV2)" = "yes"
 			`,
 		},
+
+		{
+			name: "GitPackageInstallsPinnedCommitAndPreservesHexBranchRefs",
+			script: `
+                hermit init --no-git --sources env:///packages .
+                mkdir -p packages upstream.git
+                git -C upstream.git init -q
+                git -C upstream.git config user.name 'Hermit Test'
+                git -C upstream.git config user.email hermit@example.com
+                git -C upstream.git config commit.gpgsign false
+                printf original > upstream.git/payload.txt
+                git -C upstream.git add payload.txt
+                git -C upstream.git commit -qm original
+                pinned=$(git -C upstream.git rev-parse HEAD)
+                printf newer > upstream.git/payload.txt
+                git -C upstream.git add payload.txt
+                git -C upstream.git commit -qm newer
+                hexbranch=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                git -C upstream.git branch "$hexbranch"
+                cat > packages/pinned.hcl <<EOF
+description = "Pinned Git content"
+source = "file://$PWD/upstream.git#$pinned"
+binaries = ["payload.txt"]
+version "1.0.0" {}
+EOF
+                cat > packages/named.hcl <<EOF
+description = "SHA-shaped branch name"
+source = "file://$PWD/upstream.git#$hexbranch"
+binaries = ["payload.txt"]
+version "1.0.0" {}
+EOF
+                ./bin/hermit install pinned
+                assert test "$(cat "$HERMIT_STATE_DIR/pkg/pinned-1.0.0/payload.txt")" = original
+                ./bin/hermit uninstall pinned
+                ./bin/hermit install named
+                assert test "$(cat "$HERMIT_STATE_DIR/pkg/named-1.0.0/payload.txt")" = newer
+                assert test "$(cat "$HERMIT_STATE_DIR/pkg/pinned-1.0.0/payload.txt")" = original
+            `,
+		},
 		{
 			name:         "InstallDirectScriptPackage",
 			preparations: prep{fixture("testenv2"), activate(".")},
