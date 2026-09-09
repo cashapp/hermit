@@ -878,6 +878,46 @@ EOF
 				assert test "$mode" = "600"
 			`,
 		},
+
+		{
+			name: "ActivationRefreshesDueChannelWithoutExecutingStub",
+			script: `
+                hermit init --no-git --sources env:///packages .
+                mkdir -p packages upstream.git
+                git -C upstream.git init -q
+                git -C upstream.git config user.name 'Hermit Test'
+                git -C upstream.git config user.email hermit@example.com
+                git -C upstream.git config commit.gpgsign false
+                printf first > upstream.git/payload.txt
+                git -C upstream.git add payload.txt
+                git -C upstream.git commit -qm first
+                git -C upstream.git branch -M channel
+                cat > packages/fresh.hcl <<'EOF'
+description = "Content consumed on activation"
+binaries = ["payload.txt"]
+on activate {
+  run { cmd = "/bin/cp" args = ["${root}/payload.txt", "${env}/observed.txt"] }
+}
+channel "edge" {
+  update = "1h"
+  source = "file://${env}/upstream.git#channel"
+}
+EOF
+                printf 'sources = ["env:///packages"]\ninstall-on-activate = ["fresh"]\n' > bin/hermit.hcl
+                ./bin/hermit install fresh@edge
+                hermit activate . > /dev/null
+                assert test "$(cat observed.txt)" = first
+                printf second > upstream.git/payload.txt
+                git -C upstream.git add payload.txt
+                git -C upstream.git commit -qm second
+                hermit activate . > /dev/null
+                assert test "$(cat observed.txt)" = first
+                # Expire the freshness window without sleeping or executing the stub.
+                touch -t 200001010000 "$HERMIT_STATE_DIR/metadata/fresh@edge.etag"
+                hermit activate . > /dev/null
+                assert test "$(cat observed.txt)" = second
+            `,
+		},
 		{
 			name:         "InstallOnActivateEnsuresPackagesAreUnpacked",
 			preparations: prep{fixture("testenv-install-on-activate"), activate(".")},
