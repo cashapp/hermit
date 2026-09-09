@@ -19,6 +19,7 @@ import (
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/internal/system"
 	"github.com/cashapp/hermit/platform"
+	"github.com/cashapp/hermit/redact"
 	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/ui"
 )
@@ -79,10 +80,10 @@ type Package struct {
 	RuntimeDeps          []Reference
 	Provides             []string
 	Env                  envars.Ops
-	Source               string
-	SHA256Source         string
+	Source               redact.URL
+	SHA256Source         redact.URL
 	DontExtract          bool // Don't extract the package, just download it.
-	Mirrors              []string
+	Mirrors              []redact.URL
 	Root                 string
 	SHA256               string
 	Mutable              bool
@@ -587,7 +588,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	}
 
 	for _, env := range layerEnvars {
-		if err := env.Validate(); err != nil {
+		if err := env.ValidateManifest(); err != nil {
 			return nil, errors.Wrapf(err, "%s: %s", manifest.Path, found)
 		}
 		for k, v := range env {
@@ -614,17 +615,17 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	for i, provides := range p.Provides {
 		p.Provides[i] = envars.Expand(provides, mapping)
 	}
-	p.Source = envars.Expand(p.Source, mapping)
-	p.SHA256Source = envars.Expand(p.SHA256Source, mapping)
+	p.Source = redact.URL(envars.Expand(p.Source.Reveal(), mapping))
+	p.SHA256Source = redact.URL(envars.Expand(p.SHA256Source.Reveal(), mapping))
 	for i, mirror := range p.Mirrors {
-		p.Mirrors[i] = envars.Expand(mirror, mapping)
+		p.Mirrors[i] = redact.URL(envars.Expand(mirror.Reveal(), mapping))
 	}
 	// Get sha256 checksum after variable expansion for source, taking care of
 	// autoversion
 	for _, layer := range layers {
 		if layer.SHA256 != "" {
 			p.SHA256 = layer.SHA256
-		} else if sum, ok := manifest.SHA256Sums[p.Source]; ok {
+		} else if sum, ok := manifest.SHA256Sums[p.Source.Reveal()]; ok {
 			p.SHA256 = sum
 		}
 	}
@@ -726,11 +727,12 @@ func inferPackageRepository(p *Package, manifest *Manifest) {
 		}
 	}
 
-	if !strings.HasPrefix(p.Source, githubComPrefix) || strings.HasPrefix(p.Source, "https://github.com/cashapp/hermit-build") {
+	source := p.Source.Reveal()
+	if !strings.HasPrefix(source, githubComPrefix) || strings.HasPrefix(source, "https://github.com/cashapp/hermit-build") {
 		return
 	}
 
-	rest := strings.TrimPrefix(p.Source, githubComPrefix)
+	rest := strings.TrimPrefix(source, githubComPrefix)
 
 	restSplit := strings.Split(rest, "/")
 

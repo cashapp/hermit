@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/redact"
 	"github.com/cashapp/hermit/ui"
 	"github.com/cashapp/hermit/util"
 )
@@ -14,19 +15,26 @@ import (
 // GitSource is a new Source based on a git repo
 type GitSource struct {
 	fs        *uriFS
+	remote    redact.URL
 	sourceDir string
 	path      string
 	runner    util.CommandRunner
 }
 
 // NewGitSource returns a new GitSource
-func NewGitSource(uri, sourceDir string, runner util.CommandRunner) *GitSource {
-	key := util.Hash(uri)
+func NewGitSource(uri redact.URL, sourceDir string, runner util.CommandRunner) *GitSource {
+	key := util.Hash(uri.Reveal())
 	path := filepath.Join(sourceDir, key)
-	return &GitSource{&uriFS{
-		uri: uri,
-		FS:  os.DirFS(path),
-	}, sourceDir, path, runner}
+	return &GitSource{
+		fs: &uriFS{
+			uri: uri.String(),
+			FS:  os.DirFS(path),
+		},
+		remote:    uri,
+		sourceDir: sourceDir,
+		path:      path,
+		runner:    runner,
+	}
 }
 
 func (s *GitSource) Sync(p *ui.UI, force bool) (bool, error) {
@@ -38,7 +46,7 @@ func (s *GitSource) Sync(p *ui.UI, force bool) (bool, error) {
 			return false, errors.WithStack(err)
 		}
 
-		err = syncGit(task, s.sourceDir, s.fs.uri, s.path, s.runner)
+		err = syncGit(task, s.sourceDir, s.remote, s.path, s.runner)
 		// If the sync failed while the repo had already been cloned, log a warning
 		// If the repo has not yet been cloned, fail.
 		if err != nil {
@@ -70,7 +78,7 @@ func (s *GitSource) ensureSourcesDirExists() error {
 }
 
 // Atomically clone git repo.
-func syncGit(b *ui.Task, dir, source, finalDest string, runner util.CommandRunner) (err error) {
+func syncGit(b *ui.Task, dir string, source redact.URL, finalDest string, runner util.CommandRunner) (err error) {
 	task := b.SubProgress("sync", 1)
 	defer func() {
 		task.Done()
@@ -82,7 +90,7 @@ func syncGit(b *ui.Task, dir, source, finalDest string, runner util.CommandRunne
 	// First, if a git repo exists, just pull.
 	info, _ := os.Stat(filepath.Join(finalDest, ".git"))
 	if info != nil {
-		err = runner.RunInDir(b, finalDest, "git", "pull")
+		err = runner.RunInDir(b, finalDest, redact.Args(util.GitArgs("pull")...)...)
 		if err == nil {
 			return nil
 		}
@@ -94,7 +102,8 @@ func syncGit(b *ui.Task, dir, source, finalDest string, runner util.CommandRunne
 		return errors.WithStack(err)
 	}
 	defer os.RemoveAll(dest)
-	if err = runner.RunInDir(b, dest, "git", "clone", "--depth=1", source, dest); err != nil {
+	cloneArgs := append(redact.Args(util.GitArgs("clone", "--depth=1", "--")...), source, redact.Plain(dest))
+	if err = runner.RunInDir(b, dest, cloneArgs...); err != nil {
 		return errors.WithStack(err)
 	}
 	_ = os.RemoveAll(finalDest)

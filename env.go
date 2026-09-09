@@ -29,6 +29,7 @@ import (
 	"github.com/cashapp/hermit/internal/system"
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/platform"
+	"github.com/cashapp/hermit/redact"
 	"github.com/cashapp/hermit/shell"
 	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/state"
@@ -91,7 +92,7 @@ const (
 // Config for a Hermit environment.
 type Config struct {
 	Envars            envars.Envars `hcl:"env,optional" help:"Extra environment variables."`
-	Sources           []string      `hcl:"sources,optional" help:"Package manifest sources."`
+	Sources           []redact.URL  `hcl:"sources,optional" help:"Package manifest sources."`
 	ManageGit         bool          `hcl:"manage-git,optional" default:"true" help:"Whether Hermit should automatically 'git add' new packages."`
 	InheritParent     bool          `hcl:"inherit-parent,optional" default:"false" help:"Whether this environment inherits a potential parent environment from one of the parent directories"`
 	InstallOnActivate []string      `hcl:"install-on-activate,optional" help:"List of packages to eagerly download and unpack when the environment is activated."`
@@ -173,7 +174,7 @@ func Init(l *ui.UI, env string, distURL string, stateDir string, config Config, 
 			}
 
 			if useGit {
-				if err = util.RunInDir(b, env, "git", "add", "-f", extDepPath); err != nil {
+				if err = util.RunSystemInDir(b, env, "git", "add", "-f", extDepPath); err != nil {
 					return errors.WithStack(err)
 				}
 			}
@@ -196,7 +197,7 @@ func Init(l *ui.UI, env string, distURL string, stateDir string, config Config, 
 			return errors.WithStack(err)
 		}
 		if useGit {
-			if err = util.RunInDir(b, env, "git", "add", "-f", filepath.Join(bin, "hermit.hcl")); err != nil {
+			if err = util.RunSystemInDir(b, env, "git", "add", "-f", filepath.Join(bin, "hermit.hcl")); err != nil {
 				return errors.WithStack(err)
 			}
 		}
@@ -269,7 +270,7 @@ func FindEnvDir(binary string) (envDir string, err error) {
 	return
 }
 
-func getSources(l *ui.UI, envDir string, config *Config, state *state.State, defaultSources []string, sourceRewriters ...sources.URLRewriter) (*sources.Sources, error) {
+func getSources(l *ui.UI, envDir string, config *Config, state *state.State, defaultSources []redact.URL, sourceRewriters ...sources.URLRewriter) (*sources.Sources, error) {
 	configuredSources := config.Sources
 	if config.Sources == nil {
 		configuredSources = defaultSources
@@ -295,7 +296,7 @@ func readConfig(configFile string) (*Config, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, configFile)
 		}
-		if err := config.Envars.Validate(); err != nil {
+		if err := config.Envars.ValidateManifest(); err != nil {
 			return nil, errors.Wrap(err, configFile)
 		}
 	}
@@ -593,7 +594,7 @@ func (e *Env) unlinkPackage(l *ui.Task, pkg *manifest.Package) error {
 
 func (e *Env) unlink(l *ui.Task, path string) error {
 	if e.useGit {
-		err := util.RunInDir(l, e.envDir, "git", "rm", "-f", path)
+		err := util.RunSystemInDir(l, e.envDir, "git", "rm", "-f", path)
 		if err != nil {
 			l.Errorf("non-fatal: %s", err)
 		}
@@ -1429,7 +1430,7 @@ func (e *Env) linkIntoEnv(l *ui.Task, oldname, newname string) error {
 		return errors.WithStack(err)
 	}
 	if e.useGit {
-		return util.RunInDir(l, e.envDir, "git", "add", "-f", newname)
+		return util.RunSystemInDir(l, e.envDir, "git", "add", "-f", newname)
 	}
 	return nil
 }
@@ -1663,7 +1664,7 @@ func writeFileToEnvBin(l *ui.Task, useGit bool, src, envDir string, vars map[str
 		return errors.WithStack(err)
 	}
 	if useGit {
-		if err = util.RunInDir(l, envDir, "git", "add", "-f", dest); err != nil {
+		if err = util.RunSystemInDir(l, envDir, "git", "add", "-f", dest); err != nil {
 			return errors.WithStack(err)
 		}
 	}

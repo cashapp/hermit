@@ -163,9 +163,10 @@ func TestEnsureInstalledChecksChannelFreshness(t *testing.T) {
 	getCalls := 0
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("ETag", etag)
-		if r.Method == "HEAD" {
+		switch r.Method {
+		case "HEAD":
 			headCalls++
-		} else if r.Method == "GET" {
+		case "GET":
 			getCalls++
 			tar := TestTarGz{map[string]string{"bin": data}}
 			tar.Write(t, w)

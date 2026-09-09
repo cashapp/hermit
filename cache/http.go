@@ -11,16 +11,18 @@ import (
 	"path/filepath"
 
 	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/redact"
 	"github.com/cashapp/hermit/ui"
+	"github.com/cashapp/hermit/util"
 )
 
 type httpSource struct {
 	client *http.Client
-	url    string
+	url    redact.URL
 }
 
 // HTTPSource is a PackageSource for a HTTP URL.
-func HTTPSource(client *http.Client, url string) PackageSource {
+func HTTPSource(client *http.Client, url redact.URL) PackageSource {
 	return &httpSource{client, url}
 }
 
@@ -33,13 +35,13 @@ func (s *httpSource) Download(b *ui.Task, cache *Cache, checksum string) (path s
 	cachePath := cache.Path(checksum, s.url)
 	b.Tracef("cachePath %v checksum %v url %v \n", cachePath, checksum, s.url)
 	ctx := context.Background()
-	req, err := http.NewRequestWithContext(ctx, "GET", s.url, &bytes.Reader{})
+	req, err := http.NewRequestWithContext(ctx, "GET", s.url.Reveal(), &bytes.Reader{})
 	if err != nil {
-		return "", "", "", errors.Wrap(err, "could not fetch")
+		return "", "", "", errors.Wrap(util.StripURLError(err), "could not fetch")
 	}
 	response, err := s.client.Do(req)
 	if err != nil {
-		return "", "", "", errors.Wrap(err, "could not download to cache")
+		return "", "", "", errors.Wrapf(util.StripURLError(err), "could not download %s to cache", s.url)
 	}
 	defer response.Body.Close()
 	return downloadHTTP(b, response, checksum, s.url, cachePath)
@@ -47,13 +49,13 @@ func (s *httpSource) Download(b *ui.Task, cache *Cache, checksum string) (path s
 
 func (s *httpSource) ETag(b *ui.Task) (etag string, err error) {
 	uri := s.url
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodHead, uri, nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodHead, uri.Reveal(), nil)
 	if err != nil {
-		return "", errors.Wrap(err, uri)
+		return "", errors.Wrap(util.StripURLError(err), uri.String())
 	}
 	resp, err := s.client.Do(req)
 	if err != nil {
-		return "", errors.Wrap(err, uri)
+		return "", errors.Wrap(util.StripURLError(err), uri.String())
 	}
 	defer resp.Body.Close()
 	// Normal HTTP error, log and try the next mirror.
@@ -65,13 +67,13 @@ func (s *httpSource) ETag(b *ui.Task) (etag string, err error) {
 }
 
 func (s *httpSource) Validate() error {
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodHead, s.url, nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodHead, s.url.Reveal(), nil)
 	if err != nil {
-		return errors.Wrap(err, s.url)
+		return errors.Wrap(util.StripURLError(err), s.url.String())
 	}
 	resp, err := s.client.Do(req)
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(util.StripURLError(err), s.url.String())
 	}
 	defer resp.Body.Close()
 
@@ -82,7 +84,7 @@ func (s *httpSource) Validate() error {
 	return nil
 }
 
-func downloadHTTP(b *ui.Task, response *http.Response, checksum string, uri string, cachePath string) (path string, etag string, returnChecksum string, err error) {
+func downloadHTTP(b *ui.Task, response *http.Response, checksum string, uri redact.URL, cachePath string) (path string, etag string, returnChecksum string, err error) {
 	if response.StatusCode < 200 || response.StatusCode > 299 {
 		return "", "", "", errors.Errorf("download failed: %s (%d), source url: %s", response.Status, response.StatusCode, uri)
 	}
