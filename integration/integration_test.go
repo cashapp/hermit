@@ -383,6 +383,47 @@ EOF
 				assert test "${FOO:-}" = "bar"
 			`,
 		},
+
+		{
+			name: "EnvActivateInstallsAndRunsTriggersWithCleanStdout",
+			script: `
+                hermit init --no-git --sources env:///packages .
+                mkdir -p packages
+                printf 'activated content' > packages/payload.txt
+                tar -czf packages/payload.tgz -C packages payload.txt
+                cat > packages/lifecycle.hcl <<'EOF'
+description = "Activation lifecycle"
+source = "${env}/packages/payload.tgz"
+binaries = ["payload.txt"]
+env = { LIFECYCLE_READY: "yes" }
+on activate {
+  run { cmd = "/bin/cp" args = ["${root}/payload.txt", "${env}/activated.txt"] }
+  message { text = "activation-message" }
+}
+version "1.0.0" {}
+EOF
+                printf 'sources = ["env:///packages"]\ninstall-on-activate = ["lifecycle"]\n' > bin/hermit.hcl
+                ./bin/hermit install lifecycle
+                ./bin/hermit clean --packages
+                assert test ! -e activated.txt
+                shell=bash
+                if [ -n "${ZSH_VERSION-}" ]; then shell=zsh; fi
+                ./bin/hermit env --activate --shell "$shell" > env.sh 2> messages.txt
+                eval "$(cat env.sh)"
+                assert test "$LIFECYCLE_READY" = yes
+                assert test "$(cat activated.txt)" = 'activated content'
+                assert grep -q activation-message messages.txt
+                if grep -q activation-message env.sh; then
+                    hermit-send 'error: trigger message contaminated shell commands'
+                    exit 1
+                fi
+                rm -f activated.txt
+                ./bin/hermit env --ops > /dev/null
+                assert test ! -e activated.txt
+                ./bin/hermit env --activate --shell "$shell" > env.sh 2> messages.txt
+                assert test "$(cat activated.txt)" = 'activated content'
+            `,
+		},
 		{
 			name:         "HermitEnvCommandSetsAutomatically",
 			preparations: prep{fixture("testenv1")},
