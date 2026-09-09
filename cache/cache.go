@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/cashapp/hermit/errors"
+	"github.com/cashapp/hermit/redact"
 	"github.com/cashapp/hermit/ui"
 	"github.com/cashapp/hermit/util"
 )
@@ -24,9 +25,9 @@ type Cache struct {
 }
 
 // BasePath returns the subfolder in the cache path for the given file
-func BasePath(checksum, uri string) string {
-	hash := util.Hash(uri, checksum)
-	return filepath.Join(hash[:2], hash+"-"+filepath.Base(uri))
+func BasePath(checksum string, uri redact.URL) string {
+	hash := util.Hash(uri.Reveal(), checksum)
+	return filepath.Join(hash[:2], hash+"-"+filepath.Base(uri.Reveal()))
 }
 
 // Open or create a Cache at the given directory, using the given http client.
@@ -64,13 +65,13 @@ func (c *Cache) Root() string {
 }
 
 // Mkdir makes a directory for the given URI.
-func (c *Cache) Mkdir(uri string) (string, error) {
+func (c *Cache) Mkdir(uri redact.URL) (string, error) {
 	path := c.Path("", uri)
 	return path, os.MkdirAll(path, os.ModePerm) //nolint:gosec
 }
 
 // Create a new, empty, cache entry.
-func (c *Cache) Create(checksum, uri string) (*os.File, error) {
+func (c *Cache) Create(checksum string, uri redact.URL) (*os.File, error) {
 	path := c.Path(checksum, uri)
 	dir := filepath.Dir(path)
 	err := os.MkdirAll(dir, os.ModePerm) //nolint:gosec
@@ -81,7 +82,7 @@ func (c *Cache) Create(checksum, uri string) (*os.File, error) {
 }
 
 // OpenLocal opens a local cached copy of "uri", or errors.
-func (c *Cache) OpenLocal(checksum, uri string) (*os.File, error) {
+func (c *Cache) OpenLocal(checksum string, uri redact.URL) (*os.File, error) {
 	source, err := c.GetSource(c.httpClient, uri)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -92,7 +93,7 @@ func (c *Cache) OpenLocal(checksum, uri string) (*os.File, error) {
 // Open a local or remote artifact, transparently caching it. Subsequent accesses will use the cached copy.
 //
 // If checksum is present it must be the SHA256 hash of the downloaded artifact.
-func (c *Cache) Open(b *ui.Task, checksum, uri string, mirrors ...string) (*os.File, error) {
+func (c *Cache) Open(b *ui.Task, checksum string, uri redact.URL, mirrors ...redact.URL) (*os.File, error) {
 	cachePath := c.Path(checksum, uri)
 	_, err := os.Stat(cachePath)
 	if err == nil {
@@ -114,8 +115,8 @@ func (c *Cache) Open(b *ui.Task, checksum, uri string, mirrors ...string) (*os.F
 // Download a local or remote artifact, transparently caching it.
 //
 // If checksum is present it must be the SHA256 hash of the downloaded artifact.
-func (c *Cache) Download(b *ui.Task, checksum, uri string, mirrors ...string) (path string, etag string, actualChecksum string, err error) {
-	uris := append([]string{uri}, mirrors...)
+func (c *Cache) Download(b *ui.Task, checksum string, uri redact.URL, mirrors ...redact.URL) (path string, etag string, actualChecksum string, err error) {
+	uris := append([]redact.URL{uri}, mirrors...)
 	var lastError error
 	attempts := 3
 	for attempt := 1; attempt <= attempts; attempt++ {
@@ -133,9 +134,9 @@ func (c *Cache) Download(b *ui.Task, checksum, uri string, mirrors ...string) (p
 			b.Debugf("%s: %s", uri, err)
 		}
 		if lastError == nil {
-			return "", "", "", errors.Errorf("failed to download from any of %s", strings.Join(uris, ", "))
+			return "", "", "", errors.Errorf("failed to download from any of %s", joinURLs(uris))
 		}
-		msg := fmt.Sprintf("Failed to download any of %s on attempt %d/%d: %s", strings.Join(uris, ", "), attempt, attempts, lastError)
+		msg := fmt.Sprintf("Failed to download any of %s on attempt %d/%d: %s", joinURLs(uris), attempt, attempts, lastError)
 		if attempt < attempts {
 			msg = "Retrying. " + msg
 		}
@@ -152,8 +153,8 @@ func (c *Cache) Download(b *ui.Task, checksum, uri string, mirrors ...string) (p
 
 // ETag fetches the etag from given URI if available.
 // Otherwise an empty string is returned
-func (c *Cache) ETag(b *ui.Task, uri string, mirrors ...string) (etag string, err error) {
-	for _, uri := range append([]string{uri}, mirrors...) {
+func (c *Cache) ETag(b *ui.Task, uri redact.URL, mirrors ...redact.URL) (etag string, err error) {
+	for _, uri := range append([]redact.URL{uri}, mirrors...) {
 		source, err := c.GetSource(c.fastFailHTTPClient, uri)
 		if err != nil {
 			return "", errors.WithStack(err)
@@ -169,13 +170,13 @@ func (c *Cache) ETag(b *ui.Task, uri string, mirrors ...string) (etag string, er
 }
 
 // IsCached returns true if the URI is cached.
-func (c *Cache) IsCached(checksum, uri string) bool {
+func (c *Cache) IsCached(checksum string, uri redact.URL) bool {
 	_, err := os.Stat(c.Path(checksum, uri))
 	return err == nil
 }
 
 // Evict a file from the cache.
-func (c *Cache) Evict(b *ui.Task, checksum, uri string) error {
+func (c *Cache) Evict(b *ui.Task, checksum string, uri redact.URL) error {
 	b.SubTask("remove").Debugf("rm -rf %s", c.Path(checksum, uri))
 	err := os.RemoveAll(c.Path(checksum, uri))
 	if err != nil && !os.IsNotExist(err) {
@@ -190,20 +191,28 @@ func (c *Cache) Clean() error {
 }
 
 // Path to cached object.
-func (c *Cache) Path(checksum, uri string) string {
+func (c *Cache) Path(checksum string, uri redact.URL) string {
 	base := BasePath(checksum, uri)
 	return filepath.Join(c.root, base)
 }
 
+func joinURLs(uris []redact.URL) string {
+	display := make([]string, len(uris))
+	for i, uri := range uris {
+		display[i] = uri.String()
+	}
+	return strings.Join(display, ", ")
+}
+
 // UnavailableError returns 101 for the exit code.
 type UnavailableError struct {
-	URI string
+	URI redact.URL
 	Err error
 }
 
 // Error returns the error string for the unavailable error
 func (e *UnavailableError) Error() string {
-	msg := e.URI + " is unavailable"
+	msg := e.URI.String() + " is unavailable"
 	if e.Err != nil {
 		return fmt.Sprintf("%s: %v", msg, e.Err)
 	}

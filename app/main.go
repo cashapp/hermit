@@ -20,6 +20,7 @@ import (
 	"github.com/cashapp/hermit"
 	"github.com/cashapp/hermit/cache"
 	"github.com/cashapp/hermit/github"
+	"github.com/cashapp/hermit/redact"
 	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/state"
 	"github.com/cashapp/hermit/ui"
@@ -172,9 +173,9 @@ func Main(config Config) {
 		cli = &unactivated{cliBase: common}
 	}
 
-	githubToken := os.Getenv("HERMIT_GITHUB_TOKEN")
+	githubToken := redact.Secret(os.Getenv("HERMIT_GITHUB_TOKEN"))
 	if githubToken == "" {
-		githubToken = os.Getenv("GITHUB_TOKEN")
+		githubToken = redact.Secret(os.Getenv("GITHUB_TOKEN"))
 		p.Tracef("GitHub token set from GITHUB_TOKEN")
 	} else {
 		p.Tracef("GitHub token set from HERMIT_GITHUB_TOKEN")

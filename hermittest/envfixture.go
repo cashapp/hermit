@@ -16,6 +16,7 @@ import (
 	"github.com/cashapp/hermit/cache"
 	"github.com/cashapp/hermit/envars"
 	"github.com/cashapp/hermit/internal/dao"
+	"github.com/cashapp/hermit/redact"
 	"github.com/cashapp/hermit/sources"
 	"github.com/cashapp/hermit/state"
 	"github.com/cashapp/hermit/ui"
@@ -60,7 +61,7 @@ func NewEnvTestFixture(t *testing.T, handler http.Handler) *EnvTestFixture {
 	cache, err := cache.Open(stateDir, nil, client, client)
 	assert.NoError(t, err)
 	sta, err := state.Open(stateDir, state.Config{
-		Sources: []string{},
+		Sources: []redact.URL{},
 		Builtin: sources.NewBuiltInSource(vfs.InMemoryFS(nil)),
 	}, cache)
 	assert.NoError(t, err)
