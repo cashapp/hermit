@@ -392,6 +392,205 @@ func TestResolver_Resolve(t *testing.T) {
 	}
 }
 
+func TestResolveBinariesOverride(t *testing.T) {
+	config := Config{
+		Env:   "/home/user/project",
+		State: "/home/user/.cache/hermit",
+		Platform: platform.Platform{
+			OS:   platform.Linux,
+			Arch: platform.Amd64,
+		},
+	}
+	files := map[string]string{
+		"test.hcl": `
+            description = ""
+            binaries = ["a", "b"]
+            version "0.1.0" {
+              source = "www.example-1.com"
+              binaries = ["a"]
+            }
+            version "0.2.0" {
+              source = "www.example-2.com"
+            }
+        `,
+	}
+	logger := ui.New(ui.LevelInfo, os.Stdout, os.Stderr, true, true)
+	ss := []sources.Source{}
+	for name, content := range files {
+		ss = append(ss, sources.NewMemSource(name, content))
+	}
+	l, err := New(sources.New("", ss), config)
+	assert.NoError(t, err)
+
+	// A version block declaring its own binaries overrides the top-level set
+	// wholesale rather than adding to it.
+	pkg, err := l.Resolve(logger, PrefixSelector(ParseReference("test-0.1.0")))
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"a"}, pkg.Binaries)
+
+	// A version block declaring none still inherits the top-level set.
+	pkg, err = l.Resolve(logger, PrefixSelector(ParseReference("test-0.2.0")))
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"a", "b"}, pkg.Binaries)
+}
+
+func TestResolveAppsOverride(t *testing.T) {
+	config := Config{
+		Env:   "/home/user/project",
+		State: "/home/user/.cache/hermit",
+		Platform: platform.Platform{
+			OS:   platform.Linux,
+			Arch: platform.Amd64,
+		},
+	}
+	files := map[string]string{
+		"test.hcl": `
+            description = ""
+            apps = ["Top.app"]
+            version "0.1.0" {
+              source = "www.example-1.com"
+              apps = ["Nested.app"]
+            }
+        `,
+	}
+	logger := ui.New(ui.LevelInfo, os.Stdout, os.Stderr, true, true)
+	ss := []sources.Source{}
+	for name, content := range files {
+		ss = append(ss, sources.NewMemSource(name, content))
+	}
+	l, err := New(sources.New("", ss), config)
+	assert.NoError(t, err)
+
+	pkg, err := l.Resolve(logger, PrefixSelector(ParseReference("test-0.1.0")))
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"Nested.app"}, pkg.Apps)
+}
+
+// TestResolveBinariesPlatformOverride pins the shape reported in #249: a
+// top-level binaries list narrowed by a matching platform block, with the
+// top-level list still applying on platforms the block does not match.
+func TestResolveBinariesPlatformOverride(t *testing.T) {
+	files := map[string]string{
+		"podman.hcl": `
+            description = ""
+            source = "https://example.com/podman-${version}.tar.gz"
+            binaries = ["podman"]
+            platform "darwin" {
+              strip = 1
+              binaries = ["usr/bin/podman"]
+            }
+            version "1.0.0" {
+            }
+        `,
+	}
+	for _, tt := range []struct {
+		platform platform.Platform
+		want     []string
+	}{
+		{platform.Platform{OS: platform.Darwin, Arch: platform.Amd64}, []string{"usr/bin/podman"}},
+		{platform.Platform{OS: platform.Linux, Arch: platform.Amd64}, []string{"podman"}},
+	} {
+		config := Config{
+			Env:      "/home/user/project",
+			State:    "/home/user/.cache/hermit",
+			Platform: tt.platform,
+		}
+		logger := ui.New(ui.LevelInfo, os.Stdout, os.Stderr, true, true)
+		ss := []sources.Source{}
+		for name, content := range files {
+			ss = append(ss, sources.NewMemSource(name, content))
+		}
+		l, err := New(sources.New("", ss), config)
+		assert.NoError(t, err)
+		pkg, err := l.Resolve(logger, PrefixSelector(ParseReference("podman-1.0.0")))
+		assert.NoError(t, err)
+		assert.Equal(t, tt.want, pkg.Binaries)
+	}
+}
+
+// TestResolveBinariesAndAppsIndependent checks that overriding one of the two
+// list attributes does not disturb the other.
+func TestResolveBinariesAndAppsIndependent(t *testing.T) {
+	config := Config{
+		Env:   "/home/user/project",
+		State: "/home/user/.cache/hermit",
+		Platform: platform.Platform{
+			OS:   platform.Linux,
+			Arch: platform.Amd64,
+		},
+	}
+	files := map[string]string{
+		"test.hcl": `
+            description = ""
+            source = "https://example.com/test-${version}.tar.gz"
+            binaries = ["a"]
+            apps = ["Top.app"]
+            version "1.0.0" {
+              binaries = ["b"]
+            }
+        `,
+	}
+	logger := ui.New(ui.LevelInfo, os.Stdout, os.Stderr, true, true)
+	ss := []sources.Source{}
+	for name, content := range files {
+		ss = append(ss, sources.NewMemSource(name, content))
+	}
+	l, err := New(sources.New("", ss), config)
+	assert.NoError(t, err)
+
+	pkg, err := l.Resolve(logger, PrefixSelector(ParseReference("test-1.0.0")))
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"b"}, pkg.Binaries)
+	assert.Equal(t, []string{"Top.app"}, pkg.Apps, "overriding binaries must not clear apps")
+}
+
+// TestResolveBinariesChannelOverride covers the channel path, where the
+// referenced version's layers act as the ancestor of the channel's own layers.
+func TestResolveBinariesChannelOverride(t *testing.T) {
+	config := Config{
+		Env:   "/home/user/project",
+		State: "/home/user/.cache/hermit",
+		Platform: platform.Platform{
+			OS:   platform.Linux,
+			Arch: platform.Amd64,
+		},
+	}
+	files := map[string]string{
+		"test.hcl": `
+            description = ""
+            source = "https://example.com/test-${version}.tar.gz"
+            binaries = ["root"]
+            version "1.0.0" {
+              binaries = ["version"]
+            }
+            channel "stable" {
+              version = "1.0.0"
+              update = "24h"
+              binaries = ["channel"]
+            }
+            channel "plain" {
+              version = "1.0.0"
+              update = "24h"
+            }
+        `,
+	}
+	logger := ui.New(ui.LevelInfo, os.Stdout, os.Stderr, true, true)
+	ss := []sources.Source{}
+	for name, content := range files {
+		ss = append(ss, sources.NewMemSource(name, content))
+	}
+	l, err := New(sources.New("", ss), config)
+	assert.NoError(t, err)
+
+	pkg, err := l.Resolve(logger, PrefixSelector(ParseReference("test@stable")))
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"channel"}, pkg.Binaries)
+
+	pkg, err = l.Resolve(logger, PrefixSelector(ParseReference("test@plain")))
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"version"}, pkg.Binaries)
+}
+
 func TestSearchVersionsAndChannelsCoexist(t *testing.T) {
 	files := map[string]string{
 		"test.hcl": `
