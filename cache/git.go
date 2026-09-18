@@ -28,12 +28,27 @@ func (s *gitSource) Download(b *ui.Task, cache *Cache, checksum string) (string,
 	if err != nil {
 		return "", "", "", err
 	}
-	args := redact.Args(util.GitArgs("clone", "--depth=1")...)
-	if tag != "" {
-		args = append(args, redact.Plain("--branch="+tag))
+	pinned := false
+	if isFullGitSHA(tag) {
+		// A full-hex name may still be a valid branch or tag name. Only treat
+		// it as a commit pin when the remote does not advertise a ref with
+		// that exact name, preserving prior "git clone --branch" behaviour.
+		advertised, aerr := s.resolveAdvertisedRef(b, repo, tag)
+		if aerr != nil {
+			return "", "", "", aerr
+		}
+		pinned = advertised == ""
 	}
-	args = append(args, redact.Plain("--"), repo, redact.Plain(checkoutDir))
-	err = s.runner.RunInDir(b, cache.root, args...)
+	if pinned {
+		err = s.checkoutGitCommit(b, cache.root, repo, tag, checkoutDir)
+	} else {
+		args := redact.Args(util.GitArgs("clone", "--depth=1")...)
+		if tag != "" {
+			args = append(args, redact.Plain("--branch="+tag))
+		}
+		args = append(args, redact.Plain("--"), repo, redact.Plain(checkoutDir))
+		err = s.runner.RunInDir(b, cache.root, args...)
+	}
 	if err != nil {
 		return "", "", "", errors.WithStack(err)
 	}
@@ -48,7 +63,27 @@ func (s *gitSource) Download(b *ui.Task, cache *Cache, checksum string) (string,
 }
 
 func (s *gitSource) ETag(b *ui.Task) (etag string, err error) {
-	bts, err := s.lsRemote(b)
+	repo, tag, err := parseGitURL(s.URL)
+	if err != nil {
+		return "", err
+	}
+	if isFullGitSHA(tag) {
+		advertised, err := s.resolveAdvertisedRef(b, repo, tag)
+		if err != nil {
+			return "", errors.Wrap(err, s.URL.String())
+		}
+		if advertised != "" {
+			return advertised, nil
+		}
+		// Not an advertised branch or tag, so it is a pinned commit, which is
+		// immutable and its own ETag.
+		return tag, nil
+	}
+	if tag == "" {
+		tag = "HEAD"
+	}
+	args := append(redact.Args(util.GitArgs("ls-remote", "--")...), repo, redact.Plain(tag))
+	bts, err := s.runner.CaptureInDir(b, "", args...)
 	if err != nil {
 		return "", errors.Wrap(err, s.URL.String())
 	}
@@ -71,11 +106,63 @@ func (s *gitSource) lsRemote(log ui.Logger) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if tag == "" {
+	if tag == "" || isFullGitSHA(tag) {
 		tag = "HEAD"
 	}
 	args := append(redact.Args(util.GitArgs("ls-remote", "--")...), repo, redact.Plain(tag))
 	return s.runner.CaptureInDir(log, "", args...)
+}
+
+// resolveAdvertisedRef returns the commit the remote advertises for the
+// branch or tag with the exact name ref, or "" when the remote advertises no
+// such ref. Branches take precedence over tags, matching "git clone --branch".
+func (s *gitSource) resolveAdvertisedRef(b *ui.Task, repo redact.URL, ref string) (string, error) {
+	args := append(redact.Args(util.GitArgs("ls-remote", "--")...), repo, redact.Plain("refs/heads/"+ref), redact.Plain("refs/tags/"+ref))
+	bts, err := s.runner.CaptureInDir(b, "", args...)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	out := strings.TrimSpace(string(bts))
+	if out == "" {
+		return "", nil
+	}
+	// ls-remote output is sorted by ref name, so refs/heads sorts first.
+	line, _, _ := strings.Cut(out, "\n")
+	sha, _, ok := strings.Cut(line, "\t")
+	if !ok {
+		return "", errors.Errorf("invalid ls-remote output: %s", line)
+	}
+	return sha, nil
+}
+
+// checkoutGitCommit fetches a single commit by SHA and checks it out.
+//
+// A commit SHA cannot be passed to "git clone --branch", so initialise an
+// empty repository and fetch just the commit instead. This requires the
+// server to allow fetching by commit SHA (GitHub and GitLab both do).
+func (s *gitSource) checkoutGitCommit(b *ui.Task, root string, repo redact.URL, sha, checkoutDir string) error {
+	if err := s.runner.RunInDir(b, root, redact.Args("git", "init", "--", checkoutDir)...); err != nil {
+		return errors.WithStack(err)
+	}
+	args := append(redact.Args(util.GitArgs("fetch", "--depth=1", "--")...), repo, redact.Plain(sha))
+	if err := s.runner.RunInDir(b, checkoutDir, args...); err != nil {
+		return errors.WithStack(err)
+	}
+	return errors.WithStack(s.runner.RunInDir(b, checkoutDir, redact.Args("git", "checkout", "--detach", "FETCH_HEAD")...))
+}
+
+// isFullGitSHA reports whether ref is a full lowercase hex commit hash
+// (40 characters for SHA-1, 64 for SHA-256).
+func isFullGitSHA(ref string) bool {
+	if len(ref) != 40 && len(ref) != 64 {
+		return false
+	}
+	for _, r := range ref {
+		if (r < '0' || r > '9') && (r < 'a' || r > 'f') {
+			return false
+		}
+	}
+	return true
 }
 
 func parseGitURL(source redact.URL) (repo redact.URL, tag string, err error) {
