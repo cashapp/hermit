@@ -90,6 +90,78 @@ func TestIntegration(t *testing.T) {
 			`,
 			expectations: exp{outputContains("/hermit-local/hermit"), outputContains("devel (canary)")},
 		},
+
+		{
+			name: "ContentOnlyPackageInstallsOnActivation",
+			script: `
+                hermit init --no-git --sources env:///packages .
+                mkdir -p packages
+                printf 'shared instructions' > packages/content.txt
+                tar -czf packages/content.tgz -C packages content.txt
+                cat > packages/content.hcl <<'EOF'
+description = "Content without an executable"
+source = "${env}/packages/content.tgz"
+on activate {
+  run { cmd = "/bin/cp" args = ["${root}/content.txt", "${env}/instructions.txt"] }
+}
+version "1.0.0" {}
+EOF
+                printf 'sources = ["env:///packages"]\ninstall-on-activate = ["content"]\n' > bin/hermit.hcl
+                ./bin/hermit install content
+                ./bin/hermit clean --packages
+                . bin/activate-hermit
+                assert test "$(cat instructions.txt)" = 'shared instructions'
+                assert test -L bin/.content-1.0.0.pkg
+                assert test ! -e bin/content
+                assert test ! -e bin/content.txt
+                deactivate-hermit
+                rm -f instructions.txt
+                . bin/activate-hermit
+                assert test "$(cat instructions.txt)" = 'shared instructions'
+            `,
+		},
+		{
+			name: "EnvOnlyPackageSetsVariablesWithoutBinaries",
+			script: `
+                hermit init --no-git --sources env:///packages .
+                mkdir -p packages
+                printf 'configuration' > packages/config.txt
+                tar -czf packages/config.tgz -C packages config.txt
+                cat > packages/config.hcl <<'EOF'
+description = "Environment variables without an executable"
+source = "${env}/packages/config.tgz"
+env = { SHARED_CONFIG: "configured" }
+version "1.0.0" {}
+EOF
+                ./bin/hermit install config
+                . bin/activate-hermit
+                assert test "$SHARED_CONFIG" = configured
+                assert test -L bin/.config-1.0.0.pkg
+                assert test ! -e bin/config.txt
+                deactivate-hermit
+                assert test -z "${SHARED_CONFIG:-}"
+            `,
+		},
+		{
+			name: "EmptyContentPackageIsRejected",
+			script: `
+                hermit init --no-git --sources env:///packages .
+                mkdir -p packages
+                printf 'unused' > packages/empty.txt
+                cat > packages/empty.hcl <<'EOF'
+description = "No contribution"
+source = "${env}/packages/empty.txt"
+on activate {}
+version "1.0.0" {}
+EOF
+                if ./bin/hermit install empty > failure.txt 2>&1; then
+                    hermit-send 'error: empty package was accepted'
+                    exit 1
+                fi
+                assert grep -q 'no binaries or apps provided' failure.txt
+                assert test ! -L bin/.empty-1.0.0.pkg
+            `,
+		},
 		{
 			name: "Init",
 			script: `
@@ -565,6 +637,45 @@ EOF
 				assert test "$(testenv2/bin/hermit env TESTENV2)" = "yes"
 			`,
 		},
+
+		{
+			name: "GitPackageInstallsPinnedCommitAndPreservesHexBranchRefs",
+			script: `
+                hermit init --no-git --sources env:///packages .
+                mkdir -p packages upstream.git
+                git -C upstream.git init -q
+                git -C upstream.git config user.name 'Hermit Test'
+                git -C upstream.git config user.email hermit@example.com
+                git -C upstream.git config commit.gpgsign false
+                printf original > upstream.git/payload.txt
+                git -C upstream.git add payload.txt
+                git -C upstream.git commit -qm original
+                pinned=$(git -C upstream.git rev-parse HEAD)
+                printf newer > upstream.git/payload.txt
+                git -C upstream.git add payload.txt
+                git -C upstream.git commit -qm newer
+                hexbranch=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                git -C upstream.git branch "$hexbranch"
+                cat > packages/pinned.hcl <<EOF
+description = "Pinned Git content"
+source = "file://$PWD/upstream.git#$pinned"
+binaries = ["payload.txt"]
+version "1.0.0" {}
+EOF
+                cat > packages/named.hcl <<EOF
+description = "SHA-shaped branch name"
+source = "file://$PWD/upstream.git#$hexbranch"
+binaries = ["payload.txt"]
+version "1.0.0" {}
+EOF
+                ./bin/hermit install pinned
+                assert test "$(cat "$HERMIT_STATE_DIR/pkg/pinned-1.0.0/payload.txt")" = original
+                ./bin/hermit uninstall pinned
+                ./bin/hermit install named
+                assert test "$(cat "$HERMIT_STATE_DIR/pkg/named-1.0.0/payload.txt")" = newer
+                assert test "$(cat "$HERMIT_STATE_DIR/pkg/pinned-1.0.0/payload.txt")" = original
+            `,
+		},
 		{
 			name:         "InstallDirectScriptPackage",
 			preparations: prep{fixture("testenv2"), activate(".")},
@@ -597,6 +708,48 @@ EOF
 			hermit upgrade testbin1
 			`,
 			expectations: exp{outputContains("testbin1-1.0.0 hook"), outputContains("testbin1-1.0.1 hook")},
+		},
+
+		{
+			name: "ActivateSymlinkIsRepeatableAndPreservesDirectories",
+			script: `
+                hermit init --no-git --sources env:///packages .
+                mkdir -p packages
+                printf 'shared content' > packages/payload.txt
+                tar -czf packages/payload.tgz -C packages payload.txt
+                cat > packages/links.hcl <<'EOF'
+description = "Activation symlink"
+source = "${env}/packages/payload.tgz"
+binaries = ["payload.txt"]
+on activate {
+  symlink { from = "${root}/payload.txt" to = "${env}/linked.txt" }
+}
+version "1.0.0" {}
+EOF
+                ./bin/hermit install links
+                hermit activate . > /dev/null
+                target=$(readlink linked.txt)
+                assert test "$(cat linked.txt)" = 'shared content'
+                hermit activate . > /dev/null
+                assert test "$(readlink linked.txt)" = "$target"
+                rm linked.txt
+                ln -s nonexistent linked.txt
+                hermit activate . > /dev/null
+                assert test "$(readlink linked.txt)" = "$target"
+                rm linked.txt
+                printf 'old regular file' > linked.txt
+                hermit activate . > /dev/null
+                assert test "$(readlink linked.txt)" = "$target"
+                rm linked.txt
+                mkdir linked.txt
+                printf 'keep me' > linked.txt/owned.txt
+                if hermit activate . > failure.txt 2>&1; then
+                    hermit-send 'error: symlink replaced an existing directory'
+                    exit 1
+                fi
+                assert grep -q 'destination exists and is a directory' failure.txt
+                assert test "$(cat linked.txt/owned.txt)" = 'keep me'
+            `,
 		},
 		{
 			name:         "SymlinkAndMkdirActionsWork",
@@ -918,6 +1071,46 @@ EOF
 				esac
 				assert test "$mode" = "600"
 			`,
+		},
+
+		{
+			name: "ActivationRefreshesDueChannelWithoutExecutingStub",
+			script: `
+                hermit init --no-git --sources env:///packages .
+                mkdir -p packages upstream.git
+                git -C upstream.git init -q
+                git -C upstream.git config user.name 'Hermit Test'
+                git -C upstream.git config user.email hermit@example.com
+                git -C upstream.git config commit.gpgsign false
+                printf first > upstream.git/payload.txt
+                git -C upstream.git add payload.txt
+                git -C upstream.git commit -qm first
+                git -C upstream.git branch -M channel
+                cat > packages/fresh.hcl <<'EOF'
+description = "Content consumed on activation"
+binaries = ["payload.txt"]
+on activate {
+  run { cmd = "/bin/cp" args = ["${root}/payload.txt", "${env}/observed.txt"] }
+}
+channel "edge" {
+  update = "1h"
+  source = "file://${env}/upstream.git#channel"
+}
+EOF
+                printf 'sources = ["env:///packages"]\ninstall-on-activate = ["fresh"]\n' > bin/hermit.hcl
+                ./bin/hermit install fresh@edge
+                hermit activate . > /dev/null
+                assert test "$(cat observed.txt)" = first
+                printf second > upstream.git/payload.txt
+                git -C upstream.git add payload.txt
+                git -C upstream.git commit -qm second
+                hermit activate . > /dev/null
+                assert test "$(cat observed.txt)" = first
+                # Expire the freshness window without sleeping or executing the stub.
+                touch -t 200001010000 "$HERMIT_STATE_DIR/metadata/fresh@edge.etag"
+                hermit activate . > /dev/null
+                assert test "$(cat observed.txt)" = second
+            `,
 		},
 		{
 			name:         "InstallOnActivateEnsuresPackagesAreUnpacked",
