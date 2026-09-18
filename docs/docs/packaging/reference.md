@@ -55,6 +55,14 @@ channel nightly {
 Package source can refer to a remote archive file by using `http://` or `https://` prefixes, to a local file by using `file://` prefix, or to a Git repository by using `.git` suffix. 
 If the source points to an archive file, it is extracted at installation. Git repositories are cloned from the default branch and used as is.
 
+Configuration in a `version`, `channel`, `darwin`, `linux` or `platform` block
+is layered over the manifest's top level, with the most specific block that
+sets an attribute winning. That applies to `binaries` and `apps` as well: a
+nested block that declares them replaces the outer list wholesale rather than
+adding to it, so a platform block can narrow `binaries = ["bin/*"]` down to
+the exact paths that exist on that platform. A nested block that does not
+declare them inherits the outer list.
+
 ## Sources
 
 A manifest source is a location where a set of manifests are stored. Hermit

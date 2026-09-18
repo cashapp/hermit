@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -493,11 +494,17 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 		if layer.Dest != "" {
 			p.Dest = layer.Dest
 		}
+		// Binaries and Apps are overridden wholesale by the most specific layer
+		// that declares them, matching the scalar attributes above. Appending
+		// instead would place the outer block's globs alongside the inner
+		// block's, which for the common "inner block narrows the path" case
+		// (eg. podman: top-level "podman" vs darwin "usr/bin/podman") leaves
+		// the outer glob matching nothing and makes the package unresolvable.
 		if len(layer.Apps) != 0 {
-			p.Apps = append(p.Apps, layer.Apps...)
+			p.Apps = slices.Clone(layer.Apps)
 		}
 		if len(layer.Binaries) != 0 {
-			p.Binaries = append(p.Binaries, layer.Binaries...)
+			p.Binaries = slices.Clone(layer.Binaries)
 		}
 		if len(layer.Requires) != 0 {
 			p.Requires = append(p.Requires, layer.Requires...)
