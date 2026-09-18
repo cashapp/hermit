@@ -58,17 +58,26 @@ func (e *envCmd) Run(l *ui.UI, env *hermit.Env) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		ops, err := env.EnvOps(l)
-		if err != nil {
-			return errors.WithStack(err)
-		}
 
 		switch {
 		case e.Activate:
+			// Perform the same activation lifecycle as "hermit activate" so
+			// the two activation paths cannot drift apart.
+			messages, ops, err := env.Activate(l)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			for _, message := range messages {
+				fmt.Fprintln(os.Stderr, message)
+			}
 			environ := envars.Parse(os.Environ()).Apply(env.Root(), ops).Changed(true)
 			return errors.WithStack(sh.ApplyEnvars(os.Stdout, environ))
 
 		case e.Ops:
+			ops, err := env.EnvOps(l)
+			if err != nil {
+				return errors.WithStack(err)
+			}
 			data, err := envars.MarshalOps(ops)
 			if err != nil {
 				return errors.Wrap(err, "failed to encode envar operations")
@@ -76,15 +85,18 @@ func (e *envCmd) Run(l *ui.UI, env *hermit.Env) error {
 			fmt.Println(string(data))
 
 		case e.DeactivateFromOps != "":
-			ops, err = envars.UnmarshalOps([]byte(e.DeactivateFromOps))
+			ops, err := envars.UnmarshalOps([]byte(e.DeactivateFromOps))
 			if err != nil {
 				return errors.Wrap(err, "failed to decode envar operations")
 			}
-			fallthrough
+			return deactivateEnvars(sh, env, ops)
 
 		case e.Deactivate:
-			environ := envars.Parse(os.Environ()).Revert(env.Root(), ops).Changed(true)
-			return errors.WithStack(sh.ApplyEnvars(os.Stdout, environ))
+			ops, err := env.EnvOps(l)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			return deactivateEnvars(sh, env, ops)
 		}
 		return nil
 	}
@@ -115,6 +127,11 @@ func (e *envCmd) Run(l *ui.UI, env *hermit.Env) error {
 		}
 	}
 	return nil
+}
+
+func deactivateEnvars(sh shell.Shell, env *hermit.Env, ops envars.Ops) error {
+	environ := envars.Parse(os.Environ()).Revert(env.Root(), ops).Changed(true)
+	return errors.WithStack(sh.ApplyEnvars(os.Stdout, environ))
 }
 
 func (e *envCmd) resolveShell() (shell.Shell, error) {
