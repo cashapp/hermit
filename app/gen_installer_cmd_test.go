@@ -84,3 +84,59 @@ chmod +x "$HERMIT_EXE"
 	assert.Contains(t, stderr.String(), noise1)
 	assert.Contains(t, stderr.String(), noise2)
 }
+
+func TestGenInstallerSystemShimExecutesReplacementAfterBootstrap(t *testing.T) {
+	if _, err := exec.LookPath("bash"); err != nil {
+		t.Skip("bash not available")
+	}
+	if _, err := exec.LookPath("curl"); err != nil {
+		t.Skip("curl not available")
+	}
+
+	dir := t.TempDir()
+	shimPath := filepath.Join(dir, "hermit")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `#!/bin/bash
+set -euo pipefail
+cat > "$TEST_SHIM_PATH" <<'INNER'
+#!/bin/bash
+echo "REPLACEMENT_INVOKED $*"
+INNER
+chmod +x "$TEST_SHIM_PATH"
+`)
+	}))
+	defer srv.Close()
+
+	script, _, err := GenInstaller(Config{
+		BaseDistURL:  srv.URL,
+		InstallPaths: []string{dir},
+	})
+	assert.NoError(t, err)
+
+	installerPath := filepath.Join(dir, "install.sh")
+	assert.NoError(t, os.WriteFile(installerPath, script, 0o755))
+
+	// Generate a launcher whose unexported HERMIT_EXE points at a disposable state directory.
+	// The bootstrap installer replaces the launcher with one for the current state directory, so
+	// the running launcher must reload itself before choosing which executable to run.
+	staleStateDir := filepath.Join(dir, "stale-state")
+	installCmd := exec.Command("bash", installerPath)
+	installCmd.Env = append(os.Environ(),
+		"HERMIT_SKIP_USER_INSTALL=1",
+		"HERMIT_BIN_INSTALL_DIR="+dir,
+		"HERMIT_DIST_URL="+srv.URL,
+		"HERMIT_STATE_DIR="+staleStateDir,
+	)
+	out, err := installCmd.CombinedOutput()
+	assert.NoError(t, err, "rendered install.sh failed: %s", out)
+
+	shimCmd := exec.Command(shimPath, "some-arg")
+	shimCmd.Env = []string{
+		"HOME=" + dir,
+		"PATH=" + os.Getenv("PATH"),
+		"TEST_SHIM_PATH=" + shimPath,
+	}
+	out, err = shimCmd.CombinedOutput()
+	assert.NoError(t, err, "shim failed: %s", out)
+	assert.Equal(t, "REPLACEMENT_INVOKED some-arg\n", string(out))
+}
