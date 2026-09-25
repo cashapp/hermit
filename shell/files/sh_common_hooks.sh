@@ -24,6 +24,7 @@ change_hermit_env() {
       fi
       return
     fi
+    # Use shell expansion to avoid launching dirname for every parent directory.
     # PWD is absolute, so an empty parent means we reached /.
     CUR="${CUR%/*}"
     CUR="${CUR:-/}"
