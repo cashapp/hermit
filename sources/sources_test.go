@@ -34,6 +34,7 @@ func TestEnvSourceRejectsPathTraversal(t *testing.T) {
 func TestGitHubTokenRewriter(t *testing.T) {
 	tests := []struct {
 		name    string
+		host    string
 		uri     string
 		token   string
 		pattern string
@@ -41,6 +42,7 @@ func TestGitHubTokenRewriter(t *testing.T) {
 	}{
 		{
 			name:    "matching github repo",
+			host:    "github.com",
 			uri:     "https://github.com/owner/repo.git",
 			token:   "secret-token",
 			pattern: "owner/*",
@@ -48,13 +50,24 @@ func TestGitHubTokenRewriter(t *testing.T) {
 		},
 		{
 			name:    "non-matching github repo",
+			host:    "github.com",
 			uri:     "https://github.com/other/repo.git",
 			token:   "secret-token",
 			pattern: "owner/*",
 			want:    "https://github.com/other/repo.git",
 		},
+
+		{
+			name:    "matching enterprise github repo",
+			host:    "mycompany.ghe.com",
+			uri:     "https://mycompany.ghe.com/owner/repo.git",
+			token:   "secret-token",
+			pattern: "owner/*",
+			want:    "https://x-access-token:secret-token@mycompany.ghe.com/owner/repo.git",
+		},
 		{
 			name:    "non-github url",
+			host:    "github.com",
 			uri:     "https://example.com/repo.git",
 			token:   "secret-token",
 			pattern: "*/*",
@@ -62,6 +75,7 @@ func TestGitHubTokenRewriter(t *testing.T) {
 		},
 		{
 			name:    "git protocol url",
+			host:    "github.com",
 			uri:     "git@github.com:owner/repo.git",
 			token:   "secret-token",
 			pattern: "owner/*",
@@ -69,6 +83,7 @@ func TestGitHubTokenRewriter(t *testing.T) {
 		},
 		{
 			name:    "git protocol url with matching pattern",
+			host:    "github.com",
 			uri:     "git@github.com:owner/repo.git",
 			token:   "secret-token",
 			pattern: "*/*",
@@ -81,7 +96,7 @@ func TestGitHubTokenRewriter(t *testing.T) {
 			matcher, err := github.GlobRepoMatcher([]string{tt.pattern})
 			assert.NoError(t, err)
 
-			rewriter := github.AuthenticatedURLRewriter(redact.Secret(tt.token), matcher)
+			rewriter := github.AuthenticatedURLRewriter(tt.host, redact.Secret(tt.token), matcher)
 			result, err := rewriter(redact.URL(tt.uri))
 
 			assert.NoError(t, err)
@@ -98,7 +113,7 @@ func TestForURIsIntegration(t *testing.T) {
 	t.Run("successful rewriting", func(t *testing.T) {
 		matcher, err := github.GlobRepoMatcher([]string{"owner/*"})
 		assert.NoError(t, err)
-		rewriter := github.AuthenticatedURLRewriter(redact.Secret("test-token"), matcher)
+		rewriter := github.AuthenticatedURLRewriter("github.com", redact.Secret("test-token"), matcher)
 
 		uris := []redact.URL{
 			"https://github.com/owner/repo1.git",

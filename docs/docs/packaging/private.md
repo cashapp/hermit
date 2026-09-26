@@ -40,7 +40,9 @@ an [OAuth token](https://docs.github.com/en/github/extending-github/git-automati
 or a [GitHub App installation token](https://docs.github.com/en/developers/apps/building-github-apps/authenticating-with-github-apps).
 This token must have the `repo` scope set at creation.
 
-The environment variable `HERMIT_GITHUB_TOKEN` must be set to this a token.
+For GitHub.com, the environment variable `HERMIT_GITHUB_TOKEN` must be set to this token. If `HERMIT_GITHUB_TOKEN` is unset, Hermit also checks `GITHUB_TOKEN`.
+
+For GitHub Enterprise Cloud data residency hosts named `<subdomain>.ghe.com`, Hermit recognizes release URLs automatically. A `github-token-auth` block is optional for release downloads; when no block configures the host, Hermit lazily runs `gh auth token -h <host>` for a matching release request. Configure a block to scope handling with `match` or to provide a token environment variable. Configured hosts resolve the same `gh` token when `token-env` is absent so HTTPS git sources can be authenticated too.
 
 You can configure a Hermit-initialized repository to use this token
 by adding a `github-token-auth` block to your `bin/hermit.hcl`.
@@ -53,3 +55,15 @@ github-token-auth {
   match = ["cashapp/*"]
 }
 ```
+
+For GitHub Enterprise Cloud with data residency, configure the enterprise web host and a token environment variable for that host:
+
+```hcl
+github-token-auth {
+  host = "mycompany.ghe.com"
+  token-env = "HERMIT_GITHUB_TOKEN_MYCOMPANY_GHE_COM"
+  match = ["mycompany/*"]
+}
+```
+
+For GitHub Enterprise hosts, Hermit uses the REST API at `https://api.<host>`. Self-hosted hosts outside the `<subdomain>.ghe.com` form require a `github-token-auth` block.

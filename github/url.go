@@ -8,9 +8,9 @@ import (
 	"github.com/cashapp/hermit/redact"
 )
 
-// isGitHubHTTPSURL checks if a URL is a GitHub HTTPS URL and returns owner/repo if it is
-func isGitHubHTTPSURL(u *url.URL) (owner, repo string, ok bool) {
-	if u.Scheme != "https" || u.Host != gitHubHost {
+// isGitHubHTTPSURL checks if a URL is an HTTPS URL for a configured GitHub host and returns owner/repo if it is.
+func isGitHubHTTPSURL(u *url.URL, host string) (owner, repo string, ok bool) {
+	if u.Scheme != "https" || NormalizeHost(u.Host) != NormalizeHost(host) {
 		return "", "", false
 	}
 
@@ -22,15 +22,17 @@ func isGitHubHTTPSURL(u *url.URL) (owner, repo string, ok bool) {
 	return parts[1], parts[2], true
 }
 
-// isGitHubSSHURL checks if a URL is a GitHub SSH URL (git@github.com:owner/repo.git)
+// isGitHubSSHURL checks if a URL is a GitHub SSH URL (git@github.com:owner/repo.git).
 func isGitHubSSHURL(uri string) bool {
 	return strings.HasPrefix(uri, "git@github.com:")
 }
 
-// AuthenticatedURLRewriter rewrites GitHub URLs to include an auth token if they match the provided pattern
-func AuthenticatedURLRewriter(token redact.Secret, matcher RepoMatcher) func(uri redact.URL) (redact.URL, error) {
+// AuthenticatedURLRewriter rewrites HTTPS URLs for a configured GitHub host to
+// include an auth token if they match the provided pattern.
+func AuthenticatedURLRewriter(host string, token redact.Secret, matcher RepoMatcher) func(uri redact.URL) (redact.URL, error) {
+	host = NormalizeHost(host)
 	return func(repo redact.URL) (redact.URL, error) {
-		// Pass through SSH URLs unchanged
+		// Pass through SSH URLs unchanged. Users should configure SSH authentication separately.
 		if isGitHubSSHURL(repo.Reveal()) {
 			return repo, nil
 		}
@@ -43,7 +45,7 @@ func AuthenticatedURLRewriter(token redact.Secret, matcher RepoMatcher) func(uri
 			return "", errors.Errorf("invalid URL %q", repo)
 		}
 
-		owner, repoName, ok := isGitHubHTTPSURL(u)
+		owner, repoName, ok := isGitHubHTTPSURL(u, host)
 		if !ok || token == "" {
 			return repo, nil
 		}

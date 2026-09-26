@@ -16,11 +16,11 @@ import (
 
 type testGHAPI []string
 
-func (v testGHAPI) LatestRelease(repo string) (*github.Release, error) {
+func (v testGHAPI) LatestRelease(host, repo string) (*github.Release, error) {
 	return &github.Release{TagName: v[0]}, nil
 }
 
-func (v testGHAPI) Releases(repo string, limit int) (releases []*github.Release, err error) {
+func (v testGHAPI) Releases(host, repo string, limit int) (releases []*github.Release, err error) {
 	for i := 0; i < limit && i < len(v); i++ {
 		releases = append(releases, &github.Release{TagName: v[i]})
 	}
