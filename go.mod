@@ -22,7 +22,7 @@ require (
 	github.com/gobwas/glob v0.2.3
 	github.com/itchyny/gojq v0.12.19
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
-	github.com/klauspost/compress v1.20.0
+	github.com/klauspost/compress v1.20.1
 	github.com/mattn/go-isatty v0.0.24
 	github.com/mitchellh/go-ps v1.0.0
 	github.com/otiai10/copy v1.14.1
@@ -31,7 +31,7 @@ require (
 	github.com/saracen/go7z v0.0.0-20191010121135-9c09b6bd7fda
 	github.com/sassoftware/go-rpmutils v0.4.0
 	github.com/square/exit v1.3.0
-	github.com/ulikunitz/xz v0.5.16
+	github.com/ulikunitz/xz v0.5.17
 	github.com/willabides/kongplete v0.4.0
 	github.com/willdonnelly/passwd v0.0.0-20141013001024-7935dab3074c
 	golang.org/x/net v0.59.0
