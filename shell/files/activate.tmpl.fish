@@ -47,7 +47,7 @@ end
 # Initialize the Hermit environment
 set -e DEACTIVATED_HERMIT
 set -gx ACTIVE_HERMIT "$HERMIT_ENV"
-set -gx HERMIT_ENV_OPS "$("$HERMIT_ENV/bin/hermit" env --ops)"
+set -gx HERMIT_ENV_OPS {{ .EnvOps | FishQuote }}
 set -gx HERMIT_BIN_CHANGE "$(/bin/date -r "$HERMIT_ENV/bin" +"%s")"
 
 # Function to update Hermit environment

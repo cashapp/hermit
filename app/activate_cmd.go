@@ -53,6 +53,10 @@ func (a *activateCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, global
 		return errors.WithStack(err)
 	}
 	environ := envars.Parse(os.Environ()).Apply(env.Root(), ops).Changed(true)
+	envOps, err := envars.MarshalOps(ops)
+	if err != nil {
+		return errors.Wrap(err, "failed to encode envar operations")
+	}
 	// Apply user config settings
 	prompt := userConfig.Prompt
 	if userConfig.ShortPrompt {
@@ -67,6 +71,7 @@ func (a *activateCmd) Run(l *ui.UI, cache *cache.Cache, sta *state.State, global
 	}
 	return shell.ActivateHermit(os.Stdout, sh, shell.ActivationConfig{
 		Env:    environ,
+		EnvOps: string(envOps),
 		Root:   env.Root(),
 		Prompt: prompt,
 	})

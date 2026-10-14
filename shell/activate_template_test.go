@@ -20,6 +20,7 @@ func TestPosixActivationScriptQuotesPathsWithSpaces(t *testing.T) {
 		Env: envars.Envars{
 			"HERMIT_BIN": root + "/bin",
 		},
+		EnvOps: `[{"f":{"n":"HERMIT_BIN","v":"` + root + `/bin"}}]`,
 	})
 	assert.NoError(t, err)
 
@@ -28,7 +29,8 @@ func TestPosixActivationScriptQuotesPathsWithSpaces(t *testing.T) {
 	assert.Contains(t, script, `export ACTIVE_HERMIT="${HERMIT_ENV}"`)
 	assert.Contains(t, script, `eval "$("${ACTIVE_HERMIT}/bin/hermit" env --deactivate-from-ops="${HERMIT_ENV_OPS}")"`)
 	assert.Contains(t, script, `echo "Hermit environment $("${HERMIT_ENV}/bin/hermit" env HERMIT_ENV) deactivated"`)
-	assert.Contains(t, script, `export HERMIT_ENV_OPS="$("${HERMIT_ENV}/bin/hermit" env --ops)"`)
+	assert.Contains(t, script,
+		`export HERMIT_ENV_OPS='[{"f":{"n":"HERMIT_BIN","v":"/tmp/Application Support/hermit env/bin"}}]'`)
 	assert.Contains(t, script, `export HERMIT_BIN_CHANGE="$(/bin/date -r "${HERMIT_ENV}/bin" +"%s")"`)
 	assert.Contains(t, script, `local CUR_HERMIT="${HERMIT_ENV}/bin/hermit"`)
 
@@ -135,6 +137,7 @@ func TestFishActivationScriptQuotesPathsWithSpaces(t *testing.T) {
 		Env: envars.Envars{
 			"HERMIT_BIN": root + "/bin",
 		},
+		EnvOps: `[{"f":{"n":"HERMIT_BIN","v":"` + root + `/bin"}}]`,
 	})
 	assert.NoError(t, err)
 
@@ -142,7 +145,8 @@ func TestFishActivationScriptQuotesPathsWithSpaces(t *testing.T) {
 	assert.Contains(t, script, "set -gx HERMIT_ENV '/tmp/Application Support/hermit env'")
 	assert.Contains(t, script, `set -gx ACTIVE_HERMIT "$HERMIT_ENV"`)
 	assert.Contains(t, script, `echo "Hermit environment $("$HERMIT_ENV/bin/hermit" env HERMIT_ENV) deactivated"`)
-	assert.Contains(t, script, `set -gx HERMIT_ENV_OPS "$("$HERMIT_ENV/bin/hermit" env --ops)"`)
+	assert.Contains(t, script,
+		`set -gx HERMIT_ENV_OPS '[{"f":{"n":"HERMIT_BIN","v":"/tmp/Application Support/hermit env/bin"}}]'`)
 
 	if strings.Contains(script, "set -gx HERMIT_ENV /tmp/Application Support/hermit env") {
 		t.Fatalf("generated fish script still contains unquoted HERMIT_ENV assignment:\n%s", script)

@@ -21,6 +21,11 @@ type ActivationConfig struct {
 	Root   string
 	Prompt string
 	Env    envars.Envars
+	// EnvOps is the JSON encoding of the envars.Ops for this environment, as
+	// produced by "hermit env --ops". Activation already computes these, so
+	// inlining them saves the generated script from spawning hermit again to ask
+	// for a value it was just given.
+	EnvOps string
 }
 
 // Shell abstracts shell specific functionality

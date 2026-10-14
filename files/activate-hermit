@@ -10,12 +10,18 @@ if [ "${BASH_SOURCE-}" = "$0" ]; then
 fi
 
 BIN_DIR="$(dirname "${BASH_SOURCE[0]:-${(%):-%x}}")"
-if "${BIN_DIR}/hermit" noop > /dev/null; then
-  eval "$("${BIN_DIR}/hermit" activate "${BIN_DIR}/..")"
+# Capturing the activation script also reports whether hermit ran at all, which
+# is what the previous "hermit noop" probe was for. Folding the two together
+# means a working environment spawns hermit once here instead of twice.
+if _hermit_activation="$("${BIN_DIR}/hermit" activate "${BIN_DIR}/..")"; then
+  # Discard the captured script as part of running it: it may return early when
+  # the environment is already active, which would skip a later unset.
+  eval "unset _hermit_activation
+${_hermit_activation}"
 
   if [ -n "${BASH-}" ] || [ -n "${ZSH_VERSION-}" ]; then
       hash -r 2>/dev/null
     fi
 
-    echo "Hermit environment $("${HERMIT_ENV}"/bin/hermit env HERMIT_ENV) activated"
+    echo "Hermit environment ${HERMIT_ENV} activated"
 fi

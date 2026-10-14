@@ -55,8 +55,20 @@ deactivate-hermit() {
 
 unset DEACTIVATED_HERMIT
 export ACTIVE_HERMIT="${HERMIT_ENV}"
-export HERMIT_ENV_OPS="$("${HERMIT_ENV}/bin/hermit" env --ops)"
+export HERMIT_ENV_OPS={{ .EnvOps | Quote }}
+{{- if .Zsh }}
+# zstat is a builtin, so reading the mtime costs no process at all. That matters
+# most in update_hermit_env below, which runs before every prompt. It also means
+# there is no external command here for repo code on PATH to shadow, which is
+# what the absolute /bin/date paths defend against.
+zmodload -F zsh/stat b:zstat 2>/dev/null
+_hermit_bin_mtime=()
+zstat -A _hermit_bin_mtime +mtime "${HERMIT_ENV}/bin" 2>/dev/null
+export HERMIT_BIN_CHANGE="${_hermit_bin_mtime[1]:-$(/bin/date -r "${HERMIT_ENV}/bin" +"%s")}"
+unset _hermit_bin_mtime
+{{- else }}
 export HERMIT_BIN_CHANGE="$(/bin/date -r "${HERMIT_ENV}/bin" +"%s")"
+{{- end }}
 
 {{- if ne .Prompt "none" }}
 if test -n "${PS1+_}"; then
@@ -82,7 +94,14 @@ fi
 
 update_hermit_env() {
   local CURRENT
+{{- if .Zsh }}
+  local -a _hermit_mtime
+  _hermit_mtime=()
+  zstat -A _hermit_mtime +mtime "${HERMIT_ENV}/bin" 2>/dev/null
+  CURRENT="${_hermit_mtime[1]:-$(/bin/date -r "${HERMIT_ENV}/bin" +"%s")}"
+{{- else }}
   CURRENT="$(/bin/date -r "${HERMIT_ENV}/bin" +"%s")"
+{{- end }}
   test "$CURRENT" = "$HERMIT_BIN_CHANGE" && return 0
   local CUR_HERMIT="${HERMIT_ENV}/bin/hermit"
   eval "$("${ACTIVE_HERMIT}/bin/hermit" env --deactivate-from-ops="${HERMIT_ENV_OPS}")"
