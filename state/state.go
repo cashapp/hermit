@@ -327,15 +327,19 @@ func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 	// Download outside the lock — network I/O no longer blocks other hermit processes.
 	// This is safe because cache paths are content-addressed and the cache layer
 	// uses temp files + atomic os.Rename (see cache/http.go downloadHTTP()).
+	// A mirror hit is cached under the mirror's URL, not p.Source, so keep the
+	// path for extract rather than letting it re-check p.Source and re-download.
+	var downloaded string
 	if !s.isCached(p) {
 		mirrors := make([]redact.URL, len(p.Mirrors))
 		copy(mirrors, p.Mirrors)
 		mirrors = append(mirrors, s.generateMirrors(p.Source)...)
-		_, etag, _, err := s.cache.Download(b, p.SHA256, p.Source, mirrors...)
+		path, etag, _, err := s.cache.Download(b, p.SHA256, p.Source, mirrors...)
 		if err != nil {
 			return errors.WithStack(err)
 		}
 		p.ETag = etag
+		downloaded = path
 	}
 
 	// Lock only for extract + link (fast local filesystem operations).
@@ -346,7 +350,7 @@ func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 	defer release() //nolint:errcheck
 
 	if !s.isExtracted(p) {
-		if err := s.extract(b, p); err != nil {
+		if err := s.extract(b, p, downloaded); err != nil {
 			return errors.WithStack(err)
 		}
 	}
@@ -419,14 +423,16 @@ func (s *State) linkBinaries(p *manifest.Package) error {
 	return nil
 }
 
-func (s *State) extract(b *ui.Task, p *manifest.Package) error {
+func (s *State) extract(b *ui.Task, p *manifest.Package, path string) error {
 	var (
-		path string
 		etag string
 		err  error
 	)
 
-	if !s.isCached(p) {
+	switch {
+	case path != "":
+		// Already downloaded by the caller, possibly from a mirror.
+	case !s.isCached(p):
 		mirrors := make([]redact.URL, len(p.Mirrors))
 		copy(mirrors, p.Mirrors)
 		mirrors = append(mirrors, s.generateMirrors(p.Source)...)
@@ -436,7 +442,7 @@ func (s *State) extract(b *ui.Task, p *manifest.Package) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
-	} else {
+	default:
 		path = s.cache.Path(p.SHA256, p.Source)
 	}
 
