@@ -4,12 +4,14 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/manifest/manifesttest"
+	"github.com/cashapp/hermit/redact"
 	"github.com/cashapp/hermit/ui"
 )
 
@@ -61,6 +63,64 @@ func TestCacheAndUnpackDownloadsOnlyWhenNeeded(t *testing.T) {
 	err = state.CacheAndUnpack(log.Task("test"), pkg)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, calls)
+}
+
+func TestCacheAndUnpackFromHTTPMirrorDownloadsOnce(t *testing.T) {
+	calls := 0
+	fixture := NewStateTestFixture(t).
+		WithHTTPHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != "/mirror.tar.gz" {
+				http.NotFound(w, r)
+				return
+			}
+			fr, err := os.Open("../archive/testdata/archive.tar.gz")
+			assert.NoError(t, err)
+			defer fr.Close()
+			_, err = io.Copy(w, fr)
+			assert.NoError(t, err)
+			calls++
+		}))
+	defer fixture.Clean()
+	state := fixture.State()
+
+	log, _ := ui.NewForTesting()
+	pkg := manifesttest.NewPkgBuilder(state.PkgDir()).WithSource(fixture.Server.URL + "/source.tar.gz").Result()
+	pkg.Mirrors = []redact.URL{redact.URL(fixture.Server.URL + "/mirror.tar.gz")}
+
+	err := state.CacheAndUnpack(log.Task("test"), pkg)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, calls)
+}
+
+func TestCacheAndUnpackFromGitMirror(t *testing.T) {
+	repo := filepath.Join(t.TempDir(), "repo.git")
+	assert.NoError(t, os.MkdirAll(repo, 0700))
+	assert.NoError(t, os.WriteFile(filepath.Join(repo, "hello"), []byte("#!/bin/sh\n"), 0700))
+	for _, args := range [][]string{
+		{"init", "-q", repo},
+		{"-C", repo, "add", "hello"},
+		{"-C", repo, "-c", "user.name=test", "-c", "user.email=test@example.com", "commit", "-q", "-m", "init"},
+		{"-C", repo, "tag", "v1.0.0"},
+	} {
+		out, err := exec.Command("git", args...).CombinedOutput()
+		assert.NoError(t, err, string(out))
+	}
+	fixture := NewStateTestFixture(t).
+		WithHTTPHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.NotFound(w, r)
+		}))
+	defer fixture.Clean()
+	state := fixture.State()
+
+	log, _ := ui.NewForTesting()
+	pkg := manifesttest.NewPkgBuilder(state.PkgDir()).
+		WithSource(fixture.Server.URL + "/source.tar.gz").
+		WithBinaries("hello").
+		Result()
+	pkg.Mirrors = []redact.URL{redact.URL("file://" + repo + "#v1.0.0")}
+
+	err := state.CacheAndUnpack(log.Task("test"), pkg)
+	assert.NoError(t, err)
 }
 
 func TestCacheAndUnpackHooksRunOnMutablePackage(t *testing.T) {
