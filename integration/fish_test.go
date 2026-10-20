@@ -103,3 +103,48 @@ printf '%s' "$FOO" > FOO.txt
 	assert.NoError(t, err)
 	assert.Equal(t, "bar", string(foo))
 }
+
+func TestFishReassertsEnvironmentAtFirstPrompt(t *testing.T) {
+	fish, dir, environ := initFishEnv(t)
+
+	config := `env = {
+  "PATH": "${HERMIT_ENV}/tool/bin:${PATH}",
+  "TOOL_HOME": "${HERMIT_ENV}/tool",
+}
+`
+	err := os.WriteFile(filepath.Join(dir, "bin", "hermit.hcl"), []byte(config), 0600)
+	assert.NoError(t, err)
+
+	// Hermit's conf.d hook activates before config.fish, which may then change
+	// the environment.
+	cmd := exec.Command(fish, "--no-config", "-c", `
+bin/hermit activate . | source
+set -gx PATH /rvm/bin $PATH
+set -gx TOOL_HOME /rvm/tool
+emit fish_prompt
+string join : $PATH > reasserted-PATH.txt
+printf '%s' "$TOOL_HOME" > reasserted-TOOL_HOME.txt
+deactivate-hermit
+string join : $PATH > deactivated-PATH.txt
+printf '%s' "$TOOL_HOME" > deactivated-TOOL_HOME.txt
+`)
+	cmd.Dir = dir
+	cmd.Env = environ
+	output, err := cmd.CombinedOutput()
+	assert.NoError(t, err, "%s", output)
+
+	read := func(name string) string {
+		t.Helper()
+		data, err := os.ReadFile(filepath.Join(dir, name))
+		assert.NoError(t, err)
+		return string(data)
+	}
+	root, err := filepath.EvalSymlinks(dir)
+	assert.NoError(t, err)
+	assert.True(t, strings.HasPrefix(read("reasserted-PATH.txt"), root+"/tool/bin:"), "%s", read("reasserted-PATH.txt"))
+	assert.Contains(t, read("reasserted-PATH.txt"), ":"+root+"/bin:/rvm/bin:")
+	assert.Equal(t, root+"/tool", read("reasserted-TOOL_HOME.txt"))
+	// Deactivation restores what config.fish set.
+	assert.True(t, strings.HasPrefix(read("deactivated-PATH.txt"), "/rvm/bin:"), "%s", read("deactivated-PATH.txt"))
+	assert.Equal(t, "/rvm/tool", read("deactivated-TOOL_HOME.txt"))
+}

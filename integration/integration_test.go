@@ -1184,6 +1184,76 @@ EOF
 			`,
 		},
 		{
+			name: "ZshReassertsPackageEnvironmentAtFirstPrompt",
+			script: `
+				hermit init --no-git --sources env:///packages .
+				mkdir -p packages
+				printf 'tool' > packages/tool.txt
+				tar -czf packages/tool.tgz -C packages tool.txt
+				cat > packages/tool.hcl <<'EOF'
+description = "Sets environment variables"
+source = "${env}/packages/tool.tgz"
+env = {
+  PATH: "${env}/.hermit/tool/bin:${PATH}",
+  TOOL_HOME: "${env}/.hermit/tool",
+}
+version "1.0.0" {}
+EOF
+				./bin/hermit install tool
+				export HERMIT_PREPEND_PATH="/prepend/first:/prepend/second"
+				. bin/activate-hermit
+				expected="/prepend/first:/prepend/second:${HERMIT_ENV}/.hermit/tool/bin:${HERMIT_LINK_FARM}:${HERMIT_ENV}/bin"
+				assert test "${PATH#"$expected:"}" != "$PATH"
+				if [ -n "${ZSH_VERSION-}" ]; then
+					# Simulate startup files that run after activation.
+					PATH="/rvm/bin:$PATH"
+					export TOOL_HOME=/rvm/tool
+					for f in $precmd_functions; do "$f"; done
+					assert test "${PATH#"$expected:/rvm/bin:"}" != "$PATH"
+					assert test "$TOOL_HOME" = "${HERMIT_ENV}/.hermit/tool"
+					# Deactivation restores what the startup files set.
+					deactivate-hermit
+					assert test "${PATH#/rvm/bin:}" != "$PATH"
+					assert test "$TOOL_HOME" = /rvm/tool
+				fi
+			`,
+		},
+		{
+			// A child bash inherits the environment's variables but not its
+			// shell functions, and its startup files may change the environment.
+			name: "BashChildShellRestoresEnvironmentAtPrompt",
+			script: `
+				hermit init --no-git .
+				cat > bin/hermit.hcl <<'EOF'
+env = {
+  "PATH": "${HERMIT_ENV}/tool/bin:${PATH}",
+  "TOOL_HOME": "${HERMIT_ENV}/tool",
+}
+EOF
+				. bin/activate-hermit
+				bash --norc --noprofile -c '
+					eval "$(hermit shell-hooks --print --bash)"
+					# Simulate startup files.
+					PATH="/rvm/bin:$PATH"
+					export TOOL_HOME=/rvm/tool
+					eval "$PROMPT_COMMAND"
+					type deactivate-hermit > child-functions.txt 2>&1
+					printf "%s" "$PATH" > child-PATH.txt
+					printf "%s" "$TOOL_HOME" > child-TOOL_HOME.txt
+					deactivate-hermit
+					printf "%s" "$PATH" > child-deactivated-PATH.txt
+					printf "%s" "${TOOL_HOME-}" > child-deactivated-TOOL_HOME.txt
+				'
+				assert grep -q function child-functions.txt
+				expected="${HERMIT_ENV}/tool/bin:${HERMIT_LINK_FARM}:${HERMIT_ENV}/bin:/rvm/bin:"
+				assert test "$(cut -c1-${#expected} child-PATH.txt)" = "$expected"
+				assert test "$(cat child-TOOL_HOME.txt)" = "${HERMIT_ENV}/tool"
+				# Deactivation restores what the startup files set.
+				assert test "$(cut -c1-9 child-deactivated-PATH.txt)" = "/rvm/bin:"
+				assert test "$(cat child-deactivated-TOOL_HOME.txt)" = /rvm/tool
+			`,
+		},
+		{
 			name:         "CleanPackagesDoesNotChmodSymlinkTargets",
 			preparations: prep{fixture("testenv1"), activate(".")},
 			script: `

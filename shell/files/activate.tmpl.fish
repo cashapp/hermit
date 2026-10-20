@@ -26,6 +26,7 @@ function _hermit_deactivate
     "$ACTIVE_HERMIT/bin/hermit" env --deactivate-from-ops="$HERMIT_ENV_OPS" | source
     functions -e deactivate-hermit > /dev/null 2>&1
     functions -e update_hermit_env > /dev/null 2>&1
+    functions -e reassert_hermit_env > /dev/null 2>&1
     set -e ACTIVE_HERMIT
     set -e HERMIT_ENV_OPS
 
@@ -61,6 +62,13 @@ function update_hermit_env --on-event fish_prompt
     "$CUR_HERMIT" env --activate | source
     set -gx HERMIT_ENV_OPS "$("$HERMIT_ENV/bin/hermit" env --ops)"
     set -gx HERMIT_BIN_CHANGE "$CURRENT"
+end
+
+# Hermit's conf.d hook activates before config.fish, which may override the
+# environment, so re-assert it once at the first prompt.
+function reassert_hermit_env --on-event fish_prompt
+    functions -e reassert_hermit_env
+    "$ACTIVE_HERMIT/bin/hermit" env --reassert-from-ops="$HERMIT_ENV_OPS" | source
 end
 
 # Call user-defined activate hook if it exists
