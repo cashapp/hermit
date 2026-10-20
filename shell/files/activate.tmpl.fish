@@ -48,11 +48,13 @@ end
 set -e DEACTIVATED_HERMIT
 set -gx ACTIVE_HERMIT "$HERMIT_ENV"
 set -gx HERMIT_ENV_OPS "$("$HERMIT_ENV/bin/hermit" env --ops)"
-set -gx HERMIT_BIN_CHANGE "$(/bin/date -r "$HERMIT_ENV/bin" +"%s")"
+# Package changes add or remove entries in bin/, changing its mtime, but edits
+# to hermit.hcl rewrite an existing file, so check both. hermit.hcl is optional.
+set -gx HERMIT_BIN_CHANGE "$(/bin/date -r "$HERMIT_ENV/bin" +"%s"):$(/bin/date -r "$HERMIT_ENV/bin/hermit.hcl" +"%s" 2>/dev/null)"
 
 # Function to update Hermit environment
-function update_hermit_env
-    set CURRENT "$(/bin/date -r "$HERMIT_ENV/bin" +"%s")"
+function update_hermit_env --on-event fish_prompt
+    set CURRENT "$(/bin/date -r "$HERMIT_ENV/bin" +"%s"):$(/bin/date -r "$HERMIT_ENV/bin/hermit.hcl" +"%s" 2>/dev/null)"
     test "$CURRENT" = "$HERMIT_BIN_CHANGE"; and return 0
     set CUR_HERMIT "$HERMIT_ENV/bin/hermit"
     "$ACTIVE_HERMIT/bin/hermit" env --deactivate-from-ops="$HERMIT_ENV_OPS" | source

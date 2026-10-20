@@ -63,14 +63,17 @@ with-prompt-hooks() {
   # We need to reset the change timestamp, as file timestamps are at second resolution.
   # Some IT updates could be lost without this
   export HERMIT_BIN_CHANGE=0
+  run-prompt-hooks
+  return $res
+}
 
+# Run the hooks an interactive shell would run before its next prompt.
+run-prompt-hooks() {
   if test -n "${PROMPT_COMMAND+_}"; then
     eval "$PROMPT_COMMAND"
   elif [ -n "${ZSH_VERSION-}" ]; then
     update_hermit_env
   fi
-
-  return $res
 }
 `
 
@@ -504,6 +507,32 @@ EOF
 				. bin/activate-hermit
 				assert test -z "$(hermit env FOO)"
 				with-prompt-hooks hermit env FOO bar
+				assert test "${FOO:-}" = "bar"
+			`,
+		},
+		{
+			// Backdate instead of using with-prompt-hooks, which forces a refresh
+			// and so bypasses the hooks' second-resolution mtime check.
+			name:         "PromptHooksDetectHermitEnvCommand",
+			preparations: prep{fixture("testenv1")},
+			script: `
+				touch -t 200001010000 bin bin/hermit.hcl
+				. bin/activate-hermit
+				hermit env FOO bar
+				run-prompt-hooks
+				assert test "${FOO:-}" = "bar"
+			`,
+		},
+		{
+			name:         "PromptHooksDetectInPlaceConfigEdit",
+			preparations: prep{fixture("testenv1")},
+			script: `
+				touch -t 200001010000 bin bin/hermit.hcl
+				. bin/activate-hermit
+				# Rewriting an existing file, as many editors do, leaves the
+				# mtime of bin unchanged.
+				printf 'env = { "FOO": "bar" }\nsources = ["env:///packages"]\n' > bin/hermit.hcl
+				run-prompt-hooks
 				assert test "${FOO:-}" = "bar"
 			`,
 		},

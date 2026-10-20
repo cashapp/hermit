@@ -1235,21 +1235,47 @@ func (e *Env) SetEnv(key, value string) error {
 		return errors.WithStack(err)
 	}
 	e.config.Envars[key] = value
-	data, err := hcl.Marshal(e.config)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	return os.WriteFile(e.configFile, data, 0600)
+	return e.writeConfig()
 }
 
 // DelEnv deletes a custom environment variable.
 func (e *Env) DelEnv(key string) error {
 	delete(e.config.Envars, key)
+	return e.writeConfig()
+}
+
+// writeConfig atomically replaces the configuration file, so concurrent
+// readers such as shell prompt hooks never see a partially written file.
+func (e *Env) writeConfig() error {
 	data, err := hcl.Marshal(e.config)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	return os.WriteFile(e.configFile, data, 0600)
+	// Replace a symlink's target rather than the symlink itself.
+	path := e.configFile
+	if resolved, err := filepath.EvalSymlinks(path); err == nil {
+		path = resolved
+	}
+	perm := os.FileMode(0600)
+	if info, err := os.Stat(path); err == nil {
+		perm = info.Mode().Perm()
+	}
+	w, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".*")
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer os.Remove(w.Name())
+	_, err = w.Write(data)
+	if err == nil {
+		err = w.Chmod(perm)
+	}
+	if closeErr := w.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		return errors.Wrap(err, path)
+	}
+	return errors.WithStack(os.Rename(w.Name(), path))
 }
 
 // Clean parts of the hermit system.

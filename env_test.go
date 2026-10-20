@@ -619,6 +619,28 @@ func TestEnv_EphemeralVariableSubstitutionOverride(t *testing.T) {
 	opsContains(t, vars, "TOOL_HOME="+fixture.Env.Root()+"/.hermit/tool")
 }
 
+func TestSetEnvPreservesConfigSymlinkAndPermissions(t *testing.T) {
+	fixture := hermittest.NewEnvTestFixture(t, nil)
+	configFile := filepath.Join(fixture.Env.Root(), "bin", "hermit.hcl")
+	target := filepath.Join(fixture.Env.Root(), "shared.hcl")
+	assert.NoError(t, os.Rename(configFile, target))
+	assert.NoError(t, os.Chmod(target, 0644))
+	assert.NoError(t, os.Symlink(target, configFile))
+
+	err := fixture.Env.SetEnv("FOO", "bar")
+	assert.NoError(t, err)
+
+	link, err := os.Readlink(configFile)
+	assert.NoError(t, err)
+	assert.Equal(t, target, link)
+	info, err := os.Stat(target)
+	assert.NoError(t, err)
+	assert.Equal(t, os.FileMode(0644), info.Mode().Perm())
+	data, err := os.ReadFile(target)
+	assert.NoError(t, err)
+	assert.Contains(t, string(data), `"FOO": "bar"`)
+}
+
 func TestLoadEnvInfo(t *testing.T) {
 	tests := []struct {
 		name     string
