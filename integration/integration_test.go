@@ -600,6 +600,108 @@ EOF
 			`,
 		},
 		{
+			name:         "ActivatedShellRunsUnpackedBinariesThroughLinkFarm",
+			preparations: prep{fixture("testenv1")},
+			script: `
+				./bin/hermit install testbin1-1.0.0
+				. bin/activate-hermit
+				case "${HERMIT_LINK_FARM}" in
+					"$HERMIT_STATE_DIR"/environments/*) ;;
+					*) hermit-send "error: unexpected link farm ${HERMIT_LINK_FARM}"; exit 1 ;;
+				esac
+				assert test "$(command -v testbin1)" = "${HERMIT_LINK_FARM}/testbin1"
+				assert test "$(testbin1)" = "testbin1 1.0.0"
+				old_farm="${HERMIT_LINK_FARM}"
+
+				with-prompt-hooks hermit install testbin1-1.0.1
+				assert test "${HERMIT_LINK_FARM}" != "${old_farm}"
+				assert test "$(command -v testbin1)" = "${HERMIT_LINK_FARM}/testbin1"
+				assert test "$(testbin1)" = "testbin1 1.0.1"
+				# Processes that resolved binaries through the old farm keep working.
+				case "$(readlink "${old_farm}/testbin1")" in
+					*/testbin1-1.0.0/testbin1) ;;
+					*) hermit-send "error: old link farm was modified"; exit 1 ;;
+				esac
+
+				deactivate-hermit
+				assert test -z "${HERMIT_LINK_FARM:-}"
+				if echo "$PATH" | grep -qF "$HERMIT_STATE_DIR/environments"; then
+					hermit-send "error: link farm left on PATH after deactivation"
+					exit 1
+				fi
+				./bin/hermit clean --packages
+				assert test ! -e "${old_farm}"
+			`,
+		},
+		{
+			name:         "ActivatedShellRunsPackagesThatAreNotUnpackedThroughStubs",
+			preparations: prep{fixture("testenv1")},
+			script: `
+				./bin/hermit install testbin1-1.0.0
+				./bin/hermit clean --packages
+				. bin/activate-hermit
+				assert test "$(command -v testbin1)" = "${HERMIT_ENV}/bin/testbin1"
+				assert test "$(testbin1)" = "testbin1 1.0.0"
+			`,
+		},
+		{
+			name: "ActivationRefreshesDueChannelForLinkedBinaries",
+			script: `
+				hermit init --no-git --sources env:///packages .
+				mkdir -p packages upstream.git
+				git -C upstream.git init -q
+				git -C upstream.git config user.name 'Hermit Test'
+				git -C upstream.git config user.email hermit@example.com
+				git -C upstream.git config commit.gpgsign false
+				printf '#!/bin/sh\necho first\n' > upstream.git/fresh.sh
+				chmod +x upstream.git/fresh.sh
+				git -C upstream.git add fresh.sh
+				git -C upstream.git commit -qm first
+				git -C upstream.git branch -M channel
+				cat > packages/fresh.hcl <<'EOF'
+description = "Channel package run through the link farm"
+binaries = ["fresh.sh"]
+channel "edge" {
+  update = "1h"
+  source = "file://${env}/upstream.git#channel"
+}
+EOF
+				./bin/hermit install fresh@edge
+				. bin/activate-hermit
+				assert test "$(command -v fresh.sh)" = "${HERMIT_LINK_FARM}/fresh.sh"
+				assert test "$(fresh.sh)" = first
+				printf '#!/bin/sh\necho second\n' > upstream.git/fresh.sh
+				git -C upstream.git commit -qam second
+				# The linked binary bypasses its stub, so only re-activation can pick up the update.
+				touch -t 200001010000 "$HERMIT_STATE_DIR/metadata/fresh@edge.etag"
+				with-prompt-hooks true
+				assert test "$(fresh.sh)" = second
+			`,
+		},
+		{
+			name: "ActivatedShellRunsExecTriggersThroughStubs",
+			script: `
+				hermit init --no-git --sources env:///packages .
+				mkdir -p packages
+				printf '#!/bin/sh\necho hooked\n' > packages/hooked.sh
+				chmod +x packages/hooked.sh
+				cat > packages/hooked.hcl <<'EOF'
+description = "Package with an exec trigger"
+source = "${env}/packages/hooked.sh"
+binaries = ["hooked.sh"]
+on exec {
+  run { cmd = "/usr/bin/touch" args = ["${env}/exec-triggered"] }
+}
+version "1.0.0" {}
+EOF
+				./bin/hermit install hooked
+				. bin/activate-hermit
+				assert test "$(command -v hooked.sh)" = "${HERMIT_ENV}/bin/hooked.sh"
+				assert test "$(hooked.sh)" = hooked
+				assert test -e exec-triggered
+			`,
+		},
+		{
 			name:         "InstallingEnvPackagesIsaNoop",
 			preparations: prep{fixture("testenv1"), activate(".")},
 			script: `
@@ -1053,12 +1155,14 @@ EOF
 			script: `
 				. bin/activate-hermit
 				if [ -n "${ZSH_VERSION-}" ]; then
-					assert test "${path[1]}" = "${HERMIT_ENV}/bin"
+					assert test "${path[1]}" = "${HERMIT_LINK_FARM}"
+					assert test "${path[2]}" = "${HERMIT_ENV}/bin"
 					PATH="/rvm/bin:$PATH"
 					# Run the precmd hooks as an interactive shell would at the next prompt.
 					for f in $precmd_functions; do "$f"; done
-					assert test "${path[1]}" = "${HERMIT_ENV}/bin"
-					assert test "${path[2]}" = "/rvm/bin"
+					assert test "${path[1]}" = "${HERMIT_LINK_FARM}"
+					assert test "${path[2]}" = "${HERMIT_ENV}/bin"
+					assert test "${path[3]}" = "/rvm/bin"
 				fi
 			`,
 		},
@@ -1073,8 +1177,9 @@ EOF
 					for f in $precmd_functions; do "$f"; done
 					assert test "${path[1]}" = "/prepend/first"
 					assert test "${path[2]}" = "/prepend/second"
-					assert test "${path[3]}" = "${HERMIT_ENV}/bin"
-					assert test "${path[4]}" = "/rvm/bin"
+					assert test "${path[3]}" = "${HERMIT_LINK_FARM}"
+					assert test "${path[4]}" = "${HERMIT_ENV}/bin"
+					assert test "${path[5]}" = "/rvm/bin"
 				fi
 			`,
 		},

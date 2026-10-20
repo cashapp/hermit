@@ -59,6 +59,7 @@ type State struct {
 	pkgDir      string // Path to unpacked packages.
 	sourcesDir  string // Path to extracted sources.
 	binaryDir   string // Path to directory with symlinks to package binaries
+	envsDir     string // Path to per-environment directories of symlinks to package binaries
 	config      Config
 	autoMirrors []precompiledAutoMirror
 	cache       *cache.Cache
@@ -79,6 +80,7 @@ func Open(stateDir string, config Config, cache *cache.Cache) (*State, error) {
 	cacheDir := filepath.Join(stateDir, "cache")
 	sourcesDir := filepath.Join(stateDir, "sources")
 	binaryDir := filepath.Join(stateDir, "binaries")
+	envsDir := filepath.Join(stateDir, "environments")
 	dao, err := dao.Open(stateDir)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -99,6 +101,7 @@ func Open(stateDir string, config Config, cache *cache.Cache) (*State, error) {
 		cacheDir:    cacheDir,
 		sourcesDir:  sourcesDir,
 		binaryDir:   binaryDir,
+		envsDir:     envsDir,
 		config:      config,
 		pkgDir:      pkgDir,
 		cache:       cache,
@@ -208,6 +211,12 @@ func (s *State) PkgDir() string {
 // BinaryDir returns path to the directory for bin symlinks
 func (s *State) BinaryDir() string {
 	return s.binaryDir
+}
+
+// EnvironmentsDir returns the path to the directory holding each environment's
+// directories of symlinks to package binaries.
+func (s *State) EnvironmentsDir() string {
+	return s.envsDir
 }
 
 func (s *State) resolver(l *ui.UI) (*manifest.Resolver, error) {
@@ -505,14 +514,17 @@ func (s *State) CleanPackages(b *ui.UI) error {
 	}
 	defer release() //nolint:errcheck
 
-	bins, err := os.ReadDir(s.binaryDir)
-	if err != nil && !os.IsNotExist(err) {
-		return errors.WithStack(err)
-	}
-	for _, entry := range bins {
-		path := filepath.Join(s.binaryDir, entry.Name())
-		if err = s.removeRecursive(b.Task(entry.Name()), path); err != nil {
+	// Environment link directories point into the packages being removed.
+	for _, dir := range []string{s.envsDir, s.binaryDir} {
+		entries, err := os.ReadDir(dir)
+		if err != nil && !os.IsNotExist(err) {
 			return errors.WithStack(err)
+		}
+		for _, entry := range entries {
+			path := filepath.Join(dir, entry.Name())
+			if err = s.removeRecursive(b.Task(entry.Name()), path); err != nil {
+				return errors.WithStack(err)
+			}
 		}
 	}
 
