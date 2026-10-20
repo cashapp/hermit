@@ -29,7 +29,7 @@ func TestPosixActivationScriptQuotesPathsWithSpaces(t *testing.T) {
 	assert.Contains(t, script, `eval "$("${ACTIVE_HERMIT}/bin/hermit" env --deactivate-from-ops="${HERMIT_ENV_OPS}")"`)
 	assert.Contains(t, script, `echo "Hermit environment $("${HERMIT_ENV}/bin/hermit" env HERMIT_ENV) deactivated"`)
 	assert.Contains(t, script, `export HERMIT_ENV_OPS="$("${HERMIT_ENV}/bin/hermit" env --ops)"`)
-	assert.Contains(t, script, `export HERMIT_BIN_CHANGE="$(/bin/date -r "${HERMIT_ENV}/bin" +"%s")"`)
+	assert.Contains(t, script, `export HERMIT_BIN_CHANGE="$(/bin/date -r "${HERMIT_ENV}/bin" +"%s"):$(/bin/date -r "${HERMIT_ENV}/bin/hermit.hcl" +"%s" 2>/dev/null || :)"`)
 	assert.Contains(t, script, `local CUR_HERMIT="${HERMIT_ENV}/bin/hermit"`)
 
 	if strings.Contains(script, "export HERMIT_ENV=/tmp/Application Support/hermit env") {
@@ -50,15 +50,9 @@ func TestActivationScriptsUseTrustedDate(t *testing.T) {
 			})
 			assert.NoError(t, err)
 
-			calls := 0
-			for line := range strings.SplitSeq(out.String(), "\n") {
-				if !strings.Contains(line, "date -r") {
-					continue
-				}
-				assert.Contains(t, line, "/bin/date -r")
-				calls++
-			}
-			assert.Equal(t, 2, calls)
+			script := out.String()
+			assert.Equal(t, 4, strings.Count(script, "/bin/date -r"))
+			assert.Equal(t, strings.Count(script, "/bin/date -r"), strings.Count(script, "date -r"))
 		})
 	}
 }
