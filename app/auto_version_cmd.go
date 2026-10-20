@@ -45,14 +45,16 @@ func (a *autoVersionCmd) Run(l *ui.UI, hclient *http.Client, state *state.State,
 }
 
 func autoVersionManifest(l *ui.UI, hclient *http.Client, state *state.State, client *github.Client, path string) error {
-	version, err := autoversion.AutoVersion(hclient, client, path)
+	versions, err := autoversion.AutoVersion(hclient, client, path)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	if version == "" {
+	if len(versions) == 0 {
 		return nil
 	}
-	l.Infof("Auto-versioned %s to %s", path, version)
+	for _, version := range versions {
+		l.Infof("Auto-versioned %s: added %s", path, version)
+	}
 	err = digest.UpdateDigests(l, hclient, state, path)
 	if err != nil {
 		return errors.WithStack(err)
