@@ -53,7 +53,7 @@ set -gx HERMIT_ENV_OPS "$("$HERMIT_ENV/bin/hermit" env --ops)"
 set -gx HERMIT_BIN_CHANGE "$(/bin/date -r "$HERMIT_ENV/bin" +"%s"):$(/bin/date -r "$HERMIT_ENV/bin/hermit.hcl" +"%s" 2>/dev/null)"
 
 # Function to update Hermit environment
-function update_hermit_env
+function update_hermit_env --on-event fish_prompt
     set CURRENT "$(/bin/date -r "$HERMIT_ENV/bin" +"%s"):$(/bin/date -r "$HERMIT_ENV/bin/hermit.hcl" +"%s" 2>/dev/null)"
     test "$CURRENT" = "$HERMIT_BIN_CHANGE"; and return 0
     set CUR_HERMIT "$HERMIT_ENV/bin/hermit"

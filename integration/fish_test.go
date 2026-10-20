@@ -12,11 +12,14 @@ import (
 	"github.com/alecthomas/assert/v2"
 )
 
-func TestFishActivationEscapesTrailingBackslash(t *testing.T) {
+// initFishEnv initialises a Hermit environment with a freshly built Hermit,
+// returning the fish executable, the environment directory, and its environ.
+func initFishEnv(t *testing.T) (fish, dir string, environ []string) {
+	t.Helper()
 	fish, err := exec.LookPath("fish")
 	assert.NoError(t, err)
 
-	environ := buildAndInjectHermit(t, buildEnviron(t))
+	environ = buildAndInjectHermit(t, buildEnviron(t))
 	stateDir := filepath.Join(t.TempDir(), "state")
 	userConfigFile := filepath.Join(t.TempDir(), ".hermit.hcl")
 	err = os.WriteFile(userConfigFile, nil, 0600)
@@ -37,12 +40,17 @@ func TestFishActivationEscapesTrailingBackslash(t *testing.T) {
 		t.Fatal("HERMIT_EXE not found in integration test environment")
 	}
 
-	dir := t.TempDir()
+	dir = t.TempDir()
 	cmd := exec.Command(hermitExe, "init", "--no-git", ".")
 	cmd.Dir = dir
 	cmd.Env = environ
 	output, err := cmd.CombinedOutput()
 	assert.NoError(t, err, "%s", output)
+	return fish, dir, environ
+}
+
+func TestFishActivationEscapesTrailingBackslash(t *testing.T) {
+	fish, dir, environ := initFishEnv(t)
 
 	// Regression test for DX-30: a trailing backslash must not escape the
 	// closing quote and allow the following environment value to execute.
@@ -51,17 +59,17 @@ func TestFishActivationEscapesTrailingBackslash(t *testing.T) {
   "AAB": ";touch RCE.txt; #",
 }
 `
-	err = os.WriteFile(filepath.Join(dir, "bin", "hermit.hcl"), []byte(config), 0600)
+	err := os.WriteFile(filepath.Join(dir, "bin", "hermit.hcl"), []byte(config), 0600)
 	assert.NoError(t, err)
 
-	cmd = exec.Command(fish, "--no-config", "-c", `
+	cmd := exec.Command(fish, "--no-config", "-c", `
 bin/hermit activate . | source
 printf '%s' "$AAA" > AAA.txt
 printf '%s' "$AAB" > AAB.txt
 `)
 	cmd.Dir = dir
 	cmd.Env = environ
-	output, err = cmd.CombinedOutput()
+	output, err := cmd.CombinedOutput()
 	assert.NoError(t, err, "%s", output)
 
 	aaa, err := os.ReadFile(filepath.Join(dir, "AAA.txt"))
@@ -72,4 +80,26 @@ printf '%s' "$AAB" > AAB.txt
 	assert.Equal(t, `;touch RCE.txt; #`, string(aab))
 	_, err = os.Stat(filepath.Join(dir, "RCE.txt"))
 	assert.True(t, os.IsNotExist(err), "payload created RCE.txt")
+}
+
+func TestFishPromptHookAppliesInPlaceConfigEdit(t *testing.T) {
+	fish, dir, environ := initFishEnv(t)
+
+	// Backdate the environment so the hook's second-resolution mtime check sees
+	// the edit, and rewrite hermit.hcl in place so the mtime of bin is unchanged.
+	cmd := exec.Command(fish, "--no-config", "-c", `
+touch -t 200001010000 bin bin/hermit.hcl
+bin/hermit activate . | source
+printf 'env = { "FOO": "bar" }\n' > bin/hermit.hcl
+emit fish_prompt
+printf '%s' "$FOO" > FOO.txt
+`)
+	cmd.Dir = dir
+	cmd.Env = environ
+	output, err := cmd.CombinedOutput()
+	assert.NoError(t, err, "%s", output)
+
+	foo, err := os.ReadFile(filepath.Join(dir, "FOO.txt"))
+	assert.NoError(t, err)
+	assert.Equal(t, "bar", string(foo))
 }

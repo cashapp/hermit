@@ -1251,11 +1251,16 @@ func (e *Env) writeConfig() error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
+	// Replace a symlink's target rather than the symlink itself.
+	path := e.configFile
+	if resolved, err := filepath.EvalSymlinks(path); err == nil {
+		path = resolved
+	}
 	perm := os.FileMode(0600)
-	if info, err := os.Stat(e.configFile); err == nil {
+	if info, err := os.Stat(path); err == nil {
 		perm = info.Mode().Perm()
 	}
-	w, err := os.CreateTemp(filepath.Dir(e.configFile), filepath.Base(e.configFile)+".*")
+	w, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".*")
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -1268,9 +1273,9 @@ func (e *Env) writeConfig() error {
 		err = closeErr
 	}
 	if err != nil {
-		return errors.Wrap(err, e.configFile)
+		return errors.Wrap(err, path)
 	}
-	return errors.WithStack(os.Rename(w.Name(), e.configFile))
+	return errors.WithStack(os.Rename(w.Name(), path))
 }
 
 // Clean parts of the hermit system.
