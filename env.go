@@ -492,7 +492,7 @@ func (e *Env) Activate(l *ui.UI) (messages []string, ops envars.Ops, err error) 
 	if err != nil {
 		return nil, nil, errors.WithStack(err)
 	}
-	ops, err = e.EnvOps(l)
+	ops, err = e.envOps(l, true)
 	if err != nil {
 		return nil, nil, errors.WithStack(err)
 	}
@@ -657,7 +657,7 @@ func (e *Env) Test(l *ui.UI, pkg *manifest.Package) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	cmd.Env = e.envarsFromOps(true, e.allEnvarOpsForPackages(deps, pkg))
+	cmd.Env = e.envarsFromOps(true, e.allEnvarOpsForPackages("", deps, pkg))
 	err = cmd.Run()
 	if err != nil {
 		return errors.Wrap(err, out.String())
@@ -916,7 +916,7 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 		}
 	}
 
-	ops := e.allEnvarOpsForPackages(runtimeDeps, pkg, installed...)
+	ops := e.allEnvarOpsForPackages("", runtimeDeps, pkg, installed...)
 	packageHermitBin, err := e.getPackageRuntimeEnvops(pkg)
 	if err != nil {
 		return errors.WithStack(err)
@@ -1206,6 +1206,41 @@ func (e *Env) Envars(l *ui.UI, inherit bool) ([]string, error) {
 // environment variables defined in the packages installed in the environment,
 // and finally any environment variables explicitly configured in the environment.
 func (e *Env) EnvOps(l *ui.UI) (envars.Ops, error) {
+	return e.envOps(l, false)
+}
+
+// envOps returns the envar operations for this environment. With "activate" it also creates the
+// link farm and checks linked channel packages for updates, since their stubs no longer run.
+func (e *Env) envOps(l *ui.UI, activate bool) (envars.Ops, error) {
+	pkgs, err := e.ListInstalled(l)
+	if err != nil {
+		return nil, err
+	}
+	if activate {
+		for _, pkg := range pkgs {
+			if requiresStub(pkg) {
+				continue
+			}
+			if err := e.EnsureChannelIsUpToDate(l, pkg); err != nil {
+				return nil, errors.WithStack(err)
+			}
+		}
+	}
+	farm, err := e.linkFarm(pkgs)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if activate {
+		if err := farm.create(); err != nil {
+			return nil, errors.WithStack(err)
+		}
+	}
+	return e.inheritedEnvOps(l, pkgs, farm.dir)
+}
+
+// inheritedEnvOps adds inherited parents' envar operations. Parents get no link farm because
+// their stubs apply the parent's own package variables, which the child's may override.
+func (e *Env) inheritedEnvOps(l *ui.UI, pkgs []*manifest.Package, linkFarmDir string) (envars.Ops, error) {
 	var ops envars.Ops
 
 	if e.config.InheritParent {
@@ -1215,18 +1250,18 @@ func (e *Env) EnvOps(l *ui.UI) (envars.Ops, error) {
 			return nil, err
 		}
 		if parent != nil {
-			ops, err = parent.EnvOps(l)
+			parentPkgs, err := parent.ListInstalled(l)
+			if err != nil {
+				return nil, err
+			}
+			ops, err = parent.inheritedEnvOps(l, parentPkgs, "")
 			if err != nil {
 				return nil, err
 			}
 		}
 	}
 
-	pkgs, err := e.ListInstalled(l)
-	if err != nil {
-		return nil, err
-	}
-	return append(ops, e.allEnvarOpsForPackages(nil, nil, pkgs...)...), nil
+	return append(ops, e.allEnvarOpsForPackages(linkFarmDir, nil, nil, pkgs...)...), nil
 }
 
 // SetEnv sets an extra environment variable.
@@ -1298,6 +1333,11 @@ func (e *Env) Clean(l *ui.UI, level CleanMask) error {
 			}
 			b.Debugf("rm -f %q", e.pkgLink(pkg))
 			_ = os.Remove(e.pkgLink(pkg))
+		}
+		farms := e.linkFarmsDir()
+		l.Task("clean").Debugf("rm -rf %q", farms)
+		if err := os.RemoveAll(farms); err != nil {
+			return errors.WithStack(err)
 		}
 	}
 	if level&CleanPackages != 0 {
@@ -1490,9 +1530,16 @@ func (e *Env) pkgLink(pkg *manifest.Package) string {
 // If a targetPkg is specified, the runtime dependencies and target package environment
 // variables are applied on top all the rest of package environment variables, so that
 // they take precedence.
-func (e *Env) allEnvarOpsForPackages(runtimeDeps []*manifest.Package, targetPkg *manifest.Package, allPkgs ...*manifest.Package) envars.Ops {
+// If linkFarmDir is not empty it is placed on PATH directly ahead of the bin directory.
+func (e *Env) allEnvarOpsForPackages(linkFarmDir string, runtimeDeps []*manifest.Package, targetPkg *manifest.Package, allPkgs ...*manifest.Package) envars.Ops {
 	var ops envars.Ops
 	ops = append(ops, e.hermitEnvarOps()...)
+	if linkFarmDir != "" {
+		ops = append(ops,
+			&envars.Prepend{Name: "PATH", Value: linkFarmDir},
+			&envars.Force{Name: "HERMIT_LINK_FARM", Value: linkFarmDir},
+		)
+	}
 	ops = append(ops, e.envarsForPackages(allPkgs...)...)
 	if targetPkg != nil {
 		ops = append(ops, e.hermitRuntimeDepOps(runtimeDeps)...)

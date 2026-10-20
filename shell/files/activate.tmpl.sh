@@ -113,7 +113,7 @@ precmd_functions+=(update_hermit_path)
 update_hermit_path() {
   precmd_functions=(${precmd_functions:#update_hermit_path})
   local -a hermit_path
-  hermit_path=(${(s.:.)${HERMIT_PREPEND_PATH-}} "${HERMIT_ENV}/bin")
+  hermit_path=(${(s.:.)${HERMIT_PREPEND_PATH-}} ${HERMIT_LINK_FARM-} "${HERMIT_ENV}/bin")
   path=($hermit_path ${path:|hermit_path})
 }
 {{- end}}
