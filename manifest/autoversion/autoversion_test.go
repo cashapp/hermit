@@ -43,10 +43,19 @@ func (t testHTTPClient) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 func TestAutoVersion(t *testing.T) {
+	expectedAdded := map[string][]string{
+		"css":             {"0.11.0"},
+		"github":          {"3.2.150", "5.1.234"},
+		"html":            {"1.17.5"},
+		"htmlattr":        {"0.1.12"},
+		"json":            {"1.2.3"},
+		"multiple_blocks": {"1.16.12", "1.17.5"},
+	}
 	inputs, err := filepath.Glob("testdata/*.input.hcl")
 	assert.NoError(t, err)
 	for _, input := range inputs {
-		t.Run(strings.Title(strings.TrimSuffix(filepath.Base(input), ".input.hcl")), func(t *testing.T) {
+		name := strings.TrimSuffix(filepath.Base(input), ".input.hcl")
+		t.Run(strings.Title(name), func(t *testing.T) {
 			// Copy input manifest to a temporary path.
 			tmpFile, err := os.CreateTemp(t.TempDir(), "*.hcl")
 			assert.NoError(t, err)
@@ -68,8 +77,9 @@ func TestAutoVersion(t *testing.T) {
 				}
 			}
 
-			_, err = AutoVersion(hClient, ghClient, tmpFile.Name())
+			added, err := AutoVersion(hClient, ghClient, tmpFile.Name())
 			assert.NoError(t, err)
+			assert.Equal(t, expectedAdded[name], added)
 
 			actualContent, err := os.ReadFile(tmpFile.Name())
 			assert.NoError(t, err)

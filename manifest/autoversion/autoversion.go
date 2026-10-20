@@ -27,25 +27,27 @@ type versionBlock struct {
 //
 // Auto-versioning configuration is defined in a "version > auto-version" block. If a new
 // version is found in the defined location then the version block's versions are updated.
-func AutoVersion(httpClient *http.Client, ghClient GitHubClient, path string) (latestVersion string, err error) {
+//
+// Returns every version added, across all auto-versioned blocks, in manifest order.
+func AutoVersion(httpClient *http.Client, ghClient GitHubClient, path string) (addedVersions []string, err error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
-		return "", errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
 	ast, err := hcl.ParseBytes(content)
 	if err != nil {
-		return "", errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
 	blocks, err := parseVersionBlockFromManifest(ast)
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to parse auto-version block(s)")
+		return nil, errors.Wrapf(err, "failed to parse auto-version block(s)")
 	} else if len(blocks) == 0 {
-		return "", nil
+		return nil, nil
 	}
 
-	foundLatestVersion := false
 blocks:
 	for _, block := range blocks {
+		var latestVersion string
 		switch {
 		case block.autoVersion.GitHubRelease != "":
 			latestVersion, err = gitHub(ghClient, block.autoVersion)
@@ -56,10 +58,10 @@ blocks:
 		case block.autoVersion.GitTags != "":
 			latestVersion, err = gitTagsAutoVersion(block.autoVersion)
 		default:
-			return "", errors.Errorf("%s: expected one of github-release, html, json, or git-tags", block.version.Pos)
+			return nil, errors.Errorf("%s: expected one of github-release, html, json, or git-tags", block.version.Pos)
 		}
 		if err != nil {
-			return "", errors.Wrap(err, block.version.Pos.String())
+			return nil, errors.Wrap(err, block.version.Pos.String())
 		}
 
 		// No version information found, skip.
@@ -74,30 +76,30 @@ blocks:
 			}
 		}
 
-		foundLatestVersion = true
 		block.version.Labels = append(block.version.Labels, latestVersion)
+		addedVersions = append(addedVersions, latestVersion)
 	}
 
-	if !foundLatestVersion {
-		return "", nil
+	if len(addedVersions) == 0 {
+		return nil, nil
 	}
 
 	// Update the manifest and write it out to disk.
 	content, err = hcl.MarshalAST(ast)
 	if err != nil {
-		return "", errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
 	w, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".*")
 	if err != nil {
-		return "", errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
 	defer w.Close()
 	defer os.Remove(w.Name())
 	_, err = w.Write(content)
 	if err != nil {
-		return "", errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
-	return latestVersion, errors.WithStack(os.Rename(w.Name(), path))
+	return addedVersions, errors.WithStack(os.Rename(w.Name(), path))
 }
 
 // Parse the auto-version block from a manifest, if any.
