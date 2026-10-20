@@ -93,6 +93,30 @@ func TestIntegration(t *testing.T) {
 			`,
 			expectations: exp{outputContains("/hermit-local/hermit"), outputContains("devel (canary)")},
 		},
+		{
+			name:         "WhichResolvesOnlyLinkedBinaries",
+			preparations: prep{fixture("testenv2")},
+			script: `
+				# A manifest alone must not make a binary discoverable.
+				if ./bin/hermit which testbin1 > result.txt 2> error.txt; then
+					hermit-send 'error: which found an unlinked binary'
+					exit 1
+				fi
+				assert test ! -s result.txt
+				assert test ! -s error.txt
+				assert test ! -d "${HERMIT_STATE_DIR}/pkg/testbin1-1.0.0"
+
+				# Simulate a fresh clone with only the binary's stub chain.
+				ln -s hermit bin/.testbin1-1.0.0.pkg
+				ln -s .testbin1-1.0.0.pkg bin/testbin1
+				expected="${HERMIT_STATE_DIR}/pkg/testbin1-1.0.0/testbin1"
+				assert test "$(./bin/hermit which testbin1)" = "$expected"
+				assert test -x "$expected"
+				assert test "$(./bin/hermit which ./bin/testbin1)" = "$expected"
+				. bin/activate-hermit
+				assert test "$(hermit which testbin1)" = "$expected"
+			`,
+		},
 
 		{
 			name: "ContentOnlyPackageInstallsOnActivation",

@@ -105,6 +105,24 @@ Root: /home/user/.cache/hermit/pkg/rust@nightly
 Binaries: cargo cargo-clippy clippy-driver cargo-miri miri rust-analyzer rust-demangler rust-gdb rust-gdbgui rust-lldb rustc rustdoc
 ```
 
+## Finding an Executable
+
+Use `hermit which` to print the executable path behind a binary's Hermit symlink:
+
+```shell
+project🐚~/project$ hermit which gosimports
+/home/user/.cache/hermit/pkg/gosimports-0.3.8/gosimports
+```
+
+You can also pass a symlink path, such as `hermit which ./bin/gosimports`.
+Binary names are looked up in the current environment's `bin` directory.
+If the binary is absent, the command prints nothing and exits with status 1,
+even if a package with that name is available from a manifest source.
+
+If the symlink exists but the package is missing from the cache, Hermit downloads
+and unpacks it first. The command does not launch the binary or run `on exec`
+triggers.
+
 ## Upgrading Packages
 
 For package channels or versions that adhere to semantic versioning, Hermit

@@ -896,7 +896,7 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	binaries, err := pkg.ResolveBinaries()
+	bin, err := pkg.ResolveBinary(binary)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -926,21 +926,15 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 	}
 	env := e.envarsFromOps(true, ops)
 
-	for _, bin := range binaries {
-		if filepath.Base(bin) != filepath.Base(binary) {
-			continue
-		}
-		argsCopy := make([]string, len(args))
-		copy(argsCopy, args)
-		argsCopy[0] = bin
-		b.Tracef("exec %s", shellquote.Join(argsCopy...))
-		l.Clear()
-		timer()
+	argsCopy := make([]string, len(args))
+	copy(argsCopy, args)
+	argsCopy[0] = bin
+	b.Tracef("exec %s", shellquote.Join(argsCopy...))
+	l.Clear()
+	timer()
 
-		err = syscall.Exec(bin, argsCopy, env)
-		return errors.Wrapf(err, "%s: failed to execute %q", pkg, bin)
-	}
-	return errors.Errorf("%s: failed to resolve binary %q in installed package - this may indicate a corrupted installation, try removing %s and hermit will reinstall it (may required sudo)", pkg, filepath.Base(binary), pkg.Dest)
+	err = syscall.Exec(bin, argsCopy, env)
+	return errors.Wrapf(err, "%s: failed to execute %q", pkg, bin)
 }
 
 func (e *Env) getPackageRuntimeEnvops(pkg *manifest.Package) (envars.Op, error) {
