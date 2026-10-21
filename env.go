@@ -901,7 +901,10 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 		return errors.WithStack(err)
 	}
 
-	var installed []*manifest.Package
+	var (
+		installed   []*manifest.Package
+		linkFarmDir string
+	)
 
 	// If we are activated, the parent shell already has
 	// already passed us all necessary environment variables.
@@ -914,9 +917,16 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 		if err != nil {
 			return errors.WithStack(err)
 		}
+		// Without the link farm, every tool the binary's children run would go back
+		// through a stub, each reloading the whole environment.
+		farm, err := e.createLinkFarm(l, installed)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		linkFarmDir = farm.dir
 	}
 
-	ops := e.allEnvarOpsForPackages("", runtimeDeps, pkg, installed...)
+	ops := e.allEnvarOpsForPackages(linkFarmDir, runtimeDeps, pkg, installed...)
 	packageHermitBin, err := e.getPackageRuntimeEnvops(pkg)
 	if err != nil {
 		return errors.WithStack(err)
@@ -1216,24 +1226,14 @@ func (e *Env) envOps(l *ui.UI, activate bool) (envars.Ops, error) {
 	if err != nil {
 		return nil, err
 	}
+	var farm *linkFarm
 	if activate {
-		for _, pkg := range pkgs {
-			if requiresStub(pkg) {
-				continue
-			}
-			if err := e.EnsureChannelIsUpToDate(l, pkg); err != nil {
-				return nil, errors.WithStack(err)
-			}
-		}
+		farm, err = e.createLinkFarm(l, pkgs)
+	} else {
+		farm, err = e.linkFarm(pkgs)
 	}
-	farm, err := e.linkFarm(pkgs)
 	if err != nil {
 		return nil, errors.WithStack(err)
-	}
-	if activate {
-		if err := farm.create(); err != nil {
-			return nil, errors.WithStack(err)
-		}
 	}
 	return e.inheritedEnvOps(l, pkgs, farm.dir)
 }
