@@ -1461,6 +1461,18 @@ func checkForShells(t *testing.T) {
 	}
 }
 
+func TestBuildEnvironRemovesInheritedLinkFarm(t *testing.T) {
+	farm := t.TempDir()
+	originalPath := os.Getenv("PATH")
+	t.Setenv("HERMIT_ENV_OPS", "")
+	t.Setenv("HERMIT_LINK_FARM", farm)
+	t.Setenv("PATH", farm+string(os.PathListSeparator)+originalPath)
+
+	environ := envars.Parse(buildEnviron(t))
+	assert.Equal(t, "", environ["HERMIT_LINK_FARM"])
+	assert.Equal(t, originalPath, environ["PATH"])
+}
+
 // Build a clean environment for the tests, removing Hermit env changes if necessary.
 func buildEnviron(t *testing.T) (environ []string) {
 	t.Helper()
@@ -1472,6 +1484,14 @@ func buildEnviron(t *testing.T) (environ []string) {
 		environ = envars.Parse(os.Environ()).Revert(os.Getenv("HERMIT_ENV"), ops).Combined().System()
 	} else {
 		environ = os.Environ()
+	}
+	// Unactivated stubs export the link farm without HERMIT_ENV_OPS.
+	clean := envars.Parse(environ)
+	if farm := clean["HERMIT_LINK_FARM"]; farm != "" {
+		environ = clean.Revert("", envars.Ops{
+			&envars.Prepend{Name: "PATH", Value: farm},
+			&envars.Force{Name: "HERMIT_LINK_FARM"},
+		}).Combined().System()
 	}
 	environ = append(environ, "PS1=hermit-test> ")
 	environ = append(environ, "PROMPT=hermit-test> ")
