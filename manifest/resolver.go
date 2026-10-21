@@ -139,6 +139,20 @@ func (p *Package) ResolveBinaries() ([]string, error) {
 	return binaries, nil
 }
 
+// ResolveBinary returns the package binary matching the given basename.
+func (p *Package) ResolveBinary(binary string) (string, error) {
+	binaries, err := p.ResolveBinaries()
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	for _, bin := range binaries {
+		if filepath.Base(bin) == filepath.Base(binary) {
+			return bin, nil
+		}
+	}
+	return "", errors.Errorf("%s: failed to resolve binary %q in installed package - this may indicate a corrupted installation, try removing %s and hermit will reinstall it (may required sudo)", p, filepath.Base(binary), p.Dest)
+}
+
 // LogWarnings logs possible warnings found in the package manifest
 func (p *Package) LogWarnings(l *ui.UI) {
 	task := l.Task(p.Reference.String())

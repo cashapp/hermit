@@ -84,6 +84,7 @@ type activated struct {
 	Uninstall  uninstallCmd         `cmd:"" help:"Uninstall packages." group:"env"`
 	Upgrade    upgradeCmd           `cmd:"" help:"Upgrade packages" group:"env"`
 	List       listCmd              `cmd:"" help:"List local packages." group:"env"`
+	Which      whichCmd             `cmd:"" help:"Print the executable path for a binary linked in this environment." group:"env"`
 	Env        envCmd               `cmd:"" help:"Manage environment variables." group:"env"`
 	Validate   activatedValidateCmd `cmd:"" help:"Hermit validation." group:"global"`
 	AddDigests addDigestsCmd        `cmd:"" help:"Add digests for all versions/platforms to the input manifest files." group:"global"`

@@ -93,6 +93,53 @@ func TestIntegration(t *testing.T) {
 			`,
 			expectations: exp{outputContains("/hermit-local/hermit"), outputContains("devel (canary)")},
 		},
+		{
+			name:         "WhichResolvesOnlyLinkedBinaries",
+			preparations: prep{fixture("testenv2")},
+			script: `
+				cat > packages/testbin1.hcl <<'EOF'
+description = "Test package one"
+source = "${env}/packages/testbin1.tgz"
+binaries = ["testbin*"]
+on exec {
+  run { cmd = "/bin/sh" args = ["-c", "exit 1"] }
+}
+version "1.0.0" "1.0.1" {}
+EOF
+
+				# A manifest alone must not make a binary discoverable.
+				if ./bin/hermit which testbin1 > result.txt 2> error.txt; then
+					hermit-send 'error: which found an unlinked binary'
+					exit 1
+				fi
+				assert test ! -s result.txt
+				assert test ! -s error.txt
+				assert test ! -d "${HERMIT_STATE_DIR}/pkg/testbin1-1.0.0"
+
+				# Simulate a fresh clone with only the binary's stub chain.
+				ln -s hermit bin/.testbin1-1.0.0.pkg
+				ln -s .testbin1-1.0.0.pkg bin/testbin1
+				expected="${HERMIT_STATE_DIR}/pkg/testbin1-1.0.0/testbin1"
+				assert test "$(./bin/hermit which testbin1)" = "$expected"
+				assert test -x "$expected"
+				assert test "$(./bin/hermit which ./bin/testbin1)" = "$expected"
+				assert test "$(./bin/hermit which "$PWD/bin/testbin1")" = "$expected"
+
+				ln -s testbin1 bin/alias
+				assert test "$(./bin/hermit which alias)" = "$expected"
+
+				ln -s hermit bin/invalid
+				if ./bin/hermit which invalid > result.txt 2> error.txt; then
+					hermit-send 'error: which accepted an invalid binary link'
+					exit 1
+				fi
+				assert test ! -s result.txt
+				assert test -s error.txt
+
+				. bin/activate-hermit
+				assert test "$(hermit which testbin1)" = "$expected"
+			`,
+		},
 
 		{
 			name: "ContentOnlyPackageInstallsOnActivation",
@@ -1488,21 +1535,37 @@ func checkForShells(t *testing.T) {
 	}
 }
 
+func TestBuildEnvironRemovesInheritedLinkFarm(t *testing.T) {
+	farm := t.TempDir()
+	originalPath := os.Getenv("PATH")
+	t.Setenv("HERMIT_ENV_OPS", "")
+	t.Setenv("HERMIT_LINK_FARM", farm)
+	t.Setenv("PATH", farm+string(os.PathListSeparator)+originalPath)
+
+	environ := envars.Parse(buildEnviron(t))
+	assert.Equal(t, "", environ["HERMIT_LINK_FARM"])
+	assert.Equal(t, originalPath, environ["PATH"])
+}
+
 // Build a clean environment for the tests, removing Hermit env changes if necessary.
-func buildEnviron(t *testing.T) (environ []string) {
+func buildEnviron(t *testing.T) []string {
 	t.Helper()
+	environ := envars.Parse(os.Environ())
 	if os.Getenv("HERMIT_ENV_OPS") != "" {
 		// Revert Hermit environment variables to their original values.
 		ops, err := envars.UnmarshalOps([]byte(os.Getenv("HERMIT_ENV_OPS")))
 		assert.NoError(t, err)
 		ops = append(ops, &envars.Set{Name: "ACTIVE_HERMIT", Value: os.Getenv("ACTIVE_HERMIT")})
-		environ = envars.Parse(os.Environ()).Revert(os.Getenv("HERMIT_ENV"), ops).Combined().System()
-	} else {
-		environ = os.Environ()
+		environ = environ.Revert(os.Getenv("HERMIT_ENV"), ops).Combined()
 	}
-	environ = append(environ, "PS1=hermit-test> ")
-	environ = append(environ, "PROMPT=hermit-test> ")
-	return environ
+	// Unactivated stubs export the link farm without HERMIT_ENV_OPS.
+	if farm := environ["HERMIT_LINK_FARM"]; farm != "" {
+		environ = environ.Revert("", envars.Ops{
+			&envars.Prepend{Name: "PATH", Value: farm},
+			&envars.Force{Name: "HERMIT_LINK_FARM"},
+		}).Combined()
+	}
+	return append(environ.System(), "PS1=hermit-test> ", "PROMPT=hermit-test> ")
 }
 
 // Preparation applied to the test directory before running the test.
