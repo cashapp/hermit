@@ -18,6 +18,7 @@ type envCmd struct {
 	Activate          bool   `xor:"action" help:"Print the commands needed to set the environment to the activated state."`
 	Deactivate        bool   `xor:"action" help:"Print the commands needed to reset the environment to the deactivated state."`
 	DeactivateFromOps string `xor:"action" placeholder:"OPS" help:"Decodes the operations, and prints the shell commands to reset the environment to the deactivated state."`
+	ReassertFromOps   string `xor:"action" placeholder:"OPS" help:"Decodes the operations, and prints the shell commands to re-apply them over any changes made since activation."`
 	Shell             string `short:"s" help:"Shell type."`
 	Inherit           bool   `short:"i" help:"Inherit variables from parent environment."`
 	Names             bool   `short:"n" help:"Show only names."`
@@ -53,7 +54,7 @@ func (e *envCmd) Run(l *ui.UI, env *hermit.Env) error {
 		return env.DelEnv(e.Name)
 	}
 
-	if e.Activate || e.Deactivate || e.Ops || e.DeactivateFromOps != "" {
+	if e.Activate || e.Deactivate || e.Ops || e.DeactivateFromOps != "" || e.ReassertFromOps != "" {
 		sh, err := e.resolveShell()
 		if err != nil {
 			return errors.WithStack(err)
@@ -90,6 +91,13 @@ func (e *envCmd) Run(l *ui.UI, env *hermit.Env) error {
 				return errors.Wrap(err, "failed to decode envar operations")
 			}
 			return deactivateEnvars(sh, env, ops)
+
+		case e.ReassertFromOps != "":
+			ops, err := envars.UnmarshalOps([]byte(e.ReassertFromOps))
+			if err != nil {
+				return errors.Wrap(err, "failed to decode envar operations")
+			}
+			return reassertEnvars(sh, env, ops)
 
 		case e.Deactivate:
 			ops, err := env.EnvOps(l)
@@ -131,6 +139,17 @@ func (e *envCmd) Run(l *ui.UI, env *hermit.Env) error {
 
 func deactivateEnvars(sh shell.Shell, env *hermit.Env, ops envars.Ops) error {
 	environ := envars.Parse(os.Environ()).Revert(env.Root(), ops).Changed(true)
+	return errors.WithStack(sh.ApplyEnvars(os.Stdout, environ))
+}
+
+// reassertEnvars reverts ops before re-applying them, so values changed since
+// activation become what deactivation later restores.
+func reassertEnvars(sh shell.Shell, env *hermit.Env, ops envars.Ops) error {
+	reverted := envars.Parse(os.Environ()).Revert(env.Root(), ops)
+	if err := sh.ApplyEnvars(os.Stdout, reverted.Changed(true)); err != nil {
+		return errors.WithStack(err)
+	}
+	environ := reverted.Combined().Apply(env.Root(), ops).Changed(true)
 	return errors.WithStack(sh.ApplyEnvars(os.Stdout, environ))
 }
 
