@@ -1474,28 +1474,24 @@ func TestBuildEnvironRemovesInheritedLinkFarm(t *testing.T) {
 }
 
 // Build a clean environment for the tests, removing Hermit env changes if necessary.
-func buildEnviron(t *testing.T) (environ []string) {
+func buildEnviron(t *testing.T) []string {
 	t.Helper()
+	environ := envars.Parse(os.Environ())
 	if os.Getenv("HERMIT_ENV_OPS") != "" {
 		// Revert Hermit environment variables to their original values.
 		ops, err := envars.UnmarshalOps([]byte(os.Getenv("HERMIT_ENV_OPS")))
 		assert.NoError(t, err)
 		ops = append(ops, &envars.Set{Name: "ACTIVE_HERMIT", Value: os.Getenv("ACTIVE_HERMIT")})
-		environ = envars.Parse(os.Environ()).Revert(os.Getenv("HERMIT_ENV"), ops).Combined().System()
-	} else {
-		environ = os.Environ()
+		environ = environ.Revert(os.Getenv("HERMIT_ENV"), ops).Combined()
 	}
 	// Unactivated stubs export the link farm without HERMIT_ENV_OPS.
-	clean := envars.Parse(environ)
-	if farm := clean["HERMIT_LINK_FARM"]; farm != "" {
-		environ = clean.Revert("", envars.Ops{
+	if farm := environ["HERMIT_LINK_FARM"]; farm != "" {
+		environ = environ.Revert("", envars.Ops{
 			&envars.Prepend{Name: "PATH", Value: farm},
 			&envars.Force{Name: "HERMIT_LINK_FARM"},
-		}).Combined().System()
+		}).Combined()
 	}
-	environ = append(environ, "PS1=hermit-test> ")
-	environ = append(environ, "PROMPT=hermit-test> ")
-	return environ
+	return append(environ.System(), "PS1=hermit-test> ", "PROMPT=hermit-test> ")
 }
 
 // Preparation applied to the test directory before running the test.
