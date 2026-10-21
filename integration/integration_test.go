@@ -97,6 +97,16 @@ func TestIntegration(t *testing.T) {
 			name:         "WhichResolvesOnlyLinkedBinaries",
 			preparations: prep{fixture("testenv2")},
 			script: `
+				cat > packages/testbin1.hcl <<'EOF'
+description = "Test package one"
+source = "${env}/packages/testbin1.tgz"
+binaries = ["testbin*"]
+on exec {
+  run { cmd = "/bin/sh" args = ["-c", "exit 1"] }
+}
+version "1.0.0" "1.0.1" {}
+EOF
+
 				# A manifest alone must not make a binary discoverable.
 				if ./bin/hermit which testbin1 > result.txt 2> error.txt; then
 					hermit-send 'error: which found an unlinked binary'
@@ -113,6 +123,19 @@ func TestIntegration(t *testing.T) {
 				assert test "$(./bin/hermit which testbin1)" = "$expected"
 				assert test -x "$expected"
 				assert test "$(./bin/hermit which ./bin/testbin1)" = "$expected"
+				assert test "$(./bin/hermit which "$PWD/bin/testbin1")" = "$expected"
+
+				ln -s testbin1 bin/alias
+				assert test "$(./bin/hermit which alias)" = "$expected"
+
+				ln -s hermit bin/invalid
+				if ./bin/hermit which invalid > result.txt 2> error.txt; then
+					hermit-send 'error: which accepted an invalid binary link'
+					exit 1
+				fi
+				assert test ! -s result.txt
+				assert test -s error.txt
+
 				. bin/activate-hermit
 				assert test "$(hermit which testbin1)" = "$expected"
 			`,
