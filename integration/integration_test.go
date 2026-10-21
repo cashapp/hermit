@@ -702,6 +702,80 @@ EOF
 			`,
 		},
 		{
+			name: "UnactivatedStubRunsChildBinariesThroughLinkFarm",
+			script: `
+				hermit init --no-git --sources env:///packages .
+				mkdir -p packages
+				printf '#!/bin/sh\nexec "$@"\n' > packages/runner.sh
+				printf '#!/bin/sh\necho "child ${CHILD_VAR:-}"\n' > packages/child.sh
+				chmod +x packages/runner.sh packages/child.sh
+				cat > packages/runner.hcl <<'EOF'
+description = "Runs its arguments"
+source = "${env}/packages/runner.sh"
+binaries = ["runner.sh"]
+version "1.0.0" {}
+EOF
+				cat > packages/child.hcl <<'EOF'
+description = "Run by runner.sh"
+source = "${env}/packages/child.sh"
+binaries = ["child.sh"]
+env = { "CHILD_VAR": "set" }
+version "1.0.0" {}
+EOF
+				./bin/hermit install runner child
+				assert test -z "${HERMIT_LINK_FARM:-}"
+				farm="$(./bin/runner.sh sh -c 'echo "${HERMIT_LINK_FARM:-}"')"
+				case "${farm}" in
+					"$HERMIT_STATE_DIR"/environments/*) ;;
+					*) hermit-send "error: unexpected link farm ${farm}"; exit 1 ;;
+				esac
+				assert test "$(./bin/runner.sh sh -c 'command -v child.sh')" = "${farm}/child.sh"
+				assert test "$(./bin/runner.sh child.sh)" = "child set"
+				# The farm is the one activation would use.
+				. bin/activate-hermit
+				assert test "${HERMIT_LINK_FARM}" = "${farm}"
+			`,
+		},
+		{
+			name: "UnactivatedStubRefreshesDueChannelForLinkedBinaries",
+			script: `
+				hermit init --no-git --sources env:///packages .
+				mkdir -p packages upstream.git
+				printf '#!/bin/sh\nexec "$@"\n' > packages/runner.sh
+				chmod +x packages/runner.sh
+				cat > packages/runner.hcl <<'EOF'
+description = "Runs its arguments"
+source = "${env}/packages/runner.sh"
+binaries = ["runner.sh"]
+version "1.0.0" {}
+EOF
+				git -C upstream.git init -q
+				git -C upstream.git config user.name 'Hermit Test'
+				git -C upstream.git config user.email hermit@example.com
+				git -C upstream.git config commit.gpgsign false
+				printf '#!/bin/sh\necho first\n' > upstream.git/fresh.sh
+				chmod +x upstream.git/fresh.sh
+				git -C upstream.git add fresh.sh
+				git -C upstream.git commit -qm first
+				git -C upstream.git branch -M channel
+				cat > packages/fresh.hcl <<'EOF'
+description = "Channel package run through the link farm"
+binaries = ["fresh.sh"]
+channel "edge" {
+  update = "1h"
+  source = "file://${env}/upstream.git#channel"
+}
+EOF
+				./bin/hermit install runner fresh@edge
+				assert test "$(./bin/runner.sh fresh.sh)" = first
+				printf '#!/bin/sh\necho second\n' > upstream.git/fresh.sh
+				git -C upstream.git commit -qam second
+				# The child runs the linked binary without its stub, so runner.sh's stub must check for the update.
+				touch -t 200001010000 "$HERMIT_STATE_DIR/metadata/fresh@edge.etag"
+				assert test "$(./bin/runner.sh fresh.sh)" = second
+			`,
+		},
+		{
 			name:         "InstallingEnvPackagesIsaNoop",
 			preparations: prep{fixture("testenv1"), activate(".")},
 			script: `

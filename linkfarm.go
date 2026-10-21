@@ -10,6 +10,7 @@ import (
 
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/manifest"
+	"github.com/cashapp/hermit/ui"
 )
 
 // linkFarm is an immutable directory of symlinks to package binaries, put on PATH ahead of bin/.
@@ -80,6 +81,27 @@ func (e *Env) linkFarm(installed []*manifest.Package) (*linkFarm, error) {
 		dir:   filepath.Join(e.linkFarmsDir(), hex.EncodeToString(hasher.Sum(nil))[:16]),
 		links: links,
 	}, nil
+}
+
+// createLinkFarm creates the farm for the given installed packages before it is put on PATH.
+// It first checks linked channel packages for updates, because their stubs no longer run to do it.
+func (e *Env) createLinkFarm(l *ui.UI, installed []*manifest.Package) (*linkFarm, error) {
+	for _, pkg := range installed {
+		if requiresStub(pkg) {
+			continue
+		}
+		if err := e.EnsureChannelIsUpToDate(l, pkg); err != nil {
+			return nil, errors.WithStack(err)
+		}
+	}
+	farm, err := e.linkFarm(installed)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if err := farm.create(); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return farm, nil
 }
 
 // requiresStub reports whether a package needs the work its bin/ stubs do at execution time.
