@@ -537,22 +537,32 @@ func (e *Env) ValidateManifests(l *ui.UI) (manifest.ManifestErrors, error) {
 
 // LinkedBinaries lists just the binaries installed in the environment.
 func (e *Env) LinkedBinaries(pkg *manifest.Package) (binaries []string, err error) {
+	linked, err := e.linkedBinaryNames()
+	if err != nil {
+		return nil, err
+	}
+	for _, name := range linked[pkg.String()] {
+		binaries = append(binaries, filepath.Join(e.binDir, name))
+	}
+	return
+}
+
+// linkedBinaryNames returns the names of the binaries linked into bin/, keyed by package reference.
+func (e *Env) linkedBinaryNames() (map[string][]string, error) {
 	files, err := os.ReadDir(e.binDir)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+	linked := map[string][]string{}
 	for _, file := range files {
-		bin := filepath.Join(e.binDir, file.Name())
-		link, err := os.Readlink(bin)
+		link, err := os.Readlink(filepath.Join(e.binDir, file.Name()))
 		if err != nil || !strings.HasSuffix(link, ".pkg") {
 			continue
 		}
-		ref := e.referenceFromBinLink(link)
-		if ref.String() == pkg.String() {
-			binaries = append(binaries, bin)
-		}
+		ref := e.referenceFromBinLink(link).String()
+		linked[ref] = append(linked[ref], file.Name())
 	}
-	return
+	return linked, nil
 }
 
 // Uninstall uninstalls a single package.

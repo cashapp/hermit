@@ -5,8 +5,8 @@ import (
 	"encoding/hex"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
-	"strings"
 
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/manifest"
@@ -31,39 +31,23 @@ func (e *Env) linkFarmsDir() string {
 // linkFarm computes the farm for the given installed packages without creating it.
 // Only binaries bin/ links to a package are included, so the farm exposes nothing the stubs don't.
 func (e *Env) linkFarm(installed []*manifest.Package) (*linkFarm, error) {
-	linkable := map[string]*manifest.Package{}
-	for _, pkg := range installed {
-		if !requiresStub(pkg) {
-			linkable[pkg.Reference.String()] = pkg
-		}
-	}
-	entries, err := os.ReadDir(e.binDir)
+	linked, err := e.linkedBinaryNames()
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
-	resolved := map[string][]string{}
 	links := map[string]string{}
-	for _, entry := range entries {
-		pkgLink, err := os.Readlink(filepath.Join(e.binDir, entry.Name()))
-		if err != nil || !strings.HasSuffix(pkgLink, ".pkg") {
+	for _, pkg := range installed {
+		names := linked[pkg.String()]
+		if len(names) == 0 || requiresStub(pkg) {
 			continue
 		}
-		ref := e.referenceFromBinLink(pkgLink).String()
-		pkg, ok := linkable[ref]
-		if !ok {
-			continue
-		}
-		binaries, ok := resolved[ref]
-		if !ok {
-			// A package whose binaries cannot be resolved is left to its stub,
-			// which reports the problem when run.
-			binaries, _ = pkg.ResolveBinaries()
-			resolved[ref] = binaries
-		}
+		// A package whose binaries cannot be resolved is left to its stub,
+		// which reports the problem when run.
+		binaries, _ := pkg.ResolveBinaries()
 		for _, binary := range binaries {
-			if filepath.Base(binary) == entry.Name() {
-				links[entry.Name()] = binary
-				break
+			name := filepath.Base(binary)
+			if _, ok := links[name]; !ok && slices.Contains(names, name) {
+				links[name] = binary
 			}
 		}
 	}
