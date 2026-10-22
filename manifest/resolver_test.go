@@ -256,6 +256,30 @@ func TestResolver_Resolve(t *testing.T) {
 		},
 		wantErr: "@testc: no version found matching 2.0",
 	}, {
+		name: "Reports invalid platform attributes",
+		files: map[string]string{
+			"test.hcl": `
+                description = ""
+				binaries = ["bin"]
+				source = "www.example.com/${version}"
+
+				platform linux "glibc>=2.28" { source = "www.example.com/${version}-gnu" }
+				platform darwin "(" { source = "www.example.com/${version}-darwin" }
+				version "1.0.0" {
+				  platform linux glibc_2 { source = "www.example.com/${version}-gnu" }
+				}
+            `,
+		},
+		reference: "test-1.0.0",
+		manifestErrors: map[string][]string{
+			"memory:///test.hcl": {
+				`invalid platform attribute "glibc>=2.28", expected glibc_<major>_<minor>`,
+				"invalid platform attribute \"(\": error parsing regexp: missing closing ): `(`",
+				`invalid platform attribute "glibc_2", expected glibc_<major>_<minor>`,
+			},
+		},
+		wantErr: `invalid platform attribute "glibc>=2.28", expected glibc_<major>_<minor>`,
+	}, {
 		name: "Returns unsupported core platforms",
 		files: map[string]string{
 			"test.hcl": `
@@ -273,7 +297,7 @@ func TestResolver_Resolve(t *testing.T) {
 			WithBinaries("bin").
 			WithVersion("1.0.0").
 			WithSource("www.example.com/1.0.0").
-			WithUnsupportedPlatforms([]platform.Platform{{platform.Darwin, platform.Amd64}, {platform.Darwin, platform.Arm64}}).
+			WithUnsupportedPlatforms([]platform.Platform{{OS: platform.Darwin, Arch: platform.Amd64}, {OS: platform.Darwin, Arch: platform.Arm64}}).
 			Result(),
 	}, {
 		name: "Validates event enum",

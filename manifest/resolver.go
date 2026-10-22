@@ -445,13 +445,17 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 		UpdateInterval:       foundUpdateInterval,
 		Files:                []*ResolvedFileRef{},
 		FS:                   manifest.FS,
-		UnsupportedPlatforms: manifest.unsupported(found, platform.Core),
 	}
+	unsupported, err := manifest.unsupported(found, platform.Core)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	p.UnsupportedPlatforms = unsupported
 
 	files := map[string]string{}
 
 	// Merge all the layers.
-	layers, err := manifest.layers(found, config.OS, config.Arch) //nolint
+	layers, err := manifest.layers(found, config.Platform) //nolint
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -818,6 +822,12 @@ func (m *Manifest) validate() []error {
 			if !found {
 				result = append(result, errors.Errorf("@%s: no version found matching %s", channel.Name, channel.Version))
 			}
+		}
+	}
+
+	for _, block := range m.platformBlocks() {
+		if err := block.validate(); err != nil {
+			result = append(result, err)
 		}
 	}
 

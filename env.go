@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"runtime"
 	"slices"
 	"sort"
 	"strings"
@@ -1783,10 +1782,7 @@ func (e *Env) resolver(l *ui.UI) (*manifest.Resolver, error) {
 		Env:    e.envDir,
 		State:  e.state.Root(),
 		PkgDir: e.state.PkgDir(),
-		Platform: platform.Platform{
-			OS:   runtime.GOOS,
-			Arch: runtime.GOARCH,
-		},
+		Platform: platform.Host(),
 	})
 	if err != nil {
 		return nil, errors.WithStack(err)

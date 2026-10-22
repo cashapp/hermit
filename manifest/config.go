@@ -3,6 +3,8 @@ package manifest
 import (
 	"reflect"
 	"regexp"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/cashapp/hermit/envars"
@@ -46,42 +48,35 @@ type Layer struct {
 	SHA256Source redact.URL        `hcl:"sha256-source,optional" help:"URL for SHA256 checksum file for source package."`
 	Darwin       []*Layer          `hcl:"darwin,block" help:"Darwin-specific configuration."`
 	Linux        []*Layer          `hcl:"linux,block" help:"Linux-specific configuration."`
-	Platform     []*PlatformBlock  `hcl:"platform,block" help:"Platform-specific configuration. <attr> is a set regexes that must all match against one of CPU, OS, etc.."`
+	Platform     []*PlatformBlock  `hcl:"platform,block" help:"Platform-specific configuration. <attr> is a set of regexes that must all match against one of CPU, OS, etc., or glibc_<major>_<minor>. When several blocks match, later blocks override earlier ones."`
 	Triggers     []*Trigger        `hcl:"on,block" help:"Triggers to run on lifecycle events."`
 	Mutable      bool              `hcl:"mutable,optional" help:"Package will not be made read-only."`
 }
 
-func (c Layer) layers(os string, arch string) (out layers) {
+func (c Layer) layers(p platform.Platform) (out layers, err error) {
 	out = append(out, &c)
 	var selected []*Layer
-	switch os {
+	switch p.OS {
 	case "darwin":
 		selected = c.Darwin
 	case "linux":
 		selected = c.Linux
 	}
-	if len(selected) != 0 {
-		for _, layer := range selected {
-			if layer.match(arch) {
-				out = append(out, layer)
-			}
+	for _, layer := range selected {
+		if layer.match(p.Arch) {
+			out = append(out, layer)
 		}
 	}
-	osArch := os + "-" + arch
-nextPlatform:
-	for _, platform := range c.Platform {
-		for _, attr := range platform.Attrs {
-			re, err := regexp.Compile(attr)
-			if err != nil {
-				continue
-			}
-			if !re.MatchString(os) && !re.MatchString(arch) && !re.MatchString(osArch) {
-				continue nextPlatform
-			}
+	for _, block := range c.Platform {
+		matched, err := block.match(p)
+		if err != nil {
+			return nil, err
 		}
-		out = append(out, &platform.Layer)
+		if matched {
+			out = append(out, &block.Layer)
+		}
 	}
-	return out
+	return out, nil
 }
 
 func (c *Layer) match(arch string) bool {
@@ -116,8 +111,65 @@ type JSONAutoVersionBlock struct {
 //
 // The PlatformBlock replaces "linux" and "darwin".
 type PlatformBlock struct {
-	Attrs []string `hcl:"attr,label" help:"Regex to match against platform attributes <arch>, <os>, and <arch>-<os>."`
+	Attrs []string `hcl:"attr,label" help:"Regexes to match against platform attributes <arch>, <os>, and <os>-<arch>, or glibc_<major>_<minor> to require that glibc version or newer."`
 	Layer
+}
+
+// match returns true if every attribute of the block matches the platform.
+func (b *PlatformBlock) match(p platform.Platform) (bool, error) {
+	for _, attr := range b.Attrs {
+		matched, err := matchPlatformAttr(attr, p)
+		if err != nil || !matched {
+			return false, err
+		}
+	}
+	return true, nil
+}
+
+// validate returns an error for the first invalid attribute of the block.
+func (b *PlatformBlock) validate() error {
+	for _, attr := range b.Attrs {
+		if _, err := matchPlatformAttr(attr, platform.Platform{}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func matchPlatformAttr(attr string, p platform.Platform) (bool, error) {
+	required, isGlibc, err := parseGlibcAttr(attr)
+	if err != nil {
+		return false, err
+	}
+	if isGlibc {
+		return !p.Glibc.IsZero() && p.Glibc.Compare(required) >= 0, nil
+	}
+	re, err := regexp.Compile(attr)
+	if err != nil {
+		return false, errors.Wrapf(err, "invalid platform attribute %q", attr)
+	}
+	return re.MatchString(p.OS) || re.MatchString(p.Arch) || re.MatchString(p.OS+"-"+p.Arch), nil
+}
+
+// glibcAttrPrefix marks a platform attribute as a glibc version requirement rather than a regex.
+// No OS or architecture starts with "glibc", and older Hermit versions skip these blocks.
+const glibcAttrPrefix = "glibc"
+
+// parseGlibcAttr parses a platform attribute of the form "glibc_<major>_<minor>", eg. "glibc_2_28".
+//
+// isGlibc is false if the attribute is not a glibc attribute.
+func parseGlibcAttr(attr string) (required platform.GlibcVersion, isGlibc bool, err error) {
+	rest, ok := strings.CutPrefix(attr, glibcAttrPrefix)
+	if !ok {
+		return platform.GlibcVersion{}, false, nil
+	}
+	rest, hasSeparator := strings.CutPrefix(rest, "_")
+	major, minor, hasMinor := strings.Cut(rest, "_")
+	required, err = platform.ParseGlibcVersion(major + "." + minor)
+	if !hasSeparator || !hasMinor || err != nil {
+		return platform.GlibcVersion{}, true, errors.Errorf("invalid platform attribute %q, expected glibc_<major>_<minor>", attr)
+	}
+	return required, true, nil
 }
 
 // VersionBlock is a Layer block specifying an installable version of a package.
@@ -135,8 +187,11 @@ type ChannelBlock struct {
 	Layer
 }
 
-func (c *ChannelBlock) layersWithReferences(os string, arch string, m *Manifest) (layers, error) {
-	layer := c.layers(os, arch)
+func (c *ChannelBlock) layersWithReferences(p platform.Platform, m *Manifest) (layers, error) {
+	layer, err := c.layers(p)
+	if err != nil {
+		return nil, err
+	}
 	if c.Version != "" {
 		v := c.Version
 		g, err := ParseGlob(v)
@@ -145,7 +200,11 @@ func (c *ChannelBlock) layersWithReferences(os string, arch string, m *Manifest)
 		}
 		result, _ := m.HighestMatch(g)
 		if result != nil {
-			return append(result.layers(os, arch), layer...), nil
+			versionLayers, err := result.layers(p)
+			if err != nil {
+				return nil, err
+			}
+			return append(versionLayers, layer...), nil
 		}
 
 		return nil, errors.Errorf("@%s: no version found matching %s", c.Name, v)
@@ -167,36 +226,47 @@ type Manifest struct {
 }
 
 // Merge layers for the selected package reference, either from versions or channels.
-func (m *Manifest) layers(ref Reference, os string, arch string) (layers, error) {
-	versionLayers := map[string]layers{}
-
+func (m *Manifest) layers(ref Reference, p platform.Platform) (layers, error) {
 	for _, v := range m.Versions {
-		l := v.layers(os, arch)
-		for _, version := range v.Version {
-			versionLayers[version] = l
-			if version == ref.Version.String() {
-				return append(m.Layer.layers(os, arch), l...), nil
-			}
+		if !slices.Contains(v.Version, ref.Version.String()) {
+			continue
 		}
+		l, err := v.layers(p)
+		if err != nil {
+			return nil, err
+		}
+		return m.withManifestLayers(p, l)
 	}
 	for _, ch := range m.Channels {
 		if ch.Name == ref.Channel {
-			l, err := ch.layersWithReferences(os, arch, m)
+			l, err := ch.layersWithReferences(p, m)
 			if err != nil {
 				return nil, err
 			}
-			return append(m.Layer.layers(os, arch), l...), nil
+			return m.withManifestLayers(p, l)
 		}
 	}
 	return nil, nil
 }
 
+// withManifestLayers prepends the manifest's top-level layers to l.
+func (m *Manifest) withManifestLayers(p platform.Platform, l layers) (layers, error) {
+	base, err := m.Layer.layers(p)
+	if err != nil {
+		return nil, err
+	}
+	return append(base, l...), nil
+}
+
 // unsupported returns the platforms not supported in the given Reference
-func (m *Manifest) unsupported(ref Reference, platforms []platform.Platform) []platform.Platform {
+func (m *Manifest) unsupported(ref Reference, platforms []platform.Platform) ([]platform.Platform, error) {
 	var result []platform.Platform
 platformsNext:
 	for _, p := range platforms {
-		lrs, _ := m.layers(ref, p.OS, p.Arch)
+		lrs, err := m.layers(ref, p)
+		if err != nil {
+			return nil, err
+		}
 		for _, l := range lrs {
 			if l.Source != "" {
 				continue platformsNext
@@ -204,7 +274,39 @@ platformsNext:
 		}
 		result = append(result, p)
 	}
-	return result
+	return result, nil
+}
+
+// platformBlocks returns the platform blocks that layers() can select.
+func (m *Manifest) platformBlocks() []*PlatformBlock {
+	blocks := slices.Clone(m.Platform)
+	for _, v := range m.Versions {
+		blocks = append(blocks, v.Platform...)
+	}
+	for _, ch := range m.Channels {
+		blocks = append(blocks, ch.Platform...)
+	}
+	return blocks
+}
+
+// GlibcVersions returns the distinct glibc versions required by platform blocks in the manifest, oldest first.
+//
+// Matching doesn't use this. The digest updater needs it to reach glibc blocks.
+func (m *Manifest) GlibcVersions() ([]platform.GlibcVersion, error) {
+	var versions []platform.GlibcVersion
+	for _, block := range m.platformBlocks() {
+		for _, attr := range block.Attrs {
+			required, isGlibc, err := parseGlibcAttr(attr)
+			if err != nil {
+				return nil, err
+			}
+			if isGlibc && !slices.Contains(versions, required) {
+				versions = append(versions, required)
+			}
+		}
+	}
+	slices.SortFunc(versions, platform.GlibcVersion.Compare)
+	return versions, nil
 }
 
 // GetVersions returns all the versions defined in this manifest
