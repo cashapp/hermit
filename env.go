@@ -1792,9 +1792,9 @@ func (e *Env) resolver(l *ui.UI) (*manifest.Resolver, error) {
 		return nil, errors.WithStack(err)
 	}
 	resolver, err := manifest.New(sources, manifest.Config{
-		Env:    e.envDir,
-		State:  e.state.Root(),
-		PkgDir: e.state.PkgDir(),
+		Env:      e.envDir,
+		State:    e.state.Root(),
+		PkgDir:   e.state.PkgDir(),
 		Platform: platform.Host(),
 	})
 	if err != nil {

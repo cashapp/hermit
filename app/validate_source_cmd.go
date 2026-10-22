@@ -34,7 +34,7 @@ func (g *validateSourceCmd) Run(l *ui.UI, env *hermit.Env, sta *state.State) err
 			return errors.WithStack(err)
 		}
 		resolver, err := manifest.New(srcs, manifest.Config{
-			State: sta.Root(),
+			State:    sta.Root(),
 			Platform: platform.Host(),
 		})
 		if err != nil {

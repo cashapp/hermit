@@ -436,17 +436,17 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 
 	root := filepath.Join(config.PkgDir, found.String())
 	p := &Package{
-		Description:          manifest.Description,
-		Homepage:             manifest.Homepage,
-		Repository:           manifest.Repository,
-		Reference:            found,
-		Root:                 "${dest}",
-		Dest:                 root,
-		Triggers:             map[Event][]Action{},
-		UpdateInterval:       foundUpdateInterval,
-		Files:                []*ResolvedFileRef{},
-		FS:                   manifest.FS,
-		Platform:             config.Platform,
+		Description:    manifest.Description,
+		Homepage:       manifest.Homepage,
+		Repository:     manifest.Repository,
+		Reference:      found,
+		Root:           "${dest}",
+		Dest:           root,
+		Triggers:       map[Event][]Action{},
+		UpdateInterval: foundUpdateInterval,
+		Files:          []*ResolvedFileRef{},
+		FS:             manifest.FS,
+		Platform:       config.Platform,
 	}
 	unsupported, err := manifest.unsupported(found, platform.Core)
 	if err != nil {

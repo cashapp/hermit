@@ -224,7 +224,7 @@ func (s *State) resolver(l *ui.UI) (*manifest.Resolver, error) {
 		return nil, err
 	}
 	return manifest.New(ss, manifest.Config{
-		State: s.Root(),
+		State:    s.Root(),
 		Platform: platform.Host(),
 	})
 }
