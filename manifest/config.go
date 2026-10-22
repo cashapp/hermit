@@ -2,9 +2,7 @@ package manifest
 
 import (
 	"reflect"
-	"regexp"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/cashapp/hermit/envars"
@@ -115,10 +113,10 @@ type PlatformBlock struct {
 	Layer
 }
 
-// match returns true if every attribute of the block matches the platform.
+// match returns true if every label of the block matches the platform.
 func (b *PlatformBlock) match(p platform.Platform) (bool, error) {
-	for _, attr := range b.Attrs {
-		matched, err := matchPlatformAttr(attr, p)
+	for _, label := range b.Attrs {
+		matched, err := p.Match(label)
 		if err != nil || !matched {
 			return false, err
 		}
@@ -126,50 +124,15 @@ func (b *PlatformBlock) match(p platform.Platform) (bool, error) {
 	return true, nil
 }
 
-// validate returns an error for the first invalid attribute of the block.
+// validate returns an error for the first invalid label of the block.
 func (b *PlatformBlock) validate() error {
-	for _, attr := range b.Attrs {
-		if _, err := matchPlatformAttr(attr, platform.Platform{}); err != nil {
+	for _, label := range b.Attrs {
+		// Match reports invalid labels regardless of the platform.
+		if _, err := (platform.Platform{}).Match(label); err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-func matchPlatformAttr(attr string, p platform.Platform) (bool, error) {
-	required, isGlibc, err := parseGlibcAttr(attr)
-	if err != nil {
-		return false, err
-	}
-	if isGlibc {
-		return !p.Glibc.IsZero() && p.Glibc.Compare(required) >= 0, nil
-	}
-	re, err := regexp.Compile(attr)
-	if err != nil {
-		return false, errors.Wrapf(err, "invalid platform attribute %q", attr)
-	}
-	return re.MatchString(p.OS) || re.MatchString(p.Arch) || re.MatchString(p.OS+"-"+p.Arch), nil
-}
-
-// glibcAttrPrefix marks a platform attribute as a glibc version requirement rather than a regex.
-// No OS or architecture starts with "glibc", and older Hermit versions skip these blocks.
-const glibcAttrPrefix = "glibc"
-
-// parseGlibcAttr parses a platform attribute of the form "glibc_<major>_<minor>", eg. "glibc_2_28".
-//
-// isGlibc is false if the attribute is not a glibc attribute.
-func parseGlibcAttr(attr string) (required platform.GlibcVersion, isGlibc bool, err error) {
-	rest, ok := strings.CutPrefix(attr, glibcAttrPrefix)
-	if !ok {
-		return platform.GlibcVersion{}, false, nil
-	}
-	rest, hasSeparator := strings.CutPrefix(rest, "_")
-	major, minor, hasMinor := strings.Cut(rest, "_")
-	required, err = platform.ParseGlibcVersion(major + "." + minor)
-	if !hasSeparator || !hasMinor || err != nil {
-		return platform.GlibcVersion{}, true, errors.Errorf("invalid platform attribute %q, expected glibc_<major>_<minor>", attr)
-	}
-	return required, true, nil
 }
 
 // VersionBlock is a Layer block specifying an installable version of a package.
@@ -258,21 +221,27 @@ func (m *Manifest) withManifestLayers(p platform.Platform, l layers) (layers, er
 	return append(base, l...), nil
 }
 
-// unsupported returns the platforms not supported in the given Reference
-func (m *Manifest) unsupported(ref Reference, platforms []platform.Platform) ([]platform.Platform, error) {
-	var result []platform.Platform
-platformsNext:
-	for _, p := range platforms {
+// unsupported returns the base platforms where no variant supports the given Reference.
+func (m *Manifest) unsupported(ref Reference, base platform.Platforms) (platform.Platforms, error) {
+	variants, err := m.PlatformVariants(base)
+	if err != nil {
+		return nil, err
+	}
+	supported := map[platform.Platform]bool{}
+	for _, p := range variants {
 		lrs, err := m.layers(ref, p)
 		if err != nil {
 			return nil, err
 		}
-		for _, l := range lrs {
-			if l.Source != "" {
-				continue platformsNext
-			}
+		if slices.ContainsFunc(lrs, func(l *Layer) bool { return l.Source != "" }) {
+			supported[p.Base()] = true
 		}
-		result = append(result, p)
+	}
+	var result platform.Platforms
+	for _, p := range base {
+		if !supported[p.Base()] {
+			result = append(result, p)
+		}
 	}
 	return result, nil
 }
@@ -289,24 +258,23 @@ func (m *Manifest) platformBlocks() []*PlatformBlock {
 	return blocks
 }
 
-// GlibcVersions returns the distinct glibc versions required by platform blocks in the manifest, oldest first.
+// PlatformVariants returns each base platform followed by its variants that the manifest's platform blocks distinguish.
 //
-// Matching doesn't use this. The digest updater needs it to reach glibc blocks.
-func (m *Manifest) GlibcVersions() ([]platform.GlibcVersion, error) {
-	var versions []platform.GlibcVersion
+// Resolving every variant reaches every platform block, which a fixed list of base platforms cannot do.
+func (m *Manifest) PlatformVariants(base platform.Platforms) (platform.Platforms, error) {
+	var labels []string
 	for _, block := range m.platformBlocks() {
-		for _, attr := range block.Attrs {
-			required, isGlibc, err := parseGlibcAttr(attr)
-			if err != nil {
-				return nil, err
-			}
-			if isGlibc && !slices.Contains(versions, required) {
-				versions = append(versions, required)
-			}
-		}
+		labels = append(labels, block.Attrs...)
 	}
-	slices.SortFunc(versions, platform.GlibcVersion.Compare)
-	return versions, nil
+	var variants platform.Platforms
+	for _, p := range base {
+		pv, err := p.Variants(labels)
+		if err != nil {
+			return nil, err
+		}
+		variants = append(variants, pv...)
+	}
+	return variants, nil
 }
 
 // GetVersions returns all the versions defined in this manifest

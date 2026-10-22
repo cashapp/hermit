@@ -96,6 +96,7 @@ type Package struct {
 	FS                   fs.FS               `json:"-"` // FS the Package was loaded from.
 	Warnings             []string            `json:"-"`
 	UnsupportedPlatforms []platform.Platform // Unsupported core platforms
+	Platform             platform.Platform   `json:"-"` // Platform the package was resolved for.
 
 	// Filled in by Env.
 	Linked    bool `json:"-"` // Linked into environment.
@@ -179,7 +180,7 @@ func (p *Package) Unsupported() bool {
 // EnsureSupported returns an error if the package is not supported on this platform
 func (p *Package) EnsureSupported() error {
 	if p.Unsupported() {
-		return errors.Errorf("package %s is not supported on this architecture", p.Reference)
+		return errors.Errorf("package %s is not supported on %s", p.Reference, p.Platform.Describe())
 	}
 	return nil
 }
@@ -445,6 +446,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 		UpdateInterval:       foundUpdateInterval,
 		Files:                []*ResolvedFileRef{},
 		FS:                   manifest.FS,
+		Platform:             config.Platform,
 	}
 	unsupported, err := manifest.unsupported(found, platform.Core)
 	if err != nil {
@@ -551,7 +553,7 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 		return p, errors.Wrapf(ErrNoBinaries, "%s: %s", manifest.Path, found)
 	}
 	if p.Source == "" {
-		return p, errors.Wrapf(ErrNoSource, "%s: %s", manifest.Path, found)
+		return p, errors.Wrapf(ErrNoSource, "%s: %s on %s", manifest.Path, found, config.Platform.Describe())
 	}
 
 	home, err := system.UserHomeDir()

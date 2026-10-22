@@ -602,6 +602,40 @@ func TestManifestValidation(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestManifestValidationGlibcVariants(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/missing-gnu" {
+			w.WriteHeader(http.StatusNotFound)
+		} else {
+			w.WriteHeader(http.StatusOK)
+		}
+	})
+
+	f := hermittest.NewEnvTestFixture(t, handler)
+	manifest := func(gnuPath string) string {
+		return `
+			description = ""
+			binaries = ["bin1"]
+			version "1.0.0" {
+              darwin { source = "` + f.Server.URL + `/darwin" }
+              platform linux amd64 glibc_2_17 { source = "` + f.Server.URL + gnuPath + `" }
+			}
+		`
+	}
+	f.WithManifests(map[string]string{
+		"valid.hcl":   manifest("/gnu"),
+		"missing.hcl": manifest("/missing-gnu"),
+	})
+	defer f.Clean()
+
+	warnings, err := f.Env.ValidateManifest(f.P, "valid", &hermit.ValidationOptions{CheckSources: true})
+	assert.NoError(t, err)
+	assert.Equal(t, nil, warnings)
+
+	_, err = f.Env.ValidateManifest(f.P, "missing", &hermit.ValidationOptions{CheckSources: true})
+	assert.EqualError(t, err, "missing-1.0.0: linux-amd64-glibc2.17: invalid source: could not retrieve source archive from "+f.Server.URL+"/missing-gnu: 404 Not Found")
+}
+
 func TestEnv_EphemeralVariableSubstitutionOverride(t *testing.T) {
 	fixture := hermittest.NewEnvTestFixture(t, nil)
 	defer fixture.Clean()

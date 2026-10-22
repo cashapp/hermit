@@ -25,9 +25,8 @@ import (
 
 // UpdateDigests for the manifest at the given path.
 //
-// Sources with existing digests will be skipped. All sources for the core
-// supported platforms, and for each glibc version the manifest requires on
-// Linux, will be checked.
+// Sources with existing digests will be skipped. All sources for variants of
+// the core supported platforms will be checked.
 func UpdateDigests(l *ui.UI, client *http.Client, state *state.State, path string) error {
 	filename := filepath.Base(path)
 	name := strings.TrimSuffix(filename, ".hcl")
@@ -39,11 +38,10 @@ func UpdateDigests(l *ui.UI, client *http.Client, state *state.State, path strin
 	}
 	// Dedupe by source, as channels often have the same source as normal packages.
 	pkgsBySource := map[redact.URL]pkgAndref{}
-	glibcVersions, err := mani.GlibcVersions()
+	platforms, err := mani.PlatformVariants(slices.Concat(platform.Core, platform.Optional))
 	if err != nil {
 		return errors.Wrap(err, "invalid manifest")
 	}
-	platforms := withGlibcVersions(slices.Concat(platform.Core, platform.Optional), glibcVersions)
 	for _, ref := range mani.References(name) {
 		for _, p := range platforms {
 			config := manifest.Config{
@@ -160,24 +158,9 @@ func writeAST(path string, ast *hcl.AST, filename string) error {
 	return nil
 }
 
-// withGlibcVersions adds a variant of each Linux platform for every glibc version.
-func withGlibcVersions(platforms platform.Platforms, glibcVersions []platform.GlibcVersion) platform.Platforms {
-	out := slices.Clone(platforms)
-	for _, p := range platforms {
-		if p.OS != platform.Linux {
-			continue
-		}
-		for _, glibc := range glibcVersions {
-			p.Glibc = glibc
-			out = append(out, p)
-		}
-	}
-	return out
-}
-
-// isCore returns true if p is a core platform, regardless of its glibc version.
+// isCore returns true if p is a variant of a core platform.
 func isCore(p platform.Platform) bool {
-	return slices.Contains(platform.Core, platform.Platform{OS: p.OS, Arch: p.Arch})
+	return slices.Contains(platform.Core, p.Base())
 }
 
 type pkgAndDigest struct {

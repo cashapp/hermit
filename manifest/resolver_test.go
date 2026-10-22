@@ -256,7 +256,7 @@ func TestResolver_Resolve(t *testing.T) {
 		},
 		wantErr: "@testc: no version found matching 2.0",
 	}, {
-		name: "Reports invalid platform attributes",
+		name: "Reports invalid platform labels",
 		files: map[string]string{
 			"test.hcl": `
                 description = ""
@@ -273,12 +273,12 @@ func TestResolver_Resolve(t *testing.T) {
 		reference: "test-1.0.0",
 		manifestErrors: map[string][]string{
 			"memory:///test.hcl": {
-				`invalid platform attribute "glibc>=2.28", expected glibc_<major>_<minor>`,
-				"invalid platform attribute \"(\": error parsing regexp: missing closing ): `(`",
-				`invalid platform attribute "glibc_2", expected glibc_<major>_<minor>`,
+				`invalid platform label "glibc>=2.28", expected glibc_<major>_<minor>`,
+				"invalid platform label \"(\": error parsing regexp: missing closing ): `(`",
+				`invalid platform label "glibc_2", expected glibc_<major>_<minor>`,
 			},
 		},
-		wantErr: `invalid platform attribute "glibc>=2.28", expected glibc_<major>_<minor>`,
+		wantErr: `invalid platform label "glibc>=2.28", expected glibc_<major>_<minor>`,
 	}, {
 		name: "Returns unsupported core platforms",
 		files: map[string]string{
@@ -482,6 +482,9 @@ func TestResolver_Resolve(t *testing.T) {
 			l, err := New(sources.New("", ss), config)
 			assert.NoError(t, err)
 			if tt.reference != "" {
+				if tt.wantPkg != nil {
+					tt.wantPkg.Platform = config.Platform
+				}
 				gotPkg, err := l.Resolve(logger, PrefixSelector(ParseReference(tt.reference)))
 				assert.EqualError(t, err, tt.wantErr)
 				if gotPkg != nil {
@@ -507,6 +510,14 @@ func TestResolver_Resolve(t *testing.T) {
 			assert.Equal(t, wantErrors, errorMsgs)
 		})
 	}
+}
+
+func TestPackageEnsureSupportedDescribesPlatform(t *testing.T) {
+	pkg := &Package{
+		Reference: ParseReference("test-1.0.0"),
+		Platform:  platform.Platform{OS: platform.Linux, Arch: platform.Arm64},
+	}
+	assert.EqualError(t, pkg.EnsureSupported(), "package test-1.0.0 is not supported on os=linux arch=arm64 glibc=none")
 }
 
 func TestSearchVersionsAndChannelsCoexist(t *testing.T) {
@@ -581,6 +592,9 @@ func TestSearchVersionsAndChannelsCoexist(t *testing.T) {
 			WithSource("www.example.com").
 			WithFS(ffs).
 			Result(),
+	}
+	for _, pkg := range expected {
+		pkg.Platform = config.Platform
 	}
 	assert.Equal(t, repr.String(expected, repr.Indent("  ")), repr.String(pkgs, repr.Indent("  ")))
 }

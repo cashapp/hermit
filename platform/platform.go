@@ -34,6 +34,24 @@ func (p Platform) String() string {
 	return p.OS + "-" + p.Arch + "-glibc" + p.Glibc.String()
 }
 
+// Base returns the platform's OS and architecture without any other values.
+func (p Platform) Base() Platform {
+	return Platform{OS: p.OS, Arch: p.Arch}
+}
+
+// Describe returns the values used to match the platform, eg. "os=linux arch=amd64 glibc=2.35".
+func (p Platform) Describe() string {
+	desc := "os=" + p.OS + " arch=" + p.Arch
+	switch {
+	case p.OS != Linux:
+		return desc
+	case p.Glibc.IsZero():
+		return desc + " glibc=none"
+	default:
+		return desc + " glibc=" + p.Glibc.String()
+	}
+}
+
 type Platforms []Platform
 
 func (p Platforms) Arches() []string {
