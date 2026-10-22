@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"runtime"
 	"slices"
 	"sort"
 	"strings"
@@ -1016,6 +1015,10 @@ func (e *Env) ValidateSelector(l *ui.UI, selector manifest.Selector, options *Va
 	}
 
 	refs := mnf.References(selector.Name())
+	platforms, err := mnf.PlatformVariants(platform.Core)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
 
 	// Filter to only matching references if selector is fully qualified
 	if selector.IsFullyQualified() {
@@ -1032,7 +1035,7 @@ func (e *Env) ValidateSelector(l *ui.UI, selector manifest.Selector, options *Va
 	task := l.Task("validate")
 	for _, ref := range refs {
 		task.Infof("Validating %s", ref)
-		w, err := e.validateReference(l, sources, ref, options)
+		w, err := e.validateReference(l, sources, ref, platforms, options)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -1058,11 +1061,15 @@ func (e *Env) ValidateManifest(l *ui.UI, name string, options *ValidationOptions
 	}
 
 	refs := mnf.References(name)
+	platforms, err := mnf.PlatformVariants(platform.Core)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
 	var warnings []string
 	task := l.Task("validate")
 	for _, ref := range refs {
 		task.Infof("Validating %s", ref)
-		w, err := e.validateReference(l, sources, ref, options)
+		w, err := e.validateReference(l, sources, ref, platforms, options)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -1072,17 +1079,16 @@ func (e *Env) ValidateManifest(l *ui.UI, name string, options *ValidationOptions
 	return warnings, nil
 }
 
-func (e *Env) validateReference(l *ui.UI, srcs *sources.Sources, ref manifest.Reference, options *ValidationOptions) ([]string, error) {
-	var fails []string
+// validateReference resolves ref on every platform variant. A core platform fails only if none of its variants resolve.
+func (e *Env) validateReference(l *ui.UI, srcs *sources.Sources, ref manifest.Reference, platforms platform.Platforms, options *ValidationOptions) ([]string, error) {
 	var warnings []string
-	for _, p := range platform.Core {
+	resolved := map[platform.Platform]bool{}
+	fails := map[platform.Platform][]string{}
+	for _, p := range platforms {
 		resolver, err := manifest.New(srcs, manifest.Config{
-			Env:   e.envDir,
-			State: e.state.Root(),
-			Platform: platform.Platform{
-				OS:   p.OS,
-				Arch: p.Arch,
-			},
+			Env:      e.envDir,
+			State:    e.state.Root(),
+			Platform: p,
 		})
 		if err != nil {
 			return nil, errors.WithStack(err)
@@ -1090,11 +1096,10 @@ func (e *Env) validateReference(l *ui.UI, srcs *sources.Sources, ref manifest.Re
 
 		pkg, err := resolver.Resolve(l, manifest.ExactSelector(ref))
 		if err != nil {
-			msg := fmt.Sprintf("%s: %s", p, err.Error())
-			fails = append(fails, msg)
-			warnings = append(warnings, msg)
+			fails[p.Base()] = append(fails[p.Base()], fmt.Sprintf("%s: %s", p, err.Error()))
 			continue
 		}
+		resolved[p.Base()] = true
 
 		if options.CheckSources {
 			if err := manifest.ValidatePackageSource(e.packageSource, e.httpClient, pkg.Source); err != nil {
@@ -1104,8 +1109,15 @@ func (e *Env) validateReference(l *ui.UI, srcs *sources.Sources, ref manifest.Re
 
 		warnings = append(warnings, pkg.Warnings...)
 	}
-	if len(fails) >= len(platform.Core) {
-		return nil, errors.Errorf("%s failed to resolve on all platforms: %s", ref, strings.Join(fails, "; "))
+	var allFails []string
+	for _, p := range platform.Core {
+		if !resolved[p] {
+			warnings = append(warnings, fails[p]...)
+			allFails = append(allFails, fails[p]...)
+		}
+	}
+	if len(resolved) == 0 {
+		return nil, errors.Errorf("%s failed to resolve on all platforms: %s", ref, strings.Join(allFails, "; "))
 	}
 	return warnings, nil
 }
@@ -1780,13 +1792,10 @@ func (e *Env) resolver(l *ui.UI) (*manifest.Resolver, error) {
 		return nil, errors.WithStack(err)
 	}
 	resolver, err := manifest.New(sources, manifest.Config{
-		Env:    e.envDir,
-		State:  e.state.Root(),
-		PkgDir: e.state.PkgDir(),
-		Platform: platform.Platform{
-			OS:   runtime.GOOS,
-			Arch: runtime.GOARCH,
-		},
+		Env:      e.envDir,
+		State:    e.state.Root(),
+		PkgDir:   e.state.PkgDir(),
+		Platform: platform.Host(),
 	})
 	if err != nil {
 		return nil, errors.WithStack(err)

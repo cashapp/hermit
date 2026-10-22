@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"strings"
 	"time"
 
@@ -225,11 +224,8 @@ func (s *State) resolver(l *ui.UI) (*manifest.Resolver, error) {
 		return nil, err
 	}
 	return manifest.New(ss, manifest.Config{
-		State: s.Root(),
-		Platform: platform.Platform{
-			OS:   runtime.GOOS,
-			Arch: runtime.GOARCH,
-		},
+		State:    s.Root(),
+		Platform: platform.Host(),
 	})
 }
 

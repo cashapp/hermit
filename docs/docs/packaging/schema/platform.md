@@ -2,7 +2,7 @@
 title: "platform &lt;attr&gt;"
 ---
 
-Platform-specific configuration. &lt;attr&gt; is a set regexes that must all match against one of CPU, OS, etc..
+Platform-specific configuration. &lt;attr&gt; is a set of regexes that must all match against one of CPU, OS, etc., or glibc_&lt;major&gt;_&lt;minor&gt;. When several blocks match, later blocks override earlier ones.
 
 Used by: [channel](../channel#blocks) [darwin](../darwin#blocks) [linux](../linux#blocks) [&lt;manifest>](../manifest#blocks) [version](../version#blocks)
 
@@ -14,7 +14,7 @@ Used by: [channel](../channel#blocks) [darwin](../darwin#blocks) [linux](../linu
 | [`darwin { … }`](../darwin) | Darwin-specific configuration. |
 | [`linux { … }`](../linux) | Linux-specific configuration. |
 | [`on <event> { … }`](../on) | Triggers to run on lifecycle events. |
-| [`platform { … }`](../platform) | Platform-specific configuration. &lt;attr&gt; is a set regexes that must all match against one of CPU, OS, etc.. |
+| [`platform { … }`](../platform) | Platform-specific configuration. &lt;attr&gt; is a set of regexes that must all match against one of CPU, OS, etc., or glibc_&lt;major&gt;_&lt;minor&gt;. When several blocks match, later blocks override earlier ones. |
 
 ## Attributes
 

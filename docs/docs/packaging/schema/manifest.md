@@ -13,7 +13,7 @@ Each Hermit package manifest is a nested structure containing OS/architecture-sp
 | [`darwin { … }`](../darwin) | Darwin-specific configuration. |
 | [`linux { … }`](../linux) | Linux-specific configuration. |
 | [`on <event> { … }`](../on) | Triggers to run on lifecycle events. |
-| [`platform <attr> { … }`](../platform) | Platform-specific configuration. &lt;attr&gt; is a set regexes that must all match against one of CPU, OS, etc.. |
+| [`platform <attr> { … }`](../platform) | Platform-specific configuration. &lt;attr&gt; is a set of regexes that must all match against one of CPU, OS, etc., or glibc_&lt;major&gt;_&lt;minor&gt;. When several blocks match, later blocks override earlier ones. |
 | [`version <version> { … }`](../version) | Definition of and configuration for a specific version. |
 
 ## Attributes

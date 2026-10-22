@@ -23,10 +23,33 @@ type Platform struct {
 	OS string
 	// Arch is the CPU architecture of the platform
 	Arch string
+	// Glibc is the glibc version available on the platform, or zero if glibc is absent or unknown.
+	Glibc GlibcVersion
 }
 
 func (p Platform) String() string {
-	return p.OS + "-" + p.Arch
+	if p.Glibc.IsZero() {
+		return p.OS + "-" + p.Arch
+	}
+	return p.OS + "-" + p.Arch + "-glibc" + p.Glibc.String()
+}
+
+// Base returns the platform's OS and architecture without any other values.
+func (p Platform) Base() Platform {
+	return Platform{OS: p.OS, Arch: p.Arch}
+}
+
+// Describe returns the values used to match the platform, eg. "os=linux arch=amd64 glibc=2.35".
+func (p Platform) Describe() string {
+	desc := "os=" + p.OS + " arch=" + p.Arch
+	switch {
+	case p.OS != Linux:
+		return desc
+	case p.Glibc.IsZero():
+		return desc + " glibc=none"
+	default:
+		return desc + " glibc=" + p.Glibc.String()
+	}
 }
 
 type Platforms []Platform
@@ -51,16 +74,16 @@ func (p Platforms) OSes() []string {
 //
 // For a package to be considered fully compliant, these platforms need to be supported
 var Core = Platforms{
-	{Linux, Amd64},
-	{Darwin, Amd64},
-	{Darwin, Arm64},
+	{OS: Linux, Arch: Amd64},
+	{OS: Darwin, Arch: Amd64},
+	{OS: Darwin, Arch: Arm64},
 }
 
 // Optional platforms supported on a best-effort basis.
 //
 // Fully compliant packages are not required to support these platforms
 var Optional = Platforms{
-	{Linux, Arm64},
+	{OS: Linux, Arch: Arm64},
 }
 
 // All platforms supported by Hermit.

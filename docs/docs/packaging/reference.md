@@ -55,6 +55,31 @@ channel nightly {
 Package source can refer to a remote archive file by using `http://` or `https://` prefixes, to a local file by using `file://` prefix, or to a Git repository by using `.git` suffix. 
 If the source points to an archive file, it is extracted at installation. Git repositories are cloned from the default branch and used as is.
 
+## Platforms
+
+A `platform` block applies its configuration only when every one of its labels
+matches the target platform. Labels are regexes matched against the OS, the
+CPU architecture, and `<os>-<arch>`, eg. `platform linux arm64 { … }`.
+
+A label of the form `glibc_<major>_<minor>`, eg. `glibc_2_28`, matches only on
+Linux hosts with that glibc version or newer. Hosts without glibc, such as
+Alpine Linux, never match it. When several blocks match, later blocks override
+earlier ones, so list glibc blocks from oldest to newest after a fallback that
+works without glibc:
+
+```terraform
+platform linux amd64 {
+  source = "https://example.com/tool-${version}-x86_64-linux-musl.tar.gz"
+}
+
+platform linux amd64 glibc_2_28 {
+  source = "https://example.com/tool-${version}-x86_64-linux-gnu.tar.gz"
+}
+```
+
+Hermit detects the glibc version with `getconf GNU_LIBC_VERSION`. Versions of
+Hermit without glibc support ignore blocks with glibc labels.
+
 ## Sources
 
 A manifest source is a location where a set of manifests are stored. Hermit

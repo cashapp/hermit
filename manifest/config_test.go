@@ -23,6 +23,7 @@ func TestManifest(t *testing.T) {
 		pkg      string
 		os       string
 		arch     string
+		glibc    platform.GlibcVersion
 		expected *Package
 		fail     string
 	}{
@@ -146,6 +147,136 @@ func TestManifest(t *testing.T) {
 				Source:   "https://golang.org/dl/go1.14.4.linux-amd64.tar.gz",
 			},
 		},
+		{name: "GlibcPlatformNewerHost",
+			manifest: `
+				description = "Go"
+				binaries = ["bin/go"]
+				source = "https://golang.org/dl/go${version}.${os}-${arch}.tar.gz"
+				platform linux {
+					source = "https://golang.org/dl/go${version}.${os}-${arch}-musl.tar.gz"
+				}
+				platform linux glibc_2_17 {
+					source = "https://golang.org/dl/go${version}.${os}-${arch}-glibc2.17.tar.gz"
+				}
+				platform linux glibc_2_28 {
+					source = "https://golang.org/dl/go${version}.${os}-${arch}-glibc2.28.tar.gz"
+				}
+				version "1.14.4" {}
+			`,
+			os:    "linux",
+			glibc: platform.GlibcVersion{Major: 2, Minor: 35},
+			pkg:   "go-1.14.4",
+			expected: &Package{
+				Binaries: []string{"bin/go"},
+				Source:   "https://golang.org/dl/go1.14.4.linux-amd64-glibc2.28.tar.gz",
+			},
+		},
+		{name: "GlibcPlatformExactHost",
+			manifest: `
+				description = "Go"
+				binaries = ["bin/go"]
+				source = "https://golang.org/dl/go${version}.${os}-${arch}.tar.gz"
+				platform linux {
+					source = "https://golang.org/dl/go${version}.${os}-${arch}-musl.tar.gz"
+				}
+				platform linux glibc_2_17 {
+					source = "https://golang.org/dl/go${version}.${os}-${arch}-glibc2.17.tar.gz"
+				}
+				platform linux glibc_2_28 {
+					source = "https://golang.org/dl/go${version}.${os}-${arch}-glibc2.28.tar.gz"
+				}
+				version "1.14.4" {}
+			`,
+			os:    "linux",
+			glibc: platform.GlibcVersion{Major: 2, Minor: 28},
+			pkg:   "go-1.14.4",
+			expected: &Package{
+				Binaries: []string{"bin/go"},
+				Source:   "https://golang.org/dl/go1.14.4.linux-amd64-glibc2.28.tar.gz",
+			},
+		},
+		{name: "GlibcPlatformOlderHost",
+			manifest: `
+				description = "Go"
+				binaries = ["bin/go"]
+				source = "https://golang.org/dl/go${version}.${os}-${arch}.tar.gz"
+				platform linux {
+					source = "https://golang.org/dl/go${version}.${os}-${arch}-musl.tar.gz"
+				}
+				platform linux glibc_2_17 {
+					source = "https://golang.org/dl/go${version}.${os}-${arch}-glibc2.17.tar.gz"
+				}
+				platform linux glibc_2_28 {
+					source = "https://golang.org/dl/go${version}.${os}-${arch}-glibc2.28.tar.gz"
+				}
+				version "1.14.4" {}
+			`,
+			os:    "linux",
+			glibc: platform.GlibcVersion{Major: 2, Minor: 27},
+			pkg:   "go-1.14.4",
+			expected: &Package{
+				Binaries: []string{"bin/go"},
+				Source:   "https://golang.org/dl/go1.14.4.linux-amd64-glibc2.17.tar.gz",
+			},
+		},
+		{name: "GlibcPlatformNoGlibc",
+			manifest: `
+				description = "Go"
+				binaries = ["bin/go"]
+				source = "https://golang.org/dl/go${version}.${os}-${arch}.tar.gz"
+				platform linux {
+					source = "https://golang.org/dl/go${version}.${os}-${arch}-musl.tar.gz"
+				}
+				platform linux glibc_2_17 {
+					source = "https://golang.org/dl/go${version}.${os}-${arch}-glibc2.17.tar.gz"
+				}
+				platform linux glibc_2_28 {
+					source = "https://golang.org/dl/go${version}.${os}-${arch}-glibc2.28.tar.gz"
+				}
+				version "1.14.4" {}
+			`,
+			os:    "linux",
+			glibc: platform.GlibcVersion{},
+			pkg:   "go-1.14.4",
+			expected: &Package{
+				Binaries: []string{"bin/go"},
+				Source:   "https://golang.org/dl/go1.14.4.linux-amd64-musl.tar.gz",
+			},
+		},
+		{name: "GlibcOnlySourceIsSupported",
+			manifest: `
+				description = "Go"
+				binaries = ["bin/go"]
+				darwin {
+					source = "https://golang.org/dl/go${version}.${os}-${arch}.tar.gz"
+				}
+				platform linux amd64 glibc_2_17 {
+					source = "https://golang.org/dl/go${version}.${os}-${arch}-glibc2.17.tar.gz"
+				}
+				version "1.14.4" {}
+			`,
+			os:    "linux",
+			glibc: platform.GlibcVersion{Major: 2, Minor: 35},
+			pkg:   "go-1.14.4",
+			expected: &Package{
+				Binaries: []string{"bin/go"},
+				Source:   "https://golang.org/dl/go1.14.4.linux-amd64-glibc2.17.tar.gz",
+			},
+		},
+		{name: "GlibcOnlySourceOnOlderHost",
+			manifest: `
+				description = "Go"
+				binaries = ["bin/go"]
+				platform linux amd64 glibc_2_17 {
+					source = "https://golang.org/dl/go${version}.${os}-${arch}-glibc2.17.tar.gz"
+				}
+				version "1.14.4" {}
+			`,
+			os:    "linux",
+			glibc: platform.GlibcVersion{Major: 2, Minor: 12},
+			pkg:   "go-1.14.4",
+			fail:  "memory:///go.hcl: go-1.14.4 on os=linux arch=amd64 glibc=2.12: no source provided",
+		},
 		{name: "PlatformOverlay",
 			manifest: `
 				description = "Go"
@@ -264,6 +395,7 @@ func TestManifest(t *testing.T) {
 			}
 			if test.expected != nil {
 				test.expected.Description = "Go"
+				test.expected.Platform = platform.Platform{OS: hos, Arch: arch, Glibc: test.glibc}
 				if test.expected.Files == nil {
 					test.expected.Files = []*ResolvedFileRef{}
 				}
@@ -284,8 +416,9 @@ func TestManifest(t *testing.T) {
 				Env:   "/project",
 				State: "/tmp/hermit",
 				Platform: platform.Platform{
-					OS:   hos,
-					Arch: arch,
+					OS:    hos,
+					Arch:  arch,
+					Glibc: test.glibc,
 				},
 			})
 			assert.NoError(t, err)
@@ -327,4 +460,42 @@ func TestLayerSerialisesSourceURLsRaw(t *testing.T) {
 	assert.Equal(t, layer.Source, back.Source)
 	assert.Equal(t, layer.Mirrors, back.Mirrors)
 	assert.Equal(t, layer.SHA256Source, back.SHA256Source)
+}
+
+func TestManifestPlatformVariants(t *testing.T) {
+	m := &Manifest{}
+	err := hcl.Unmarshal([]byte(`
+		description = "Test"
+		platform linux glibc_2_28 {}
+		version "1.0.0" {
+			platform linux amd64 glibc_2_17 {}
+		}
+		channel stable {
+			update = "24h"
+			platform glibc_2_28 {}
+		}
+	`), m)
+	assert.NoError(t, err)
+	variants, err := m.PlatformVariants(platform.Platforms{
+		{OS: platform.Linux, Arch: platform.Amd64},
+		{OS: platform.Darwin, Arch: platform.Arm64},
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, platform.Platforms{
+		{OS: platform.Linux, Arch: platform.Amd64},
+		{OS: platform.Linux, Arch: platform.Amd64, Glibc: platform.GlibcVersion{Major: 2, Minor: 17}},
+		{OS: platform.Linux, Arch: platform.Amd64, Glibc: platform.GlibcVersion{Major: 2, Minor: 28}},
+		{OS: platform.Darwin, Arch: platform.Arm64},
+	}, variants)
+}
+
+func TestManifestPlatformVariantsInvalid(t *testing.T) {
+	m := &Manifest{}
+	err := hcl.Unmarshal([]byte(`
+		description = "Test"
+		platform linux glibc_2_x {}
+	`), m)
+	assert.NoError(t, err)
+	_, err = m.PlatformVariants(platform.Core)
+	assert.EqualError(t, err, `invalid platform label "glibc_2_x", expected glibc_<major>_<minor>`)
 }
