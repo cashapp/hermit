@@ -7,7 +7,9 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"strings"
 
+	"github.com/cashapp/hermit/envars"
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/manifest"
 	"github.com/cashapp/hermit/ui"
@@ -35,10 +37,16 @@ func (e *Env) linkFarm(installed []*manifest.Package) (*linkFarm, error) {
 	if err != nil {
 		return nil, err
 	}
+	activated := e.activatedEnvars(installed)
 	links := map[string]string{}
 	for _, pkg := range installed {
 		names := linked[pkg.String()]
-		if len(names) == 0 || requiresStub(pkg) {
+		if len(names) == 0 || requiresStub(pkg) || !requirementsUnpacked(pkg, installed, map[string]bool{}) {
+			continue
+		}
+		// Another package may override one of this package's variables, so only its stub
+		// gives it its own values.
+		if e.stubChangesEnvars(activated, installed, nil, pkg) {
 			continue
 		}
 		// A package whose binaries cannot be resolved is left to its stub,
@@ -104,6 +112,70 @@ func requiresStub(pkg *manifest.Package) bool {
 		}
 	}
 	return false
+}
+
+// activatedEnvars returns the variables activation gives a shell, apart from the link farm.
+func (e *Env) activatedEnvars(installed []*manifest.Package) envars.Envars {
+	system := envars.Parse(os.Environ())
+	return system.Apply(e.Root(), e.allEnvarOpsForPackages("", nil, nil, installed...)).Combined()
+}
+
+// stubChangesEnvars reports whether pkg's stub runs it with different variables than activation sets.
+func (e *Env) stubChangesEnvars(activated envars.Envars, installed, runtimeDeps []*manifest.Package, pkg *manifest.Package, extra ...envars.Op) bool {
+	system := envars.Parse(os.Environ())
+	ops := append(e.allEnvarOpsForPackages("", runtimeDeps, pkg, installed...), extra...)
+	return !sameEnvars(activated, system.Apply(e.Root(), ops).Combined())
+}
+
+// requirementsUnpacked reports whether every installed package pkg requires, directly or not, is unpacked.
+// Its stub unpacks them first, and a linked binary may reach them through variables such as JAVA_HOME.
+func requirementsUnpacked(pkg *manifest.Package, installed []*manifest.Package, seen map[string]bool) bool {
+	for _, req := range pkg.Requires {
+		selector, err := manifest.ParseGlobSelector(req)
+		for _, dep := range installed {
+			ref := dep.Reference.String()
+			if seen[ref] || !(slices.Contains(dep.Provides, req) || (err == nil && selector.Matches(dep.Reference))) {
+				continue
+			}
+			seen[ref] = true
+			if dep.State != manifest.PackageStateInstalled || !requirementsUnpacked(dep, installed, seen) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// sameEnvars reports whether a binary would see the same variables in both environments.
+// List order is ignored because stubs only reorder PATH entries, never drop them.
+func sameEnvars(a, b envars.Envars) bool {
+	keys := map[string]bool{}
+	for k := range a {
+		keys[k] = true
+	}
+	for k := range b {
+		keys[k] = true
+	}
+	for k := range keys {
+		if strings.HasPrefix(k, "_HERMIT_OLD_") {
+			continue
+		}
+		av, aok := a[k]
+		bv, bok := b[k]
+		if aok != bok {
+			return false
+		}
+		if av == bv {
+			continue
+		}
+		al, bl := strings.Split(av, ":"), strings.Split(bv, ":")
+		sort.Strings(al)
+		sort.Strings(bl)
+		if !slices.Equal(al, bl) {
+			return false
+		}
+	}
+	return true
 }
 
 // create writes the farm if it does not exist, renaming a temporary directory into place
