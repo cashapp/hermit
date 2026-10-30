@@ -749,6 +749,113 @@ EOF
 			`,
 		},
 		{
+			name: "ActivatedShellRunsPackagesWithOverriddenEnvarsThroughStubs",
+			script: `
+				hermit init --no-git --sources env:///packages .
+				mkdir -p packages
+				for name in tools-a tools-b path-a path-b; do
+					printf '#!/bin/sh\necho "${TOOLS_HOME:-}"\n' > "packages/${name}.sh"
+					chmod +x "packages/${name}.sh"
+				done
+				for name in tools-a tools-b; do
+					cat > "packages/${name}.hcl" <<EOF
+description = "Sets a variable another package also sets"
+source = "\${env}/packages/${name}.sh"
+binaries = ["${name}.sh"]
+env = { "TOOLS_HOME": "\${root}" }
+version "1.0.0" {}
+EOF
+				done
+				for name in path-a path-b; do
+					cat > "packages/${name}.hcl" <<EOF
+description = "Prepends to PATH, as another package also does"
+source = "\${env}/packages/${name}.sh"
+binaries = ["${name}.sh"]
+env = { "PATH": "\${root}/bin:\${PATH}" }
+version "1.0.0" {}
+EOF
+				done
+				./bin/hermit install tools-a tools-b path-a path-b
+				. bin/activate-hermit
+				# The package whose TOOLS_HOME the shell lost needs its stub to get it back.
+				for name in tools-a tools-b; do
+					case "${TOOLS_HOME}" in
+						*/${name}-1.0.0) assert test "$(command -v ${name}.sh)" = "${HERMIT_LINK_FARM}/${name}.sh" ;;
+						*) assert test "$(command -v ${name}.sh)" = "${HERMIT_ENV}/bin/${name}.sh" ;;
+					esac
+					case "$(${name}.sh)" in
+						*/${name}-1.0.0) ;;
+						*) hermit-send "error: ${name}.sh saw TOOLS_HOME=$(${name}.sh)"; exit 1 ;;
+					esac
+				done
+				# PATH order differs through the stubs, but every entry is present either way.
+				assert test "$(command -v path-a.sh)" = "${HERMIT_LINK_FARM}/path-a.sh"
+				assert test "$(command -v path-b.sh)" = "${HERMIT_LINK_FARM}/path-b.sh"
+			`,
+		},
+		{
+			name: "ActivatedShellRunsPackagesWithRequirementsNotUnpackedThroughStubs",
+			script: `
+				hermit init --no-git --sources env:///packages .
+				mkdir -p packages
+				printf '#!/bin/sh\necho dep\n' > packages/dep.sh
+				printf '#!/bin/sh\nexec "${DEP_HOME}/dep.sh"\n' > packages/needs.sh
+				chmod +x packages/dep.sh packages/needs.sh
+				cat > packages/dep.hcl <<'EOF'
+description = "Reached through DEP_HOME rather than PATH"
+source = "${env}/packages/dep.sh"
+binaries = ["dep.sh"]
+env = { "DEP_HOME": "${root}" }
+version "1.0.0" {}
+EOF
+				cat > packages/needs.hcl <<'EOF'
+description = "Requires dep"
+source = "${env}/packages/needs.sh"
+binaries = ["needs.sh"]
+requires = ["dep"]
+version "1.0.0" {}
+EOF
+				./bin/hermit install needs
+				# As if a pull had changed dep to a version that is not unpacked yet.
+				chmod -R u+w "$HERMIT_STATE_DIR/pkg/dep-1.0.0"
+				rm -rf "$HERMIT_STATE_DIR/pkg/dep-1.0.0"
+				. bin/activate-hermit
+				assert test "$(command -v needs.sh)" = "${HERMIT_ENV}/bin/needs.sh"
+				assert test "$(needs.sh)" = dep
+			`,
+		},
+		{
+			name: "StubsRunChildBinariesThroughStubsWhenTheyChangeEnvars",
+			script: `
+				hermit init --no-git --sources env:///packages .
+				mkdir -p packages
+				printf '#!/bin/sh\nexec "$@"\n' > packages/runner.sh
+				printf '#!/bin/sh\necho "${TOOLS_HOME:-}"\n' > packages/tools.sh
+				chmod +x packages/runner.sh packages/tools.sh
+				for name in runner tools; do
+					cat > "packages/${name}.hcl" <<EOF
+description = "Sets a variable another package also sets"
+source = "\${env}/packages/${name}.sh"
+binaries = ["${name}.sh"]
+env = { "TOOLS_HOME": "\${root}" }
+version "1.0.0" {}
+EOF
+				done
+				./bin/hermit install runner tools
+				# tools wins TOOLS_HOME, so runner's stub changes it for runner's children.
+				case "$(./bin/runner.sh tools.sh)" in
+					*/tools-1.0.0) ;;
+					*) hermit-send "error: unactivated child saw TOOLS_HOME=$(./bin/runner.sh tools.sh)"; exit 1 ;;
+				esac
+				assert test -z "$(./bin/runner.sh sh -c 'echo "${HERMIT_LINK_FARM:-}"')"
+				. bin/activate-hermit
+				case "$(runner.sh tools.sh)" in
+					*/tools-1.0.0) ;;
+					*) hermit-send "error: activated child saw TOOLS_HOME=$(runner.sh tools.sh)"; exit 1 ;;
+				esac
+			`,
+		},
+		{
 			name: "UnactivatedStubRunsChildBinariesThroughLinkFarm",
 			script: `
 				hermit init --no-git --sources env:///packages .

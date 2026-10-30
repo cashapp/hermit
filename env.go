@@ -910,6 +910,15 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 		return errors.WithStack(err)
 	}
 
+	var packageOps envars.Ops
+	packageHermitBin, err := e.getPackageRuntimeEnvops(pkg)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	if packageHermitBin != nil {
+		packageOps = append(packageOps, packageHermitBin)
+	}
+
 	var (
 		installed   []*manifest.Package
 		linkFarmDir string
@@ -927,22 +936,19 @@ func (e *Env) Exec(l *ui.UI, pkg *manifest.Package, binary string, args []string
 			return errors.WithStack(err)
 		}
 		// Without the link farm, every tool the binary's children run would go back
-		// through a stub, each reloading the whole environment.
-		farm, err := e.createLinkFarm(l, installed)
-		if err != nil {
-			return errors.WithStack(err)
+		// through a stub, each reloading the whole environment. But linked children would
+		// inherit any variables this stub changes instead of getting their own.
+		if !e.stubChangesEnvars(e.activatedEnvars(installed), installed, runtimeDeps, pkg, packageOps...) {
+			farm, err := e.createLinkFarm(l, installed)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			linkFarmDir = farm.dir
 		}
-		linkFarmDir = farm.dir
 	}
 
 	ops := e.allEnvarOpsForPackages(linkFarmDir, runtimeDeps, pkg, installed...)
-	packageHermitBin, err := e.getPackageRuntimeEnvops(pkg)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	if packageHermitBin != nil {
-		ops = append(ops, packageHermitBin)
-	}
+	ops = append(ops, packageOps...)
 	env := e.envarsFromOps(true, ops)
 
 	argsCopy := make([]string, len(args))
