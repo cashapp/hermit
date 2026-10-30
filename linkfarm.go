@@ -134,7 +134,8 @@ func requirementsUnpacked(pkg *manifest.Package, installed []*manifest.Package, 
 		selector, err := manifest.ParseGlobSelector(req)
 		for _, dep := range installed {
 			ref := dep.Reference.String()
-			if seen[ref] || !(slices.Contains(dep.Provides, req) || (err == nil && selector.Matches(dep.Reference))) {
+			satisfies := slices.Contains(dep.Provides, req) || (err == nil && selector.Matches(dep.Reference))
+			if seen[ref] || !satisfies {
 				continue
 			}
 			seen[ref] = true
