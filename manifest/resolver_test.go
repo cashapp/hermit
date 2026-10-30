@@ -300,6 +300,50 @@ func TestResolver_Resolve(t *testing.T) {
 			WithUnsupportedPlatforms([]platform.Platform{{OS: platform.Darwin, Arch: platform.Amd64}, {OS: platform.Darwin, Arch: platform.Arm64}}).
 			Result(),
 	}, {
+		name: "Returns core platforms marked unsupported",
+		files: map[string]string{
+			"test.hcl": `
+                description = ""
+				binaries = ["bin"]
+				source = "www.example.com/${version}"
+
+				version "1.0.0" {
+					platform darwin-arm64 { unsupported = true }
+				}
+            `,
+		},
+		reference: "test-1.0.0",
+		wantPkg: manifesttest.NewPkgBuilder(config.State + "/pkg/test-1.0.0").
+			WithName("test").
+			WithBinaries("bin").
+			WithVersion("1.0.0").
+			WithSource("www.example.com/1.0.0").
+			WithUnsupportedPlatforms([]platform.Platform{{OS: platform.Darwin, Arch: platform.Arm64}}).
+			Result(),
+	}, {
+		name: "Rejects source and unsupported in the same block",
+		files: map[string]string{
+			"test.hcl": `
+				description = ""
+				binaries = ["bin"]
+				source = "www.example.com"
+				unsupported = true
+
+				version "1.0.0" {
+					platform linux {
+						source = "www.example.com/linux"
+						unsupported = true
+					}
+				}
+			`,
+		},
+		manifestErrors: map[string][]string{
+			"memory:///test.hcl": {
+				"top level: source and unsupported cannot both be set in the same block",
+				"8:6: source and unsupported cannot both be set in the same block",
+			},
+		},
+	}, {
 		name: "Validates event enum",
 		files: map[string]string{
 			"test.hcl": `

@@ -33,6 +33,10 @@ var ErrNoBinaries = errors.New("no binaries or apps provided")
 // ErrNoSource is returned when a resolved package does not contain source
 var ErrNoSource = errors.New("no source provided")
 
+// ErrUnsupportedPlatform is returned when the manifest marks a package unsupported on the platform.
+// It wraps ErrNoSource so existing missing-source checks still match.
+var ErrUnsupportedPlatform = errors.Wrap(ErrNoSource, "unsupported platform")
+
 // Config required for loading manifests.
 type Config struct {
 	// Path to environment root.
@@ -495,9 +499,6 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 		if layer.Test != nil {
 			p.Test = *layer.Test
 		}
-		if layer.Source != "" {
-			p.Source = layer.Source
-		}
 		if layer.SHA256Source != "" {
 			p.SHA256Source = layer.SHA256Source
 		}
@@ -549,8 +550,13 @@ func newPackage(manifest *AnnotatedManifest, config Config, selector Selector) (
 	for _, actions := range p.Triggers {
 		triggerActions += len(actions)
 	}
+	source, unsupportedPlatform := layers.source()
+	p.Source = source
 	if len(p.Binaries) == 0 && len(p.Apps) == 0 && triggerActions == 0 && len(layerEnvars) == 0 {
 		return p, errors.Wrapf(ErrNoBinaries, "%s: %s", manifest.Path, found)
+	}
+	if unsupportedPlatform {
+		return p, errors.Wrapf(ErrUnsupportedPlatform, "%s: %s on %s", manifest.Path, found, config.Platform.Describe())
 	}
 	if p.Source == "" {
 		return p, errors.Wrapf(ErrNoSource, "%s: %s on %s", manifest.Path, found, config.Platform.Describe())
@@ -831,6 +837,14 @@ func (m *Manifest) validate() []error {
 		if err := block.validate(); err != nil {
 			result = append(result, err)
 		}
+	}
+
+	result = append(result, m.Layer.validateSource()...)
+	for _, v := range m.Versions {
+		result = append(result, v.validateSource()...)
+	}
+	for _, ch := range m.Channels {
+		result = append(result, ch.validateSource()...)
 	}
 
 	return result
