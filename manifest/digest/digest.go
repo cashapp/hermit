@@ -51,6 +51,10 @@ func UpdateDigests(l *ui.UI, client *http.Client, state *state.State, path strin
 				Platform: p,
 			}
 			pkg, err := manifest.Resolve(mani, config, ref)
+			if errors.Is(err, manifest.ErrUnsupportedPlatform) {
+				task.Debugf("%s is marked unsupported on %s, skipping", ref, p)
+				continue
+			}
 			if errors.Is(err, manifest.ErrNoSource) {
 				maybeWarnf(task, p, "No source provided for %s/%s", ref, p)
 				continue

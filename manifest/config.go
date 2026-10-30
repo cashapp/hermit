@@ -5,6 +5,8 @@ import (
 	"slices"
 	"time"
 
+	"github.com/alecthomas/hcl"
+
 	"github.com/cashapp/hermit/envars"
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/platform"
@@ -25,6 +27,7 @@ const (
 
 // A Layer contributes to the final merged manifest definition.
 type Layer struct {
+	Pos          hcl.Position      `hcl:"-"`
 	Arch         string            `hcl:"arch,optional" help:"CPU architecture to match (amd64, 386, arm, etc.)."`
 	Binaries     []string          `hcl:"binaries,optional" help:"Relative glob from $root to individual terminal binaries."`
 	Apps         []string          `hcl:"apps,optional" help:"Relative paths to Mac .app packages to install."`
@@ -40,6 +43,7 @@ type Layer struct {
 	Env          envars.Envars     `hcl:"env,optional" help:"Environment variables to export."`
 	Vars         map[string]string `hcl:"vars,optional" help:"Set local variables used during manifest evaluation."`
 	Source       redact.URL        `hcl:"source,optional" help:"URL for source package. Valid URLs are Git repositories (using .git[#<tag>] suffix), Local Files (using file:// prefix), and Remote Files (using http:// or https:// prefix)"`
+	Unsupported  bool              `hcl:"unsupported,optional" help:"Package is not available where this block applies, even if an enclosing block sets source. A later matching block that sets source makes it available again."`
 	DontExtract  bool              `hcl:"dont-extract,optional" help:"Don't extract the package source, just copy it into the installation directory."`
 	Mirrors      []redact.URL      `hcl:"mirrors,optional" help:"Mirrors to use if the primary source is unavailable."`
 	SHA256       string            `hcl:"sha256,optional" help:"SHA256 of source package for verification. When in conflict with SHA256 in sha256sums, this value takes precedence."`
@@ -79,6 +83,27 @@ func (c Layer) layers(p platform.Platform) (out layers, err error) {
 
 func (c *Layer) match(arch string) bool {
 	return c.Arch == "" || c.Arch == arch
+}
+
+// validateSource returns an error for each block in the layer tree that both sets source and marks it unsupported.
+func (c *Layer) validateSource() []error {
+	var result []error
+	if c.Unsupported && c.Source != "" {
+		// The top-level layer is not a block, so it has no position.
+		location := "top level"
+		if c.Pos.Line != 0 {
+			location = c.Pos.String()
+		}
+		result = append(result, errors.Errorf("%s: source and unsupported cannot both be set in the same block", location))
+	}
+	children := slices.Concat(c.Darwin, c.Linux)
+	for _, block := range c.Platform {
+		children = append(children, &block.Layer)
+	}
+	for _, child := range children {
+		result = append(result, child.validateSource()...)
+	}
+	return result
 }
 
 // AutoVersionBlock represents auto-version configuration.
@@ -233,7 +258,7 @@ func (m *Manifest) unsupported(ref Reference, base platform.Platforms) (platform
 		if err != nil {
 			return nil, err
 		}
-		if slices.ContainsFunc(lrs, func(l *Layer) bool { return l.Source != "" }) {
+		if source, _ := lrs.source(); source != "" {
 			supported[p.Base()] = true
 		}
 	}
@@ -313,6 +338,20 @@ func (m *Manifest) References(name string) References {
 }
 
 type layers []*Layer
+
+// source returns the effective source and whether a layer marked it unsupported.
+// Resolution and the unsupported platform list must both use this so they agree.
+func (ls layers) source() (source redact.URL, unsupported bool) {
+	for _, l := range ls {
+		switch {
+		case l.Unsupported:
+			source, unsupported = "", true
+		case l.Source != "":
+			source, unsupported = l.Source, false
+		}
+	}
+	return source, unsupported
+}
 
 // Return the last non-zero value for a field in the stack of layers.
 func (ls layers) field(key string, seed interface{}) interface{} {

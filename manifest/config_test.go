@@ -304,6 +304,61 @@ func TestManifest(t *testing.T) {
 				Source:    "https://arm-linux-golang.org/dl/go1.14.4.linux-arm.tar.gz",
 			},
 		},
+		{name: "UnsupportedPlatformClearsInheritedSource",
+			manifest: `
+				description = "Go"
+				binaries = ["bin/go"]
+				source = "https://golang.org/dl/go${version}.${os}-${arch}.tar.gz"
+
+				version "1.14.4" {
+					platform linux-arm64 { unsupported = true }
+				}
+			`,
+			os:   "linux",
+			arch: "arm64",
+			pkg:  "go-1.14.4",
+			fail: "memory:///go.hcl: go-1.14.4 on os=linux arch=arm64 glibc=none: unsupported platform: no source provided",
+		},
+		{name: "UnsupportedPlatformLeavesOtherPlatforms",
+			manifest: `
+				description = "Go"
+				binaries = ["bin/go"]
+				source = "https://golang.org/dl/go${version}.${os}-${arch}.tar.gz"
+
+				version "1.14.4" {
+					platform linux-arm64 { unsupported = true }
+				}
+			`,
+			os:  "linux",
+			pkg: "go-1.14.4",
+			expected: &Package{
+				Binaries: []string{"bin/go"},
+				Source:   "https://golang.org/dl/go1.14.4.linux-amd64.tar.gz",
+			},
+		},
+		{name: "LaterSourceOverridesUnsupported",
+			manifest: `
+				description = "Go"
+				binaries = ["bin/go"]
+				source = "https://golang.org/dl/go${version}.${os}-${arch}.tar.gz"
+
+				platform linux { unsupported = true }
+				platform linux arm64 {
+					source = "https://arm64-linux-golang.org/dl/go${version}.${os}-${arch}.tar.gz"
+				}
+
+				version "1.14.4" {}
+			`,
+			os:   "linux",
+			arch: "arm64",
+			pkg:  "go-1.14.4",
+			expected: &Package{
+				Binaries: []string{"bin/go"},
+				Source:   "https://arm64-linux-golang.org/dl/go1.14.4.linux-arm64.tar.gz",
+				// The linux block clears the source on every Linux core platform except the one re-added.
+				UnsupportedPlatforms: []platform.Platform{{OS: platform.Linux, Arch: platform.Amd64}},
+			},
+		},
 		{name: "VersionOverlay",
 			manifest: `
 				description = "Go"
