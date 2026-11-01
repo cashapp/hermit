@@ -53,7 +53,7 @@ func TestUpdateHermitChannel(t *testing.T) {
 			t.Cleanup(func() {
 				// Extracted packages are read-only.
 				_ = filepath.Walk(root, func(path string, _ os.FileInfo, _ error) error {
-					return os.Chmod(path, 0700) //nolint:gosec
+					return os.Chmod(path, 0700)
 				})
 			})
 			sta := openStateWithHermitManifest(t, root, server)
