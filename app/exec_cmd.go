@@ -118,26 +118,25 @@ func maybeUpdateHermit(l *ui.UI, state *state.State, selfUpdate bool, force bool
 	if !strings.HasPrefix(pkgRef, "hermit@") {
 		return nil
 	}
+	return updateHermitChannel(l, state, manifest.ParseReference(pkgRef), force)
+}
 
-	l.Tracef("Checking if %s needs to be updated", pkgRef)
-	pkg, err := state.Resolve(l, manifest.ExactSelector(manifest.ParseReference(pkgRef)))
+// updateHermitChannel upgrades the given Hermit channel package if its update interval has elapsed.
+// The last check time is the metadata file's mtime, so writing state on every run would stop checks from ever firing.
+func updateHermitChannel(l *ui.UI, state *state.State, ref manifest.Reference, force bool) error {
+	l.Tracef("Checking if %s needs to be updated", ref)
+	pkg, err := state.Resolve(l, manifest.ExactSelector(ref))
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	// Mark Hermit updated if this is a new installation to prevent immediate upgrade checks
-	if force {
+	state.ReadPackageState(pkg)
+	switch {
+	case force || debug.Flags.AlwaysCheckSelf:
 		pkg.UpdatedAt = time.Time{}
-	} else if pkg.UpdatedAt.IsZero() {
+	case pkg.UpdatedAt.IsZero():
+		// Record a new installation as just checked to prevent an immediate upgrade check.
 		pkg.UpdatedAt = time.Now()
-	}
-	err = state.WritePackageState(pkg)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	if debug.Flags.AlwaysCheckSelf {
-		// set the update time to 0 to force an update check
-		pkg.UpdatedAt = time.Time{}
+		return errors.WithStack(state.WritePackageState(pkg))
 	}
 	return errors.WithStack(state.EnsureChannelIsUpToDate(l, pkg))
 }
