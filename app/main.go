@@ -68,6 +68,22 @@ func (l *loggingHTTPTransport) RoundTrip(r *http.Request) (*http.Response, error
 	return l.next.RoundTrip(r)
 }
 
+// newHTTPClient is the default Config.HTTP.
+func newHTTPClient(config HTTPTransportConfig) *http.Client {
+	// Start from Go's defaults, which include proxy support, TLS and idle
+	// timeouts, and HTTP/2 even with the custom dialer below.
+	transport := http.DefaultTransport.(*http.Transport).Clone() //nolint:errcheck // Hermit never replaces DefaultTransport.
+	transport.ResponseHeaderTimeout = config.ResponseHeaderTimeout
+	transport.DialContext = (&net.Dialer{
+		Timeout:   config.DialTimeout,
+		KeepAlive: config.KeepAlive,
+	}).DialContext
+	// Parallel downloads from one host share an HTTP/2 connection, so a
+	// dead one must fail them promptly rather than leave reads hanging.
+	transport.HTTP2 = &http.HTTP2Config{SendPingTimeout: 15 * time.Second, PingTimeout: 15 * time.Second}
+	return &http.Client{Transport: transport}
+}
+
 // Make a HTTP client.
 func (c Config) makeHTTPClient(logger ui.Logger, config HTTPTransportConfig) *http.Client {
 	client := c.HTTP(config)
@@ -102,17 +118,7 @@ func Main(config Config) {
 	}
 	config.LogLevel = ui.AutoLevel(config.LogLevel)
 	if config.HTTP == nil {
-		config.HTTP = func(config HTTPTransportConfig) *http.Client {
-			transport := &http.Transport{
-				ResponseHeaderTimeout: config.ResponseHeaderTimeout,
-				Proxy:                 http.ProxyFromEnvironment,
-				DialContext: (&net.Dialer{
-					Timeout:   config.DialTimeout,
-					KeepAlive: config.KeepAlive,
-				}).DialContext,
-			}
-			return &http.Client{Transport: transport}
-		}
+		config.HTTP = newHTTPClient
 	}
 
 	if len(config.SHA256Sums) == 0 {
