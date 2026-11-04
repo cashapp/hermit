@@ -44,6 +44,34 @@ hermit
 hermit.hcl
 ```
 
+### Migrating from asdf or mise
+
+If the directory contains a `.tool-versions` file, `hermit init` installs the
+tools it pins into the new environment:
+
+```text
+nodejs 20.11.0
+golang 1.22.1
+python 3.12.2 3.11.8
+java temurin-17.0.2+8
+```
+
+Each line is mapped to a Hermit package:
+
+* Common asdf plugin names are translated (`nodejs` to `node`, `golang` to
+  `go`, `python` to `python3`, `dotnet-core` to `dotnet`, `aws-cli` to
+  `awscli`). Other names are used as-is.
+* An exact version is used if Hermit has it, otherwise the newest version
+  starting with it (so `20.11` selects the latest `20.11.x`). `latest` and
+  `latest:<prefix>` are also supported.
+* If a line lists several versions, the first one Hermit can resolve is
+  installed, since a Hermit environment has one version of each package.
+* Java versions with a `temurin-`, `adoptopenjdk-` or `openjdk-` prefix map
+  to `openjdk`, and `corretto-` maps to `corretto`.
+
+Lines that can't be mapped, such as `system`, `ref:` or `path:` versions, are
+skipped with a warning. Pass `--no-tool-versions` to ignore the file.
+
 ## Activating an Environment
 
 Activating an environment will add its `bin` directory to your `$PATH`, as
