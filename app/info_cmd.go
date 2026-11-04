@@ -58,7 +58,7 @@ func (i *infoCmd) Run(l *ui.UI, env *hermit.Env, sta *state.State) error {
 	}
 
 	if i.JSON {
-		js, err := json.Marshal(packages) //nolint:musttag // default JSON behavior is fine
+		js, err := json.Marshal(expandBinaryGlobs(packages)) //nolint:musttag // default JSON behavior is fine
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -103,6 +103,30 @@ func (i *infoCmd) Run(l *ui.UI, env *hermit.Env, sta *state.State) error {
 		}
 	}
 	return nil
+}
+
+// expandBinaryGlobs returns the packages with their binary globs expanded to the matching files,
+// relative to the package root. Globs that can't be resolved, eg. because the package isn't
+// installed, are left as they are in the manifest.
+func expandBinaryGlobs(packages []*manifest.Package) []*manifest.Package {
+	out := make([]*manifest.Package, 0, len(packages))
+	for _, pkg := range packages {
+		bins, err := pkg.ResolveBinaries()
+		if err != nil {
+			out = append(out, pkg)
+			continue
+		}
+		expanded := *pkg
+		expanded.Binaries = make([]string, 0, len(bins))
+		for _, bin := range bins {
+			if rel, err := filepath.Rel(pkg.Root, bin); err == nil {
+				bin = rel
+			}
+			expanded.Binaries = append(expanded.Binaries, bin)
+		}
+		out = append(out, &expanded)
+	}
+	return out
 }
 
 func getInstalledPackageMap(l *ui.UI, env *hermit.Env) (map[string]*manifest.Package, error) {
