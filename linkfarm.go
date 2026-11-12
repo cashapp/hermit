@@ -12,11 +12,12 @@ import (
 	"github.com/cashapp/hermit/envars"
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/manifest"
+	"github.com/cashapp/hermit/state"
 	"github.com/cashapp/hermit/ui"
 )
 
 // linkFarm is an immutable directory of symlinks to package binaries, put on PATH ahead of bin/.
-// Only "hermit clean" deletes farms, because bash caches command paths and fails if they disappear.
+// Bash caches command paths, so only "hermit clean" and "hermit gc" (once unused) delete farms.
 type linkFarm struct {
 	dir   string
 	links map[string]string // Binary name to absolute binary path.
@@ -79,6 +80,9 @@ func (e *Env) linkFarm(installed []*manifest.Package) (*linkFarm, error) {
 // It first checks linked channel packages for updates, because their stubs no longer run to do it.
 func (e *Env) createLinkFarm(l *ui.UI, installed []*manifest.Package) (*linkFarm, error) {
 	for _, pkg := range installed {
+		// Linked binaries and variables such as JAVA_HOME reach packages without going through
+		// Hermit, so record every installed package as used here.
+		e.state.RecordUsage(pkg)
 		if requiresStub(pkg) {
 			continue
 		}
@@ -183,6 +187,7 @@ func sameEnvars(a, b envars.Envars) bool {
 // so concurrent activations never see a partial farm.
 func (f *linkFarm) create() error {
 	if _, err := os.Lstat(f.dir); err == nil {
+		state.Touch(f.dir)
 		return nil
 	}
 	parent := filepath.Dir(f.dir)

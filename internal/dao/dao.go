@@ -72,6 +72,11 @@ func (d *DAO) DeletePackage(pkgRef string) error {
 	return nil
 }
 
+// MetadataDir returns the directory holding the package records.
+func (d *DAO) MetadataDir() string {
+	return d.metadataDir
+}
+
 func (d *DAO) metadataPath(pkgRef string) string {
 	return filepath.Join(d.metadataDir, pkgRef+".etag")
 }

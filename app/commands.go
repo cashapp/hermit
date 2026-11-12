@@ -54,6 +54,7 @@ type cliBase struct {
 	DumpUserConfigSchema dumpUserConfigSchema `cmd:"" help:"Dump user configuration schema." hidden:""`
 	ScriptSHA            scriptSHACmd         `cmd:"" help:"Print known sha256 sums of activate-hermit and hermit scripts." hidden:""`
 	GenInstaller         genInstallerCmd      `cmd:"" help:"Generate Hermit installer script." group:"global"`
+	GC                   gcCmd                `cmd:"" help:"Remove packages, downloads and other cached state not used recently." group:"global"`
 	kong.Plugins
 }
 
@@ -91,7 +92,6 @@ type activated struct {
 	Bundle     bundleCmd            `cmd:"" help:"Expand packages from the current environment into a target directory." group:"env"`
 
 	Clean cleanCmd `cmd:"" help:"Clean hermit cache." group:"global"`
-	GC    gcCmd    `cmd:"" hidden:"" group:"global"`
 	Test  testCmd  `cmd:"" help:"Run package sanity tests." group:"global"`
 
 	// TODO: Remove this after we can assume that all active hermit sessions have been recreated with the latest scripts

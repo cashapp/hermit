@@ -296,17 +296,20 @@ func (s *State) removeRecursive(b *ui.Task, dest string) error {
 	}
 	defer release() //nolint:errcheck
 
-	task.Debugf("chmod -R +w %s", dest)
-	_ = filepath.Walk(dest, func(path string, info os.FileInfo, err error) error {
+	// Unlinking needs write permission on the parent directory only, so files are left alone.
+	// Symlinks are never directories here, so os.Chmod cannot follow one outside dest.
+	task.Debugf("chmod -R +w %s (directories)", dest)
+	_ = filepath.WalkDir(dest, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		// Never chmod through symlinks: os.Chmod follows them, which would
-		// let a symlink alter the permissions of a file outside dest.
-		if info.Mode()&os.ModeSymlink != 0 {
+		if !d.IsDir() {
 			return nil
 		}
-		err = os.Chmod(path, info.Mode()|0o200) //nolint:gosec // TODO: Switch to use os.Root()
+		info, err := d.Info()
+		if err == nil {
+			err = os.Chmod(path, info.Mode()|0o200) //nolint:gosec // TODO: Switch to use os.Root()
+		}
 
 		if errors.Is(err, os.ErrNotExist) {
 			task.Debugf("file did not exist during removal %q", path)
@@ -326,6 +329,7 @@ func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 	// again after acquiring the lock.
 
 	if (s.isExtracted(p) && s.areBinariesLinked(p)) || p.Source == "/" {
+		s.RecordUsage(p)
 		return nil
 	}
 
@@ -366,6 +370,7 @@ func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 		}
 	}
 
+	s.RecordUsage(p)
 	return nil
 }
 

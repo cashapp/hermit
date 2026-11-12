@@ -266,23 +266,36 @@ func (w *UI) writeProgress(width int) {
 	if complete > len(liveOperations) {
 		complete = len(liveOperations)
 	}
+	// clearProgress only clears two lines, so each line must fit without wrapping. The last
+	// column is left empty because writing into it makes some terminals wrap.
+	width--
 	// Format progress bar.
 	percent := float64(progress) / float64(size)
 	barsn := len(theme.bars)
-	columns := int(float64(width-15) * float64(barsn) * percent)
-	nofm := fmt.Sprintf("%d/%d", complete, len(liveOperations))
-	percentstr := fmt.Sprintf("%.1f%%", percent*100)
-	spaces := max(width-columns/barsn-15, 0)
-	fmt.Fprintf(w.stdout, "%s%s%s %-7s%6s\n", strings.Repeat(theme.fill, max(columns/barsn, 0)), theme.bars[columns%barsn], strings.Repeat(theme.blank, spaces), nofm, percentstr)
+	suffix := fmt.Sprintf(" %-7s%6s", fmt.Sprintf("%d/%d", complete, len(liveOperations)), fmt.Sprintf("%.1f%%", percent*100))
+	barWidth := max(width-len(suffix), 1)
+	columns := int(float64(barWidth-1) * float64(barsn) * percent)
+	spaces := max(barWidth-columns/barsn-1, 0)
+	fmt.Fprintf(w.stdout, "%s%s%s%s\n", strings.Repeat(theme.fill, max(columns/barsn, 0)), theme.bars[columns%barsn], strings.Repeat(theme.blank, spaces), suffix)
 	// Write operations bar.
+	var labels strings.Builder
 	for _, op := range liveOperations {
 		opprogress, opsize, _ := op.status()
 		if opprogress < opsize {
-			fmt.Fprintf(w.stdout, "\033[0m%s ", op.label())
+			labels.WriteString(op.label() + " ")
 		}
 	}
-	fmt.Fprintf(w.stdout, "\033[0m\033[0K\n")
+	fmt.Fprintf(w.stdout, "\033[0m%s\033[0m\033[0K\n", truncate(labels.String(), width))
 	_ = w.stdout.Sync()
+}
+
+// truncate cuts s to at most width runes, marking the cut with an ellipsis.
+func truncate(s string, width int) string {
+	runes := []rune(s)
+	if len(runes) <= width {
+		return s
+	}
+	return string(runes[:max(width-1, 0)]) + "…"
 }
 
 // Internal only, does not acquire lock.
