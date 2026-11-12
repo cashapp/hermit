@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/alecthomas/assert/v2"
 
@@ -122,6 +123,49 @@ func TestCleanRemovesLinkFarms(t *testing.T) {
 	entries, err := os.ReadDir(fixture.State.EnvironmentsDir())
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(entries))
+}
+
+func TestActivateProtectsPackagesAndLinkFarmFromGC(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		tar := TestTarGz{map[string]string{"tool": "#!/bin/sh\n"}}
+		tar.Write(t, w)
+	})
+	fixture := hermittest.NewEnvTestFixture(t, handler)
+	fixture.WithManifests(map[string]string{
+		"tool.hcl": `
+			description = ""
+			binaries = ["tool"]
+			source = "` + fixture.Server.URL + `/tool"
+			version "1.0.0" {}
+		`,
+	})
+	install(t, fixture, "tool-1.0.0")
+	_, ops, err := fixture.Env.Activate(fixture.P)
+	assert.NoError(t, err)
+	farm := linkFarmDir(t, ops)
+	pkg := filepath.Join(fixture.RootDir(), "tool-1.0.0")
+	const gcAge = 24 * time.Hour
+	old := time.Now().Add(-2 * gcAge)
+
+	for _, path := range []string{pkg, farm} {
+		assert.NoError(t, os.Chtimes(path, old, old))
+	}
+	_, _, err = fixture.Env.Activate(fixture.P)
+	assert.NoError(t, err)
+	assert.NoError(t, fixture.State.GC(fixture.P, gcAge))
+	for _, path := range []string{pkg, farm} {
+		_, err = os.Stat(path)
+		assert.NoError(t, err, "activation must protect %s from GC", path)
+	}
+
+	for _, path := range []string{pkg, farm} {
+		assert.NoError(t, os.Chtimes(path, old, old))
+	}
+	assert.NoError(t, fixture.State.GC(fixture.P, gcAge))
+	for _, path := range []string{pkg, filepath.Dir(farm)} {
+		_, err = os.Stat(path)
+		assert.True(t, os.IsNotExist(err), "GC must remove unused %s", path)
+	}
 }
 
 func install(t *testing.T, fixture *hermittest.EnvTestFixture, ref string) {
