@@ -87,10 +87,12 @@ func syncGit(b *ui.Task, dir string, source redact.URL, finalDest string, runner
 			err = errors.WithStack(os.Chtimes(finalDest, now, now))
 		}
 	}()
-	// First, if a git repo exists, just pull.
+	// First, if a git repo exists, just pull. Only ever fast-forward, so a
+	// user's pull.rebase or pull.ff setting cannot turn the refresh into a
+	// rebase or a merge.
 	info, _ := os.Stat(filepath.Join(finalDest, ".git"))
 	if info != nil {
-		err = runner.RunInDir(b, finalDest, redact.Args(util.GitArgs("pull")...)...)
+		err = runner.RunInDir(b, finalDest, redact.Args(util.GitArgs("pull", "--no-rebase", "--ff-only")...)...)
 		if err == nil {
 			return nil
 		}

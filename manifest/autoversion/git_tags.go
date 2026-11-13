@@ -35,6 +35,7 @@ func gitTagsAutoVersion(autoVersion *manifest.AutoVersionBlock) (string, error) 
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
+	cmd.Env = util.WithoutGitLocalEnv(cmd.Env)
 	out, err := cmd.Output()
 	if err != nil {
 		return "", errors.Wrapf(err, "error listing tags for %s", remoteURL)
