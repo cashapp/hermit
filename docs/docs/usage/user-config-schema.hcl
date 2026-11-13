@@ -23,13 +23,20 @@ defaults {
   # Whether this environment inherits a potential parent environment from one of the parent directories
   # default: false
   inherit-parent = boolean # (optional)
+  # List of packages to eagerly download and unpack when the environment is activated.
+  install-on-activate = [string] # (optional)
   # Whether Hermit should automatically add the IntelliJ IDEA plugin.
   # default: false
   idea = boolean # (optional)
 
   # When to use GitHub token authentication.
-  github-token-auth {
-    # One or more glob patterns. If any of these match the 'owner/repo' pair of a GitHub repository, the GitHub token from the current environment will be used to fetch their artifacts.
+  github-token-auth { # (repeated)
+    # GitHub web host for matched repositories. Defaults to github.com. For GitHub Enterprise Cloud with data residency this is typically <subdomain>.ghe.com.
+    # default: github.com
+    host = string # (optional)
+    # Environment variable containing the token for this host. Defaults to HERMIT_GITHUB_TOKEN/GITHUB_TOKEN for github.com. Non-github.com hosts fall back to gh auth token -h <host> if this is unset or empty.
+    token-env = string # (optional)
+    # One or more glob patterns. If any match the owner/repo pair of a GitHub repository on this host, Hermit uses that host's token for release downloads and HTTPS git source rewriting.
     match = [string] # (optional)
   }
 }
