@@ -194,14 +194,16 @@ func (e *Append) String() string {
 func (e *Append) Envar() string { return e.Name }
 func (e *Append) Apply(transform *Transform) {
 	value, _ := transform.get(e.Name)
-	out := splitAndDrop(value, e.Value)
-	out = append(out, e.Value)
+	appended := transform.expand(e.Value)
+	out := splitAndDrop(value, appended)
+	out = append(out, appended)
 	transform.set(e.Name, strings.Join(out, ":"))
 }
 
 func (e *Append) Revert(transform *Transform) {
 	value, _ := transform.get(e.Name)
-	out := splitAndDrop(value, e.Value)
+	appended := transform.expand(e.Value)
+	out := splitAndDrop(value, appended)
 	transform.set(e.Name, strings.Join(out, ":"))
 }
 
