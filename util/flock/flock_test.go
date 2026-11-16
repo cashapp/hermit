@@ -41,7 +41,7 @@ func lockedExternally(t *testing.T, path string) bool {
 	t.Helper()
 	fd, err := unix.Open(path, unix.O_RDWR|unix.O_CLOEXEC, 0600)
 	assert.NoError(t, err)
-	defer unix.Close(fd) //nolint:errcheck
+	defer unix.Close(fd)
 	return unix.Flock(fd, unix.LOCK_EX|unix.LOCK_NB) != nil
 }
 
