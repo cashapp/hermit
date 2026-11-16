@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/cashapp/hermit/errors"
@@ -21,15 +22,25 @@ type pidFile struct {
 	Message string `json:"message"`
 }
 
-// Used for testing to allow mocking of os.Getpid.
-var getPID = os.Getpid
+// heldLock is a file lock held by this process, shared by every in-process holder.
+type heldLock struct {
+	holders int
+	unlock  func() error
+}
+
+// Locks held by this process, keyed by absolute path. Not inferred from the lock file's PID,
+// because processes in different PID namespaces can share a PID.
+var (
+	heldMu sync.Mutex
+	held   = map[string]*heldLock{}
+)
 
 // Acquire a lock on the given path, storing the current PID and a message in the lock file.
 //
 // The lock is released when the returned function is called.
 //
-// If the lock is held by the current process, Acquire will return a no-op release function and the message WILL NOT be
-// updated.
+// If this process already holds the lock, Acquire shares it process-wide (not per goroutine) without updating the
+// message, and the file lock is released when the last holder releases.
 //
 // If the lock is held by another process, Acquire will block until the lock is released or the context is cancelled.
 //
@@ -42,7 +53,7 @@ func Acquire(ctx context.Context, path, message string) (release func() error, e
 	}
 	start := time.Now()
 	for {
-		release, err := acquire(absPath, message) //nolint
+		release, err := acquireShared(absPath, message) //nolint
 		if err == nil {
 			return release, nil
 		}
@@ -50,15 +61,10 @@ func Acquire(ctx context.Context, path, message string) (release func() error, e
 			return nil, errors.Wrapf(err, "failed to acquire lock %s", absPath)
 		}
 
-		// If our own PID is holding the lock, we can return a no-op release function.
-		//
-		// We can safely ignore errors here because the comparison will fail anway if the file doesn't contain our PID.
+		// Only used to report the holder; errors leave it empty.
 		pidBytes, _ := os.ReadFile(absPath)
 		pid := pidFile{}
 		_ = json.Unmarshal(pidBytes, &pid)
-		if pid.PID == getPID() {
-			return func() error { return nil }, nil
-		}
 
 		select {
 		case <-ctx.Done():
@@ -72,8 +78,36 @@ func Acquire(ctx context.Context, path, message string) (release func() error, e
 	}
 }
 
+// acquireShared joins this process's hold on path, or takes the file lock if this process does not hold it.
+func acquireShared(absPath, message string) (release func() error, err error) {
+	heldMu.Lock()
+	defer heldMu.Unlock()
+	lock, ok := held[absPath]
+	if !ok {
+		// Taken under heldMu so goroutines in this process never race each other for the file lock.
+		unlock, err := acquire(absPath, message)
+		if err != nil {
+			return nil, err
+		}
+		lock = &heldLock{unlock: unlock}
+		held[absPath] = lock
+	}
+	lock.holders++
+	// Once, so a repeated call cannot release a hold that belongs to another caller.
+	return sync.OnceValue(func() error {
+		heldMu.Lock()
+		defer heldMu.Unlock()
+		lock.holders--
+		if lock.holders > 0 {
+			return nil
+		}
+		delete(held, absPath)
+		return lock.unlock()
+	}), nil
+}
+
 func acquire(path, message string) (release func() error, err error) {
-	pid := getPID()
+	pid := os.Getpid()
 	fd, err := unix.Open(path, unix.O_CREAT|unix.O_RDWR|unix.O_CLOEXEC|unix.O_SYNC, 0600)
 	if err != nil {
 		return nil, errors.Wrapf(err, "open failed")
