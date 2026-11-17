@@ -171,6 +171,79 @@ EOF
             `,
 		},
 		{
+			name: "InitInstallsToolsFromToolVersions",
+			script: `
+                mkdir -p packages
+                for v in 1.0.0 1.1.0 1.1.3 2.0.0; do
+                  mkdir -p "packages/tool-$v"
+                  printf '#!/bin/sh\necho tool %s\n' "$v" > "packages/tool-$v/tool"
+                  chmod +x "packages/tool-$v/tool"
+                  tar -czf "packages/tool-$v.tgz" -C "packages/tool-$v" tool
+                done
+                cat > packages/tool.hcl <<'EOF'
+description = "A tool"
+binaries = ["tool"]
+source = "${env}/packages/tool-${version}.tgz"
+version "1.0.0" "1.1.0" "1.1.3" "2.0.0" {}
+EOF
+                mkdir -p packages/other
+                printf '#!/bin/sh\necho other\n' > packages/other/other
+                chmod +x packages/other/other
+                tar -czf packages/other.tgz -C packages/other other
+                cat > packages/other.hcl <<'EOF'
+description = "Another tool"
+binaries = ["other"]
+source = "${env}/packages/other.tgz"
+version "3.4.5" {}
+EOF
+                cat > .tool-versions <<'EOF'
+# The first version that Hermit can resolve wins.
+tool 9.9.9 1.1
+other latest
+missing 1.2.3
+ruby system
+EOF
+                hermit init --no-git --sources env:///packages . 2> init.log
+                cat init.log
+                assert test -L bin/.tool-1.1.3.pkg
+                assert test -L bin/.other-3.4.5.pkg
+                assert test "$(./bin/tool)" = "tool 1.1.3"
+                assert test "$(./bin/other)" = "other"
+                assert test ! -e bin/missing
+                assert grep -q 'skipping missing' init.log
+                assert grep -q 'skipping ruby (system: uses the system installation)' init.log
+            `,
+		},
+		{
+			name: "InitWithoutToolVersionsSkipsImport",
+			script: `
+                mkdir -p packages/tool
+                printf '#!/bin/sh\necho tool\n' > packages/tool/tool
+                chmod +x packages/tool/tool
+                tar -czf packages/tool.tgz -C packages/tool tool
+                cat > packages/tool.hcl <<'EOF'
+description = "A tool"
+binaries = ["tool"]
+source = "${env}/packages/tool.tgz"
+version "1.0.0" {}
+EOF
+                printf 'tool 1.0.0\n' > .tool-versions
+                hermit init --no-git --no-tool-versions --sources env:///packages .
+                assert test -f bin/hermit.hcl
+                assert test ! -e bin/.tool-1.0.0.pkg
+                assert test ! -e bin/tool
+            `,
+		},
+		{
+			name: "InitRejectsMalformedToolVersions",
+			script: `
+                printf 'nodejs\n' > .tool-versions
+                hermit init --no-git --sources env:///packages .
+            `,
+			fails:        true,
+			expectations: exp{outputContains(`.tool-versions:1: "nodejs" has no version`)},
+		},
+		{
 			name: "EnvOnlyPackageSetsVariablesWithoutBinaries",
 			script: `
                 hermit init --no-git --sources env:///packages .
