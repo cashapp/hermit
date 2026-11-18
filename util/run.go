@@ -25,16 +25,24 @@ type CommandRunner interface {
 	CaptureInDir(log ui.Logger, dir string, args ...redact.Value) ([]byte, error)
 }
 
-// RealCommandRunner actually calls command
+// RealCommandRunner actually calls command.
+//
+// It runs the git commands that maintain Hermit's own repositories (package
+// sources and git package downloads), so its commands run without git's
+// repository-local environment variables (see WithoutGitLocalEnv).
 type RealCommandRunner struct{}
 
 func (g *RealCommandRunner) RunInDir(task *ui.Task, dir string, commands ...redact.Value) error {
-	return errors.WithStack(runSystemInDir(task, dir, commands))
+	return errors.WithStack(runSystemInDir(task, dir, commands, WithoutGitLocalEnv))
 }
 
 func (g *RealCommandRunner) CaptureInDir(log ui.Logger, dir string, commands ...redact.Value) ([]byte, error) {
-	return captureSystemInDir(log, dir, commands)
+	return captureSystemInDir(log, dir, commands, WithoutGitLocalEnv)
 }
+
+// keepEnv is the environment filter for system commands that should see the
+// caller's environment unchanged.
+func keepEnv(environ []string) []string { return environ }
 
 // SystemCommand constructs a command for an external tool used internally by
 // Hermit. The executable is resolved from PATH with the active Hermit
@@ -154,10 +162,10 @@ func CaptureSystem(log ui.Logger, args ...string) ([]byte, error) {
 // CaptureSystemInDir runs an external tool used internally by Hermit in the given dir
 // and returns its output.
 func CaptureSystemInDir(log ui.Logger, dir string, args ...string) ([]byte, error) {
-	return captureSystemInDir(log, dir, redact.Args(args...))
+	return captureSystemInDir(log, dir, redact.Args(args...), keepEnv)
 }
 
-func captureSystemInDir(log ui.Logger, dir string, args []redact.Value) ([]byte, error) {
+func captureSystemInDir(log ui.Logger, dir string, args []redact.Value, env func([]string) []string) ([]byte, error) {
 	if log != nil {
 		log.Debugf("%s", displayJoin(args))
 	}
@@ -165,6 +173,7 @@ func captureSystemInDir(log ui.Logger, dir string, args []redact.Value) ([]byte,
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+	cmd.Env = env(cmd.Env)
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if scrubber := redact.Scrubber(args); scrubber != nil {
@@ -213,10 +222,10 @@ func RunInDir(log *ui.Task, dir string, args ...string) error {
 
 // RunSystemInDir runs an external tool used internally by Hermit in the given dir.
 func RunSystemInDir(log *ui.Task, dir string, args ...string) error {
-	return runSystemInDir(log, dir, redact.Args(args...))
+	return runSystemInDir(log, dir, redact.Args(args...), keepEnv)
 }
 
-func runSystemInDir(log *ui.Task, dir string, args []redact.Value) error {
+func runSystemInDir(log *ui.Task, dir string, args []redact.Value, env func([]string) []string) error {
 	log = log.SubTask("exec")
 	log.Debugf("%s", displayJoin(args))
 	b := &bytes.Buffer{}
@@ -232,6 +241,7 @@ func runSystemInDir(log *ui.Task, dir string, args []redact.Value) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
+	cmd.Env = env(cmd.Env)
 	cmd.Dir = dir
 	cmd.Stdout = w
 	cmd.Stderr = w

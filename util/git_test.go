@@ -1,6 +1,8 @@
 package util_test
 
 import (
+	"os/exec"
+	"strings"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
@@ -61,4 +63,28 @@ func TestGitArgsPinsTransportPolicy(t *testing.T) {
 		"-c", "protocol.ssh.allow=always",
 		"clone", "--", "https://example.com/repo.git",
 	}, args)
+}
+
+func TestWithoutGitLocalEnvRemovesGitLocalEnvVars(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git command not found")
+	}
+	out, err := exec.Command("git", "rev-parse", "--local-env-vars").Output()
+	assert.NoError(t, err)
+	environ := []string{"PATH=/bin", "GIT_AUTHOR_NAME=Test", "GIT_CONFIG_KEY_0=core.pager"}
+	for _, name := range strings.Fields(string(out)) {
+		environ = append(environ, name+"=value")
+	}
+
+	got := util.WithoutGitLocalEnv(environ)
+
+	// git keeps "git -c" settings when it runs a command in another
+	// repository, and so does Hermit.
+	want := []string{"PATH=/bin", "GIT_AUTHOR_NAME=Test", "GIT_CONFIG_KEY_0=core.pager"}
+	for _, name := range strings.Fields(string(out)) {
+		if name == "GIT_CONFIG_PARAMETERS" || name == "GIT_CONFIG_COUNT" {
+			want = append(want, name+"=value")
+		}
+	}
+	assert.Equal(t, want, got)
 }
