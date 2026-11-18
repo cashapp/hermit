@@ -149,6 +149,56 @@ func TestGitSourceUsesCredentialsButRedactsDisplay(t *testing.T) {
 	assert.NotContains(t, buf.String(), "sekret")
 }
 
+// headRunner reports head for checkoutDir and newHead for any other directory.
+type headRunner struct {
+	checkoutDir   string
+	head, newHead string
+}
+
+func (h *headRunner) RunInDir(_ *ui.Task, _ string, _ ...redact.Value) error { return nil }
+
+func (h *headRunner) CaptureInDir(_ ui.Logger, dir string, _ ...redact.Value) ([]byte, error) {
+	if dir == h.checkoutDir {
+		return []byte(h.head + "\n"), nil
+	}
+	return []byte(h.newHead + "\n"), nil
+}
+
+// Git downloads clone into a temporary directory, because concurrent processes
+// copy any checkout they find in the cache.
+func TestGitSourceDownloadInstallsCompleteCheckout(t *testing.T) {
+	tests := []struct {
+		name       string
+		head       string
+		wantMarker bool
+	}{
+		{name: "KeepsConcurrentCheckoutOfSameCommit", head: "new", wantMarker: true},
+		{name: "ReplacesOlderCheckout", head: "old", wantMarker: false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cache := &Cache{root: t.TempDir()}
+			url := redact.URL("https://example.com/repo.git#channel")
+			checkoutDir := cache.Path("", url)
+			assert.NoError(t, os.MkdirAll(checkoutDir, 0700))
+			marker := filepath.Join(checkoutDir, "marker")
+			assert.NoError(t, os.WriteFile(marker, nil, 0600))
+			src := &gitSource{URL: url, runner: &headRunner{checkoutDir: checkoutDir, head: test.head, newHead: "new"}}
+
+			u, _ := ui.NewForTesting()
+			path, etag, _, err := src.Download(u.Task("test"), cache, "")
+			assert.NoError(t, err)
+
+			assert.Equal(t, [2]string{checkoutDir, "new"}, [2]string{path, etag})
+			_, err = os.Stat(marker)
+			assert.Equal(t, test.wantMarker, err == nil, "existing checkout kept")
+			entries, err := os.ReadDir(filepath.Dir(checkoutDir))
+			assert.NoError(t, err)
+			assert.Equal(t, 1, len(entries), "temporary checkouts left behind")
+		})
+	}
+}
+
 func TestHTTPSourceDoesNotLeakURLCredentials(t *testing.T) {
 	u, buf := ui.NewForTesting()
 	task := u.Task("test")
