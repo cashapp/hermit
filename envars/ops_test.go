@@ -42,6 +42,10 @@ func TestOpApplyRevert(t *testing.T) {
 			Envars{"GOBIN": "/go/bin", "PATH": "/bin"},
 			&Prepend{Name: "PATH", Value: "${GOBIN}"},
 			Envars{"GOBIN": "/go/bin", "PATH": "/go/bin:/bin"}},
+		{"AppendWithVariableSuffix",
+			Envars{"SDKROOT": "/opt/sdk", "PATH": "/bin"},
+			&Append{Name: "PATH", Value: "${SDKROOT}/bin"},
+			Envars{"SDKROOT": "/opt/sdk", "PATH": "/bin:/opt/sdk/bin"}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -133,4 +137,15 @@ func TestEncodeDecodeOps(t *testing.T) {
 	expected, err := UnmarshalOps(data)
 	assert.NoError(t, err)
 	assert.Equal(t, repr.String(expected, repr.Indent("  ")), repr.String(actual, repr.Indent("  ")))
+}
+
+func TestAppendVariableIdempotentAndReverts(t *testing.T) {
+	base := Envars{"PATH": "/usr/bin", "SDKROOT": "/opt/sdk"}
+	ops := Infer([]string{"PATH=${PATH}:${SDKROOT}/bin"})
+	once := base.Apply("/project", ops).Combined()
+	assert.Equal(t, "/usr/bin:/opt/sdk/bin", once["PATH"])
+	twice := once.Apply("/project", ops).Combined()
+	assert.Equal(t, "/usr/bin:/opt/sdk/bin", twice["PATH"])
+	reverted := once.Revert("/project", ops).Combined()
+	assert.Equal(t, base, reverted)
 }
