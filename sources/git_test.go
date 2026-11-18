@@ -99,7 +99,7 @@ func TestConcurrentGitSyncsKeepManifestsReadable(t *testing.T) {
 		{"add", "test.hcl"},
 		{"-c", "user.name=Hermit", "-c", "user.email=hermit@example.com", "-c", "commit.gpgsign=false", "commit", "-qm", "initial"},
 	} {
-		output, err := exec.Command(git, append([]string{"-C", repo}, args...)...).CombinedOutput() //nolint:noctx
+		output, err := exec.Command(git, append([]string{"-C", repo}, args...)...).CombinedOutput()
 		assert.NoError(t, err, "%s", output)
 	}
 
@@ -109,7 +109,7 @@ func TestConcurrentGitSyncsKeepManifestsReadable(t *testing.T) {
 		outputs := make([]*strings.Builder, len(helpers))
 		for i := range helpers {
 			outputs[i] = &strings.Builder{}
-			helpers[i] = exec.Command(os.Args[0], "-test.run=^TestGitSyncHelperProcess$") //nolint:noctx
+			helpers[i] = exec.Command(os.Args[0], "-test.run=^TestGitSyncHelperProcess$")
 			helpers[i].Env = append(os.Environ(), syncHelperDirEnv+"="+sourceDir, syncHelperRepoEnv+"=file://"+repo)
 			helpers[i].Stdout = outputs[i]
 			helpers[i].Stderr = outputs[i]
