@@ -167,3 +167,22 @@ func TestFishEscapesBackslashesInValues(t *testing.T) {
 	assert.Contains(t, out.String(), `set -gx AAA '\\'`)
 	assert.NotContains(t, out.String(), `set -gx AAA '\'`)
 }
+
+func TestFishUpdateHookKeepsHelpersLocal(t *testing.T) {
+	// Regression test: update_hermit_env runs on every prompt, and a plain
+	// `set` in a fish function overwrites a user's exported variable of the
+	// same name instead of creating a function-scoped one.
+	var out bytes.Buffer
+	err := (&Fish{}).ActivationScript(&out, ActivationConfig{
+		Root:   "/tmp/env",
+		Prompt: "none",
+		Env:    envars.Envars{"HERMIT_BIN": "/tmp/env/bin"},
+	})
+	assert.NoError(t, err)
+
+	script := out.String()
+	assert.Contains(t, script, `set -l CURRENT "$(`)
+	assert.Contains(t, script, `set -l CUR_HERMIT "$HERMIT_ENV/bin/hermit"`)
+	assert.NotContains(t, script, "\n    set CURRENT ")
+	assert.NotContains(t, script, "\n    set CUR_HERMIT ")
+}
