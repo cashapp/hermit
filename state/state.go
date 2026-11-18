@@ -360,19 +360,21 @@ func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 	}
 	defer release() //nolint:errcheck
 
+	extracted := false
 	if !s.isExtracted(p) {
 		if err := s.extract(b, p, downloaded); err != nil {
 			return errors.WithStack(err)
 		}
-		// Record the installed channel version so that the first channel check
-		// doesn't treat it as out of date and reinstall it. This must happen
-		// before linking: processes that find the package linked skip the lock
-		// and read this state straight away.
-		if p.Reference.IsChannel() && p.ETag != "" {
-			p.UpdatedAt = time.Now()
-			if err := s.WritePackageState(p); err != nil {
-				return errors.WithStack(err)
-			}
+		extracted = true
+	}
+	// Record the installed channel version so that the first channel check
+	// doesn't treat it as out of date and reinstall it. Another process may
+	// have extracted this download first without knowing its ETag, so the
+	// process that downloaded it records it even when it didn't extract it.
+	if p.Reference.IsChannel() && p.ETag != "" && (extracted || downloaded != "") {
+		p.UpdatedAt = time.Now()
+		if err := s.WritePackageState(p); err != nil {
+			return errors.WithStack(err)
 		}
 	}
 
@@ -583,19 +585,36 @@ func (s *State) EnsureChannelIsUpToDate(l *ui.UI, pkg *manifest.Package) error {
 	// Another process may have installed or checked this channel since pkg was resolved.
 	s.ReadPackageState(pkg)
 	if pkg.UpdatedAt.IsZero() {
-		// Nothing recorded the installation, for example because the package
-		// directory was restored from a cache without Hermit's metadata. Treat it
-		// as just checked: upgrading would reinstall a package that other
-		// processes may be running.
-		task.Tracef("No channel check recorded, recording one now")
-		pkg.UpdatedAt = time.Now()
-		return errors.WithStack(s.WritePackageState(pkg))
+		return errors.WithStack(s.recordFirstChannelCheck(task, pkg))
 	}
 	if pkg.UpdatedAt.After(time.Now().Add(-1 * pkg.UpdateInterval)) {
 		task.Tracef("No updated required")
 		return nil
 	}
 	return errors.WithStack(s.UpgradeChannel(task, pkg))
+}
+
+// recordFirstChannelCheck records a check for a channel package installed
+// without one, for example because the package directory was restored from a
+// cache without Hermit's metadata. The package counts as just checked:
+// upgrading would reinstall a package that other processes may be running.
+//
+// The record is written under the lock, after reading it again, so that it
+// never overwrites the ETag that a concurrent install of the package records.
+func (s *State) recordFirstChannelCheck(task *ui.Task, pkg *manifest.Package) error {
+	release, err := s.acquireLock(task, "recording a channel check for %s", pkg)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer release() //nolint:errcheck
+
+	s.ReadPackageState(pkg)
+	if !pkg.UpdatedAt.IsZero() {
+		return nil
+	}
+	task.Tracef("No channel check recorded, recording one now")
+	pkg.UpdatedAt = time.Now()
+	return errors.WithStack(s.WritePackageState(pkg))
 }
 
 // UpgradeChannel checks if the given binary has changed in its channel, and if so, downloads it.
