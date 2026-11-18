@@ -1,6 +1,6 @@
 ---
 name: hermit
-description: Use when working in repositories that contain ./bin/activate-hermit. Covers detecting Hermit environments with that definitive check, activating Hermit before running commands, and preferring Hermit-managed tools over global tools.
+description: Use when working in repositories that contain ./bin/activate-hermit. Covers detecting Hermit environments with that definitive check, activating Hermit before running commands, preferring Hermit-managed tools over global tools, and managing packages and environment variables with Hermit commands.
 ---
 
 # Hermit
@@ -52,25 +52,42 @@ When automation needs environment variables without sourcing shell hooks, use:
 ./bin/hermit env --raw
 ```
 
+## Manage Packages and Environment Variables
+
+Always use Hermit commands to manage packages and environment variables. Never
+create, edit, rename, or delete files in `bin/` by hand for these tasks. This
+includes `.<package>-<version>.pkg` markers, binary symlinks, and the `env`
+block in `bin/hermit.hcl`. Hermit keeps these files consistent with each other,
+and manual edits can leave the environment broken or out of sync.
+
 ## Modify Toolchains
 
 Use Hermit commands to change tools in a Hermit-managed repository:
 
 ```sh
 ./bin/hermit install <package>
+./bin/hermit install <package>-<version>
+./bin/hermit upgrade <package>
 ./bin/hermit uninstall <package>
 ```
+
+Do not install packages by channel, such as `<package>@latest` or
+`<package>@nightly`, unless the user explicitly requests a channel. Channels
+update automatically and make the environment non-reproducible. Install a bare
+package name or a specific `<package>-<version>` instead. If `hermit search`
+shows that a package provides only channels, ask the user before installing it.
 
 After changing packages, run the repository's tests through the Hermit
 environment.
 
 ## Configure Environment Variables
 
-Use `hermit env` to set persistent environment variables for the Hermit
-environment:
+Use `hermit env` to set or unset persistent environment variables for the
+Hermit environment:
 
 ```sh
 ./bin/hermit env <name> <value>
+./bin/hermit env --unset <name>
 ```
 
 After changing environment variables, run the repository's tests through the
