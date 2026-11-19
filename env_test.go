@@ -104,6 +104,12 @@ func TestEnsureUpToDate(t *testing.T) {
 		WithUpdateInterval(1 * time.Hour).
 		WithSource(fixture.Server.URL).
 		Result()
+	// The last check time is the modification time of the package's metadata.
+	ageLastCheck := func() {
+		path := filepath.Join(fixture.State.Root(), "metadata", pkg.Reference.String()+".etag")
+		lastCheck := time.Now().Add(-2 * time.Hour)
+		assert.NoError(t, os.Chtimes(path, lastCheck, lastCheck))
+	}
 
 	// Initial install
 	_, err := fixture.Env.Install(fixture.P, pkg)
@@ -120,7 +126,7 @@ func TestEnsureUpToDate(t *testing.T) {
 	assert.Equal(t, data, string(file))
 
 	// Update after a check is needed but etag has not changed
-	pkg.UpdatedAt = time.Now().Add(-2 * time.Hour)
+	ageLastCheck()
 	err = fixture.Env.EnsureChannelIsUpToDate(fixture.P, pkg)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, getCalls)
@@ -129,7 +135,7 @@ func TestEnsureUpToDate(t *testing.T) {
 	assert.Equal(t, data, string(file))
 
 	// Update after a check is needed and the etag has changed
-	pkg.UpdatedAt = time.Now().Add(-2 * time.Hour)
+	ageLastCheck()
 	etag = "changed"
 	data = strings.Repeat("other", 1024)
 	err = fixture.Env.EnsureChannelIsUpToDate(fixture.P, pkg)
@@ -146,7 +152,7 @@ func TestEnsureUpToDate(t *testing.T) {
 
 	// Check etag retained when the connection fails
 	fail = true
-	pkg.UpdatedAt = time.Now().Add(-2 * time.Hour)
+	ageLastCheck()
 	err = fixture.Env.EnsureChannelIsUpToDate(fixture.P, pkg)
 	assert.NoError(t, err)
 	dbPkg, err = dao.GetPackage(pkg.Reference.String())

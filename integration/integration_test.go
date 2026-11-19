@@ -1545,6 +1545,75 @@ EOF
             `,
 		},
 		{
+			// Concurrent first uses used to replace the manifest checkout while
+			// other processes read it, failing with "unknown package", and to
+			// reinstall channel packages while others were installing them.
+			name: "ConcurrentFirstUsesFromGitSource",
+			script: `
+                hermit init --no-git .
+                git_commit() {
+                  git -C "$1" -c user.name='Hermit Test' -c user.email=hermit@example.com \
+                    -c commit.gpgsign=false commit -qm "$2"
+                }
+
+                mkdir -p packages upstream.git manifests.git
+                printf '#!/bin/sh\necho pinned\n' > packages/pinned
+                chmod +x packages/pinned
+                tar -czf packages/pinned.tgz -C packages pinned
+                git -C upstream.git init -q
+                printf '#!/bin/sh\necho channel\n' > upstream.git/channel
+                chmod +x upstream.git/channel
+                git -C upstream.git add channel
+                git_commit upstream.git first
+                git -C upstream.git branch -M channel
+
+                git -C manifests.git init -q
+                cat > manifests.git/pinned.hcl <<'EOF'
+description = "Pinned package"
+source = "${env}/packages/pinned.tgz"
+binaries = ["pinned"]
+version "1.0.0" {}
+EOF
+                cat > manifests.git/channel.hcl <<'EOF'
+description = "Channel package"
+binaries = ["channel"]
+channel "edge" {
+  update = "1h"
+  source = "file://${env}/upstream.git#channel"
+}
+EOF
+                git -C manifests.git add .
+                git_commit manifests.git manifests
+                printf 'sources = ["file://%s/manifests.git"]\n' "$PWD" > bin/hermit.hcl
+                ln -s hermit bin/.pinned-1.0.0.pkg
+                ln -s .pinned-1.0.0.pkg bin/pinned
+                ln -s hermit bin/.channel@edge.pkg
+                ln -s .channel@edge.pkg bin/channel
+
+                state_root="$HERMIT_STATE_DIR"
+                for round in 1 2 3 4 5; do
+                  # Each round starts from an empty state directory.
+                  export HERMIT_STATE_DIR="$state_root/round-$round"
+                  for i in 1 2 3 4 5 6 7 8; do
+                    for tool in pinned channel; do
+                      (./bin/$tool > "out-$round-$tool-$i" 2>&1; echo $? > "rc-$round-$tool-$i") &
+                    done
+                  done
+                  wait
+                  for i in 1 2 3 4 5 6 7 8; do
+                    for tool in pinned channel; do
+                      if [ "$(cat "rc-$round-$tool-$i")" != 0 ] || [ "$(cat "out-$round-$tool-$i")" != "$tool" ]; then
+                        hermit-send "error: round $round: $tool failed: $(cat "out-$round-$tool-$i")"
+                        exit 1
+                      fi
+                    done
+                  done
+                  # A first use records the installed channel version instead of reinstalling it.
+                  assert test -s "$HERMIT_STATE_DIR/metadata/channel@edge.etag"
+                done
+            `,
+		},
+		{
 			name:         "InstallOnActivateEnsuresPackagesAreUnpacked",
 			preparations: prep{fixture("testenv-install-on-activate"), activate(".")},
 			script: `

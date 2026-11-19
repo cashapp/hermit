@@ -338,8 +338,10 @@ func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 	// uses temp files + atomic os.Rename (see cache/http.go downloadHTTP()).
 	// A mirror hit is cached under the mirror's URL, not p.Source, so keep the
 	// path for extract rather than letting it re-check p.Source and re-download.
+	// A package directory restored without the download cache, as CI caches
+	// do, only needs linking, so don't download it again.
 	var downloaded string
-	if !s.isCached(p) {
+	if !s.isExtracted(p) && !s.isCached(p) {
 		mirrors := make([]redact.URL, len(p.Mirrors))
 		copy(mirrors, p.Mirrors)
 		mirrors = append(mirrors, s.generateMirrors(p.Source)...)
@@ -358,8 +360,20 @@ func (s *State) CacheAndUnpack(b *ui.Task, p *manifest.Package) error {
 	}
 	defer release() //nolint:errcheck
 
+	extracted := false
 	if !s.isExtracted(p) {
 		if err := s.extract(b, p, downloaded); err != nil {
+			return errors.WithStack(err)
+		}
+		extracted = true
+	}
+	// Record the installed channel version so that the first channel check
+	// doesn't treat it as out of date and reinstall it. Another process may
+	// have extracted this download first without knowing its ETag, so the
+	// process that downloaded it records it even when it didn't extract it.
+	if p.Reference.IsChannel() && p.ETag != "" && (extracted || downloaded != "") {
+		p.UpdatedAt = time.Now()
+		if err := s.WritePackageState(p); err != nil {
 			return errors.WithStack(err)
 		}
 	}
@@ -565,12 +579,42 @@ func (s *State) CleanCache(b ui.Logger) error {
 // This should only be called for packages that have already been installed
 func (s *State) EnsureChannelIsUpToDate(l *ui.UI, pkg *manifest.Package) error {
 	task := l.Task(pkg.Reference.String())
-	if pkg.UpdateInterval == 0 || pkg.UpdatedAt.After(time.Now().Add(-1*pkg.UpdateInterval)) {
+	if pkg.UpdateInterval == 0 {
+		return nil
+	}
+	// Another process may have installed or checked this channel since pkg was resolved.
+	s.ReadPackageState(pkg)
+	if pkg.UpdatedAt.IsZero() {
+		return errors.WithStack(s.recordFirstChannelCheck(task, pkg))
+	}
+	if pkg.UpdatedAt.After(time.Now().Add(-1 * pkg.UpdateInterval)) {
 		task.Tracef("No updated required")
-		// No updates needed for this package
 		return nil
 	}
 	return errors.WithStack(s.UpgradeChannel(task, pkg))
+}
+
+// recordFirstChannelCheck records a check for a channel package installed
+// without one, for example because the package directory was restored from a
+// cache without Hermit's metadata. The package counts as just checked:
+// upgrading would reinstall a package that other processes may be running.
+//
+// The record is written under the lock, after reading it again, so that it
+// never overwrites the ETag that a concurrent install of the package records.
+func (s *State) recordFirstChannelCheck(task *ui.Task, pkg *manifest.Package) error {
+	release, err := s.acquireLock(task, "recording a channel check for %s", pkg)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer release() //nolint:errcheck
+
+	s.ReadPackageState(pkg)
+	if !pkg.UpdatedAt.IsZero() {
+		return nil
+	}
+	task.Tracef("No channel check recorded, recording one now")
+	pkg.UpdatedAt = time.Now()
+	return errors.WithStack(s.WritePackageState(pkg))
 }
 
 // UpgradeChannel checks if the given binary has changed in its channel, and if so, downloads it.
@@ -593,10 +637,7 @@ func (s *State) UpgradeChannel(b *ui.Task, pkg *manifest.Package) error {
 		b.Warnf("No ETag found for %s. Skipping update.", name)
 	} else if etag != pkg.ETag {
 		b.Infof("Fetching a new version for %s", name)
-		if err := s.evictPackage(b, pkg); err != nil {
-			return errors.WithStack(err)
-		}
-		if err := s.CacheAndUnpack(b, pkg); err != nil {
+		if err := s.replaceChannelPackage(b, pkg, mirrors); err != nil {
 			return errors.WithStack(err)
 		}
 		etag = pkg.ETag
@@ -629,20 +670,47 @@ func (s *State) removePackage(task *ui.Task, pkg *manifest.Package) error {
 	return nil
 }
 
-func (s *State) evictPackage(b *ui.Task, pkg *manifest.Package) error {
-	release, err := s.acquireLock(b, "evicting package %s", pkg)
+// replaceChannelPackage downloads the latest archive of a channel package and
+// reinstalls the package from it.
+//
+// The cached archive is never evicted. Other processes may hold its path,
+// downloaded outside the lock, and be about to extract it. The download
+// replaces the archive with an atomic rename instead, so the path always holds
+// a complete archive. The download also happens outside the lock so that a
+// large archive doesn't make other processes time out waiting for it.
+func (s *State) replaceChannelPackage(b *ui.Task, pkg *manifest.Package, mirrors []redact.URL) error {
+	path, etag, _, err := s.cache.Download(b, pkg.SHA256, pkg.Source, mirrors...)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	release, err := s.acquireLock(b, "upgrading %s", pkg)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	defer release() //nolint:errcheck
 
-	if err := s.cache.Evict(b, pkg.SHA256, pkg.Source); err != nil {
-		return errors.WithStack(err)
+	// Another process may have installed this version while we were downloading.
+	// Reinstalling it would remove a package that process may be running.
+	recorded, _ := s.dao.GetPackage(pkg.Reference.String())
+	if etag != "" && recorded != nil && recorded.Etag == etag && s.isExtracted(pkg) && s.areBinariesLinked(pkg) {
+		pkg.ETag = etag
+		return nil
 	}
+
 	if err := s.removePackage(b, pkg); err != nil {
 		return errors.WithStack(err)
 	}
-	return nil
+	if err := s.extract(b, pkg, path); err != nil {
+		return errors.WithStack(err)
+	}
+	if err := s.linkBinaries(pkg); err != nil {
+		return errors.WithStack(err)
+	}
+	pkg.ETag = etag
+	// Record the new version before releasing the lock, so that processes
+	// waiting to install the same version see it.
+	return errors.WithStack(s.dao.UpdatePackage(pkg.Reference.String(), &dao.Package{Etag: etag, UpdateCheckedAt: time.Now()}))
 }
 
 // Return the generated mirrors that match URL.

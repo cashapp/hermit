@@ -132,7 +132,7 @@ func updateHermitChannel(l *ui.UI, state *state.State, ref manifest.Reference, f
 	state.ReadPackageState(pkg)
 	switch {
 	case force || debug.Flags.AlwaysCheckSelf:
-		pkg.UpdatedAt = time.Time{}
+		return errors.WithStack(state.UpgradeChannel(l.Task(ref.String()), pkg))
 	case pkg.UpdatedAt.IsZero():
 		// Record a new installation as just checked to prevent an immediate upgrade check.
 		pkg.UpdatedAt = time.Now()

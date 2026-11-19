@@ -1,9 +1,13 @@
 package sources_test
 
 import (
+	"io/fs"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/cashapp/hermit/errors"
@@ -48,10 +52,8 @@ func TestGitDoesNotRemoveSourceAfterSyncFailure(t *testing.T) {
 	u, _ := ui.NewForTesting()
 	_, err := source.Sync(u, true)
 	assert.NoError(t, err)
-	files, err := os.ReadDir(sourceDir)
-	assert.NoError(t, err)
-	assert.Equal(t, len(files), 1)
-	gitDir := files[0].Name()
+	checkouts := checkoutDirs(t, sourceDir)
+	assert.Equal(t, 1, len(checkouts))
 
 	// Fail the sync
 	git.err = errors.New("failing git fails")
@@ -61,11 +63,81 @@ func TestGitDoesNotRemoveSourceAfterSyncFailure(t *testing.T) {
 	assert.NoError(t, err)
 
 	// the directory should still be in place after git failed to update
-	files, err = os.ReadDir(sourceDir)
-	assert.NoError(t, err)
-	assert.Equal(t, len(files), 1)
-	assert.Equal(t, gitDir, files[0].Name())
+	assert.Equal(t, checkouts, checkoutDirs(t, sourceDir))
+}
 
+// checkoutDirs returns the source checkouts in sourceDir, leaving out their sync lock files.
+func checkoutDirs(t *testing.T, sourceDir string) []string {
+	t.Helper()
+	entries, err := os.ReadDir(sourceDir)
+	assert.NoError(t, err)
+	var dirs []string
+	for _, entry := range entries {
+		if entry.IsDir() {
+			dirs = append(dirs, entry.Name())
+		}
+	}
+	return dirs
+}
+
+const (
+	syncHelperDirEnv  = "HERMIT_TEST_SYNC_HELPER_DIR"
+	syncHelperRepoEnv = "HERMIT_TEST_SYNC_HELPER_REPO"
+)
+
+// Concurrent first uses each force a sync after failing to find a package.
+// Unserialised, those syncs replaced the checkout while other processes read
+// manifests from it, which failed with "unknown package".
+func TestConcurrentGitSyncsKeepManifestsReadable(t *testing.T) {
+	git, err := exec.LookPath("git")
+	assert.NoError(t, err)
+	repo := filepath.Join(t.TempDir(), "manifests.git")
+	assert.NoError(t, os.Mkdir(repo, 0700))
+	assert.NoError(t, os.WriteFile(filepath.Join(repo, "test.hcl"), []byte(`description = "test"`), 0600))
+	for _, args := range [][]string{
+		{"init", "-q"},
+		{"add", "test.hcl"},
+		{"-c", "user.name=Hermit", "-c", "user.email=hermit@example.com", "-c", "commit.gpgsign=false", "commit", "-qm", "initial"},
+	} {
+		output, err := exec.Command(git, append([]string{"-C", repo}, args...)...).CombinedOutput()
+		assert.NoError(t, err, "%s", output)
+	}
+
+	for range 3 {
+		sourceDir := t.TempDir()
+		helpers := make([]*exec.Cmd, 8)
+		outputs := make([]*strings.Builder, len(helpers))
+		for i := range helpers {
+			outputs[i] = &strings.Builder{}
+			helpers[i] = exec.Command(os.Args[0], "-test.run=^TestGitSyncHelperProcess$")
+			helpers[i].Env = append(os.Environ(), syncHelperDirEnv+"="+sourceDir, syncHelperRepoEnv+"=file://"+repo)
+			helpers[i].Stdout = outputs[i]
+			helpers[i].Stderr = outputs[i]
+			assert.NoError(t, helpers[i].Start())
+		}
+		for i, helper := range helpers {
+			assert.NoError(t, helper.Wait(), "%s", outputs[i])
+		}
+	}
+}
+
+// TestGitSyncHelperProcess runs as a separate process for
+// TestConcurrentGitSyncsKeepManifestsReadable. It syncs the source, then keeps
+// reading a manifest while other processes sync.
+func TestGitSyncHelperProcess(t *testing.T) {
+	sourceDir := os.Getenv(syncHelperDirEnv)
+	if sourceDir == "" {
+		t.Skip("only runs as a helper process")
+	}
+	source := sources.NewGitSource(redact.URL(os.Getenv(syncHelperRepoEnv)), sourceDir, &util.RealCommandRunner{})
+	u, _ := ui.NewForTesting()
+	_, err := source.Sync(u, true)
+	assert.NoError(t, err)
+	for range 200 {
+		_, err := fs.ReadFile(source.Bundle(), "test.hcl")
+		assert.NoError(t, err)
+		time.Sleep(time.Millisecond)
+	}
 }
 
 func TestGitSyncUsesCredentialsButDisplaysRedactedURI(t *testing.T) {

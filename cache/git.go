@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -39,27 +40,69 @@ func (s *gitSource) Download(b *ui.Task, cache *Cache, checksum string) (string,
 		}
 		pinned = advertised == ""
 	}
+	// Other processes treat an existing checkout as cached and copy it without
+	// waiting for this download, so clone into a temporary directory and move
+	// the complete checkout into place.
+	if err := os.MkdirAll(filepath.Dir(checkoutDir), 0700); err != nil {
+		return "", "", "", errors.WithStack(err)
+	}
+	tmpDir, err := os.MkdirTemp(filepath.Dir(checkoutDir), filepath.Base(checkoutDir)+".*.hermit.tmp.download")
+	if err != nil {
+		return "", "", "", errors.WithStack(err)
+	}
+	defer os.RemoveAll(tmpDir)
 	if pinned {
-		err = s.checkoutGitCommit(b, cache.root, repo, tag, checkoutDir)
+		err = s.checkoutGitCommit(b, cache.root, repo, tag, tmpDir)
 	} else {
 		args := redact.Args(util.GitArgs("clone", "--depth=1")...)
 		if tag != "" {
 			args = append(args, redact.Plain("--branch="+tag))
 		}
-		args = append(args, redact.Plain("--"), repo, redact.Plain(checkoutDir))
+		args = append(args, redact.Plain("--"), repo, redact.Plain(tmpDir))
 		err = s.runner.RunInDir(b, cache.root, args...)
 	}
 	if err != nil {
 		return "", "", "", errors.WithStack(err)
 	}
 
-	bts, err := s.runner.CaptureInDir(b, checkoutDir, redact.Args("git", "rev-parse", "HEAD")...)
+	etag, err := s.checkoutHead(b, tmpDir)
 	if err != nil {
 		return "", "", "", errors.WithStack(err)
 	}
-	etag := strings.Trim(string(bts), "\n")
+	if err := s.installCheckout(b, tmpDir, checkoutDir, etag); err != nil {
+		return "", "", "", errors.WithStack(err)
+	}
+	return checkoutDir, etag, "", nil
+}
 
-	return filepath.Join(cache.root, base), etag, "", nil
+func (s *gitSource) checkoutHead(b *ui.Task, dir string) (string, error) {
+	bts, err := s.runner.CaptureInDir(b, dir, redact.Args("git", "rev-parse", "HEAD")...)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	return strings.TrimSpace(string(bts)), nil
+}
+
+// installCheckout moves the checkout of commit etag in tmpDir to dest.
+//
+// A checkout of the same commit already at dest came from a concurrent
+// download, and other processes may be copying from it, so it is kept. A
+// checkout of another commit is an older channel version, which is replaced.
+func (s *gitSource) installCheckout(b *ui.Task, tmpDir, dest, etag string) error {
+	err := os.Rename(tmpDir, dest)
+	if !errors.Is(err, fs.ErrExist) {
+		return errors.WithStack(err)
+	}
+	if existing, err := s.checkoutHead(b, dest); err == nil && existing == etag {
+		return nil
+	}
+	// Move the old checkout aside so that dest is missing only between two renames.
+	old := tmpDir + ".old"
+	if err := os.Rename(dest, old); err != nil {
+		return errors.WithStack(err)
+	}
+	defer os.RemoveAll(old)
+	return errors.WithStack(os.Rename(tmpDir, dest))
 }
 
 func (s *gitSource) ETag(b *ui.Task) (etag string, err error) {
