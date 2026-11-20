@@ -61,9 +61,16 @@ function user_install() {
   fi
   URL="${HERMIT_DIST_URL}/hermit-${OS}-${ARCH}.gz"
   TMP_FILE="${HERMIT_EXE}.download.${RANDOM}"
+  TMP_ARCHIVE="${TMP_FILE}.gz"
   echo "Downloading ${URL} to ${HERMIT_EXE}"
   chmod -f u+w "${HERMIT_EXE}" 2> /dev/null || true
-  curl -fsSL "${URL}" | gzip -dc > "${TMP_FILE}"
+  curl --remove-on-error -fsSL -o "${TMP_ARCHIVE}" "${URL}"
+  if [ ! -f "${TMP_ARCHIVE}" ] || [ ! -s "${TMP_ARCHIVE}" ]; then
+    echo "Failed to download ${URL}" >&2
+    exit 1
+  fi
+  gzip -dc "${TMP_ARCHIVE}" > "${TMP_FILE}"
+  rm -f "${TMP_ARCHIVE}"
   chown "$ID_USER:$ID_GROUP" "${TMP_FILE}"
   chmod u+wx "${TMP_FILE}"
   mv "${TMP_FILE}" "${HERMIT_EXE}"
