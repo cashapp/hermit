@@ -474,6 +474,13 @@ func extractPackageTarball(b *ui.Task, r io.Reader, dest string, strip int) erro
 		} else if err != nil {
 			return errors.WithStack(err)
 		}
+		// A pax global header (typeflag 'g', e.g. "pax_global_header" in GitHub
+		// release tarballs) holds metadata for the archive, not file content.
+		// archive/tar returns it as an entry, so skip it rather than writing it
+		// out as a regular file, typically with an unreadable mode of 0.
+		if hdr.Typeflag == tar.TypeXGlobalHeader {
+			continue
+		}
 		mode := hdr.FileInfo().Mode() &^ 0077
 		destFile, err := makeDestPath(dest, hdr.Name, strip)
 		if err != nil {
