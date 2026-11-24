@@ -56,6 +56,37 @@ func TestRegularTarEntryWithLinkname(t *testing.T) {
 	assert.Equal(t, payload, contents)
 }
 
+func TestExtractPackageTarballSkipsPaxGlobalHeader(t *testing.T) {
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	// GitHub release tarballs start with a pax global header carrying the commit ID.
+	assert.NoError(t, tw.WriteHeader(&tar.Header{
+		Name:       "pax_global_header",
+		Typeflag:   tar.TypeXGlobalHeader,
+		PAXRecords: map[string]string{"comment": "0123456789abcdef0123456789abcdef01234567"},
+	}))
+	payload := []byte("binary content")
+	assert.NoError(t, tw.WriteHeader(&tar.Header{
+		Name:     "bin/tool",
+		Mode:     0755,
+		Typeflag: tar.TypeReg,
+		Size:     int64(len(payload)),
+	}))
+	_, err := tw.Write(payload)
+	assert.NoError(t, err)
+	assert.NoError(t, tw.Close())
+
+	p, _ := ui.NewForTesting()
+	dest := t.TempDir()
+	assert.NoError(t, extractPackageTarball(p.Task("extract"), bytes.NewReader(buf.Bytes()), dest, 0))
+
+	_, err = os.Lstat(filepath.Join(dest, "pax_global_header"))
+	assert.True(t, os.IsNotExist(err), "pax global header was extracted as a file")
+	contents, err := os.ReadFile(filepath.Join(dest, "bin", "tool"))
+	assert.NoError(t, err)
+	assert.Equal(t, payload, contents)
+}
+
 func TestExtractRegularTarEntryWithLinkname(t *testing.T) {
 	tmpDir := t.TempDir()
 	t.Cleanup(func() {
