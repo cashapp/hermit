@@ -21,6 +21,9 @@ func htmlAutoVersion(client *http.Client, autoVersion *manifest.AutoVersionBlock
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
+	if versionRe.NumSubexp() != 1 {
+		return "", errors.Errorf("version pattern %q must have exactly one capture group", autoVersion.VersionPattern)
+	}
 	url := autoVersion.HTML.URL
 	resp, err := client.Get(url) //nolint:noctx
 	if err != nil {

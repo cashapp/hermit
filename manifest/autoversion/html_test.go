@@ -36,7 +36,8 @@ func TestHTMLNoVersionsFound(t *testing.T) {
 					path: "testdata/no_versions.html",
 				},
 			}, &manifest.AutoVersionBlock{
-				HTML: tt.htmlBlock,
+				HTML:           tt.htmlBlock,
+				VersionPattern: `v?(.*)`,
 			})
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "no versions matched")
