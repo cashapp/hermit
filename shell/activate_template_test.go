@@ -186,3 +186,8 @@ func TestFishUpdateHookKeepsHelpersLocal(t *testing.T) {
 	assert.NotContains(t, script, "\n    set CURRENT ")
 	assert.NotContains(t, script, "\n    set CUR_HERMIT ")
 }
+
+func TestFishActivationHookKeepsCURLocal(t *testing.T) {
+	assert.Contains(t, fishShellHooks, "set -l CUR $PWD")
+	assert.NotContains(t, fishShellHooks, "\n  set CUR $PWD")
+}
