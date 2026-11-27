@@ -54,10 +54,10 @@ func New(client *http.Client, token redact.Secret) *Client {
 	if client == nil {
 		client = http.DefaultClient
 	}
-	if token == "" {
-		client = http.DefaultClient
-	} else {
-		client = &http.Client{Transport: TokenAuthenticatedTransport(client.Transport, token)}
+	if token != "" {
+		wrapped := *client
+		wrapped.Transport = TokenAuthenticatedTransport(client.Transport, token)
+		client = &wrapped
 	}
 	return &Client{client: client}
 }
