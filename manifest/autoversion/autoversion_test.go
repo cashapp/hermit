@@ -12,6 +12,7 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/cashapp/hermit/errors"
 	"github.com/cashapp/hermit/github"
+	"github.com/cashapp/hermit/manifest"
 )
 
 type testGHAPI []string
@@ -88,6 +89,39 @@ func TestAutoVersion(t *testing.T) {
 			assert.NoError(t, err)
 
 			assert.Equal(t, string(expectedContent), string(actualContent))
+		})
+	}
+}
+
+func TestHTTPAutoVersionCaptureGroups(t *testing.T) {
+	for _, source := range []struct {
+		name string
+		body string
+		run  func(*http.Client, *manifest.AutoVersionBlock) (string, error)
+	}{
+		{"HTML", `<div>v2.6</div>`, htmlAutoVersion},
+		{"JSON", `"v2.6"`, jsonAutoVersion},
+	} {
+		t.Run(source.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "response")
+			assert.NoError(t, os.WriteFile(path, []byte(source.body), 0o600))
+			client := &http.Client{Transport: testHTTPClient{path: path}}
+			config := &manifest.AutoVersionBlock{
+				HTML: &manifest.HTMLAutoVersionBlock{URL: "http://example.com", CSS: "div"},
+				JSON: &manifest.JSONAutoVersionBlock{URL: "http://example.com", JQ: "."},
+			}
+
+			config.VersionPattern = `v?(.*)`
+			version, err := source.run(client, config)
+			assert.NoError(t, err)
+			assert.Equal(t, "2.6", version)
+
+			config.VersionPattern = `v(\d+)\.(\d+)`
+			version, err = source.run(client, config)
+			if err == nil {
+				t.Fatalf("expected a capture group error, got version %q", version)
+			}
+			assert.Contains(t, err.Error(), "must have exactly one capture group")
 		})
 	}
 }
