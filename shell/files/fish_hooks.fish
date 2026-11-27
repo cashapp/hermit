@@ -1,5 +1,5 @@
 function activate_hermit --on-variable PWD
-  set CUR $PWD
+  set -l CUR $PWD
   set -q HERMIT_ROOT_BIN; or set HERMIT_ROOT_BIN "$HOME/bin/hermit"
 
   while test "$CUR" != "/"
