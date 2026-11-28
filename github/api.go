@@ -146,7 +146,7 @@ func (a *Client) ETag(asset Asset) (etag string, err error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return "", errors.Wrapf(err, "failed to retrieve ETag")
+		return "", errors.Errorf("%s: failed to retrieve ETag: %s", asset.URL, resp.Status)
 	}
 	return resp.Header.Get("ETag"), nil
 }
